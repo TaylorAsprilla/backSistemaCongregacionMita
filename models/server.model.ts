@@ -1,6 +1,12 @@
 import express, { Application } from "express";
 import usuarioRoutes from "../routes/usuario.routes";
 import loginRoutes from "../routes/login.routes";
+import generoRoutes from "../routes/genero.routes";
+import busquedasRoutes from "../routes/busqueda.routes";
+import tipoDocumentoRoutes from "../routes/tipoDocumento.routes";
+import tipoUsuarioRoutes from "../routes/tipoUsuario.routes";
+import ministerioRoutes from "../routes/ministerio.routes";
+import permisoRoutes from "../routes/permiso.routes";
 import cors from "cors";
 import db from "../database/connection";
 
@@ -10,6 +16,12 @@ class Server {
   private apiPaths = {
     usuarios: "/api/usuarios",
     login: "/api/login",
+    busquedas: "/api/busquedas",
+    tipoDocumento: "/api/tipodocumento",
+    genero: "/api/genero",
+    tipoUsuario: "/api/tipoUsuario",
+    ministerio: "api/ministerio",
+    permiso: "api/permiso",
   };
 
   constructor() {
@@ -46,6 +58,12 @@ class Server {
   routes() {
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
+    this.app.use(this.apiPaths.busquedas, busquedasRoutes);
+    this.app.use(this.apiPaths.tipoDocumento, tipoDocumentoRoutes);
+    this.app.use(this.apiPaths.genero, generoRoutes);
+    this.app.use(this.apiPaths.tipoUsuario, tipoUsuarioRoutes);
+    this.app.use(this.apiPaths.ministerio, ministerioRoutes);
+    this.app.use(this.apiPaths.permiso, permisoRoutes);
   }
 
   listen() {
