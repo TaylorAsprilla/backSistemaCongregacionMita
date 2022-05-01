@@ -1,9 +1,14 @@
 import { Sequelize } from "sequelize";
 
-const db = new Sequelize("cmainformes", "adminCMA", "KASJxkoA6$jA", {
-  host: "mysql-cmainformes.c6j48ovs9j2b.us-west-2.rds.amazonaws.com",
-  dialect: "mysql",
-  // logging: false,
-});
+const db = new Sequelize(
+  "u434635530_informesCMI",
+  "u434635530_tasprilla",
+  "0GgQuZy^F9v",
+  {
+    host: "212.1.211.203",
+    dialect: "mysql",
+    // logging: false,
+  }
+);
 
 export default db;

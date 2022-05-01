@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
+import { CustomRequest } from "../middlewares/validar-jwt";
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
@@ -54,4 +55,23 @@ export const login = async (req: Request, res: Response) => {
       error: error,
     });
   }
+};
+
+export const renewToken = async (req: CustomRequest, res: Response) => {
+  const idUsaurio = req.id;
+  const { body } = req;
+
+  const usuario = await Usuario.build(body);
+
+  // Generar el TOKEN - JWT
+  const token = await generarJWT(idUsaurio, usuario.getDataValue("login"));
+
+  // Obtener el usuario por UID
+  const usuarioID = await Usuario.findByPk(idUsaurio);
+
+  res.json({
+    ok: true,
+    token,
+    usuario: usuarioID,
+  });
 };

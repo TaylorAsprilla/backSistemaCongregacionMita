@@ -2,13 +2,40 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
+import db from "../database/connection";
 
 export const getUsuarios = async (req: Request, res: Response) => {
-  const usuarios = await Usuario.findAll();
+  const desde = Number(req.query.desde) || 0;
+
+  const [usuarios, totalUsuarios] = await Promise.all([
+    Usuario.findAll({
+      offset: desde,
+      limit: 5,
+      order: db.col("primerNombre"),
+    }),
+
+    Usuario.count(),
+  ]);
 
   res.json({
-    usuarios,
-    msg: "getUsuarios",
+    ok: true,
+    usuarios: usuarios,
+    totalUsuarios: totalUsuarios,
+    msg: "Usuarios Registrados cpn paginación",
+  });
+};
+
+export const getTodosLosUsuarios = async (req: Request, res: Response) => {
+  const [usuarios, totalUsuarios] = await Promise.all([
+    Usuario.findAll(),
+    Usuario.count(),
+  ]);
+
+  res.json({
+    ok: true,
+    usuarios: usuarios,
+    totalUsuarios: totalUsuarios,
+    msg: "Todos los usuarios Registrados",
   });
 };
 
