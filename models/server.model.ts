@@ -7,6 +7,15 @@ import tipoDocumentoRoutes from "../routes/tipoDocumento.routes";
 import tipoUsuarioRoutes from "../routes/tipoUsuario.routes";
 import ministerioRoutes from "../routes/ministerio.routes";
 import permisoRoutes from "../routes/permiso.routes";
+import tipoActividadRoutes from "../routes/tipoActividad.routes";
+import actividadRoutes from "../routes/actividad.routes";
+import informeRoutes from "../routes/informe.routes";
+import contabilidadRoutes from "../routes/contabilidad.routes";
+import logroRoutes from "../routes/logro.routes";
+import asuntoPendienteRoutes from "../routes/asuntoPendiente.routes";
+import tipoStatusRoutes from "../routes/tipoStatus.routes";
+import metaRoutes from "../routes/meta.routes";
+import visitaRoutes from "../routes/visita.routes";
 import cors from "cors";
 import db from "../database/connection";
 
@@ -20,13 +29,22 @@ class Server {
     tipoDocumento: "/api/tipodocumento",
     genero: "/api/genero",
     tipoUsuario: "/api/tipoUsuario",
-    ministerio: "api/ministerio",
-    permiso: "api/permiso",
+    ministerio: "/api/ministerio",
+    permiso: "/api/permiso",
+    tipoActividad: "/api/tipoactividad",
+    actividad: "/api/actividad",
+    informe: "/api/informe",
+    contabilidad: "/api/contabilidad",
+    logro: "/api/logro",
+    asuntoPendiente: "/api/asuntopendiente",
+    tipoStatus: "/api/tipostatus",
+    meta: "/api/meta",
+    visita: "/api/visita",
   };
 
   constructor() {
     this.app = express();
-    this.port = process.env.PORT || "8000";
+    this.port = process.env.PORT || "4000";
 
     // Métodos Iniciales
     this.dbConnection();
@@ -64,6 +82,15 @@ class Server {
     this.app.use(this.apiPaths.tipoUsuario, tipoUsuarioRoutes);
     this.app.use(this.apiPaths.ministerio, ministerioRoutes);
     this.app.use(this.apiPaths.permiso, permisoRoutes);
+    this.app.use(this.apiPaths.tipoActividad, tipoActividadRoutes);
+    this.app.use(this.apiPaths.actividad, actividadRoutes);
+    this.app.use(this.apiPaths.informe, informeRoutes);
+    this.app.use(this.apiPaths.contabilidad, contabilidadRoutes);
+    this.app.use(this.apiPaths.logro, logroRoutes);
+    this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
+    this.app.use(this.apiPaths.tipoStatus, tipoStatusRoutes);
+    this.app.use(this.apiPaths.meta, metaRoutes);
+    this.app.use(this.apiPaths.visita, visitaRoutes);
   }
 
   listen() {
