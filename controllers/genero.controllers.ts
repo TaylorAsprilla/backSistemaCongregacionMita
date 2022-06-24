@@ -42,8 +42,8 @@ export const crearGenero = async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      msg: `El género ${genero} se crero satisfactoriamente`,
-      genero,
+      msg: `El género ${genero} se creó satisfactoriamente`,
+      generoCreado,
     });
   } catch (error) {
     console.log(error);
@@ -85,10 +85,8 @@ export const actualizarGenero = async (req: Request, res: Response) => {
       }
     }
 
-    campos.nombre = genero;
-
     // Se actualiza el campo
-    const generoActualizado = await genero.update(campos, {
+    const generoActualizado = await genero.update(body, {
       new: true,
     });
 

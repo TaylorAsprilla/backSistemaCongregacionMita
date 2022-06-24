@@ -60,6 +60,7 @@ const Usuario = db.define(
     },
     tipoDocumento_id: {
       type: DataTypes.STRING,
+      allowNull: true,
     },
     pais_id: {
       type: DataTypes.STRING,

@@ -16,6 +16,14 @@ import asuntoPendienteRoutes from "../routes/asuntoPendiente.routes";
 import tipoStatusRoutes from "../routes/tipoStatus.routes";
 import metaRoutes from "../routes/meta.routes";
 import visitaRoutes from "../routes/visita.routes";
+import paisRoutes from "../routes/pais.routes";
+import divisaRoutes from "../routes/divisa.routes";
+import congregacionRoutes from "../routes/congregacion.routes";
+import campoRoutes from "../routes/campo.routes";
+import estadoCivilRoutes from "../routes/estadoCivil.routes";
+import rolCasaRoutes from "../routes/rolCasa.routes";
+import vacunaRoutes from "../routes/vacuna.routes";
+import dosisRoutes from "../routes/dosis.routes";
 import cors from "cors";
 import db from "../database/connection";
 
@@ -40,6 +48,14 @@ class Server {
     tipoStatus: "/api/tipostatus",
     meta: "/api/meta",
     visita: "/api/visita",
+    pais: "/api/pais",
+    divisa: "/api/divisa",
+    congregacion: "/api/congregacion",
+    campo: "/api/campo",
+    estadoCivil: "/api/estadocivil",
+    rolcasa: "/api/rolcasa",
+    vacuna: "/api/vacuna",
+    dosis: "/api/dosis",
   };
 
   constructor() {
@@ -91,6 +107,14 @@ class Server {
     this.app.use(this.apiPaths.tipoStatus, tipoStatusRoutes);
     this.app.use(this.apiPaths.meta, metaRoutes);
     this.app.use(this.apiPaths.visita, visitaRoutes);
+    this.app.use(this.apiPaths.pais, paisRoutes);
+    this.app.use(this.apiPaths.divisa, divisaRoutes);
+    this.app.use(this.apiPaths.congregacion, congregacionRoutes);
+    this.app.use(this.apiPaths.campo, campoRoutes);
+    this.app.use(this.apiPaths.estadoCivil, estadoCivilRoutes);
+    this.app.use(this.apiPaths.rolcasa, rolCasaRoutes);
+    this.app.use(this.apiPaths.vacuna, vacunaRoutes);
+    this.app.use(this.apiPaths.dosis, dosisRoutes);
   }
 
   listen() {

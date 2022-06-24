@@ -1,5 +1,5 @@
 /* 
-  Path: '/api/tipoActividad'
+  Path: '/api/actividad'
 */
 
 import { Router } from "express";
