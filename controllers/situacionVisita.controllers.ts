@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import SituacionVisita from "../models/situacionVisita.model";
 
-export const getsituacionVisita = async (req: Request, res: Response) => {
+export const getSituacionVisita = async (req: Request, res: Response) => {
   try {
     const situacionVisitas = await SituacionVisita.findAll();
 

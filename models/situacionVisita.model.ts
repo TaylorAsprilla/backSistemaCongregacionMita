@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize/types";
+import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
 const SituacionVisita = db.define(
@@ -15,7 +15,7 @@ const SituacionVisita = db.define(
     situacion: {
       type: DataTypes.TEXT,
     },
-    intervension: {
+    intervencion: {
       type: DataTypes.TEXT,
     },
     seguimiento: {
@@ -24,7 +24,7 @@ const SituacionVisita = db.define(
     observaciones: {
       type: DataTypes.TEXT,
     },
-    visita_id: {
+    informe_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },

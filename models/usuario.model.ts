@@ -25,6 +25,10 @@ const Usuario = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    fechaNacimiento: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     email: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -38,9 +42,14 @@ const Usuario = db.define(
       allowNull: false,
       unique: true,
     },
-    fechaNacimiento: {
-      type: DataTypes.DATE,
-      allowNull: false,
+    telefonoCasa: {
+      type: DataTypes.STRING,
+    },
+    direccion: {
+      type: DataTypes.STRING,
+    },
+    zipCode: {
+      type: DataTypes.STRING,
     },
     login: {
       type: DataTypes.STRING,
@@ -63,6 +72,18 @@ const Usuario = db.define(
       allowNull: true,
     },
     pais_id: {
+      type: DataTypes.STRING,
+    },
+    estadoCivil_id: {
+      type: DataTypes.STRING,
+    },
+    rolCasa_id: {
+      type: DataTypes.STRING,
+    },
+    vacuna_id: {
+      type: DataTypes.STRING,
+    },
+    dosis_id: {
       type: DataTypes.STRING,
     },
   },

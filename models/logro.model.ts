@@ -8,7 +8,7 @@ const Logro = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    observaciones: {
+    comentarios: {
       type: DataTypes.TEXT,
     },
     informe_id: {
