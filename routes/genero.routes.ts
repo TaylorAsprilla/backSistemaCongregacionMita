@@ -15,7 +15,7 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/:id", validarJWT, getGenero);
+router.get("/", validarJWT, getGenero);
 router.post(
   "/",
   [

@@ -37,9 +37,7 @@ router.post(
     )
       .not()
       .isEmpty(),
-    check("informe_id", "Debe selecionar el informe de l informe contable")
-      .not()
-      .isEmpty(),
+    check("informe_id", "Debe selecionar el id del informe").not().isEmpty(),
     validarCampos,
     validarJWT,
   ],

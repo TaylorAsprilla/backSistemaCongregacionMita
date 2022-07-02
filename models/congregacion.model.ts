@@ -1,25 +1,26 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const Logro = db.define(
-  "Logro",
+const Congregacion = db.define(
+  "Congregacion",
   {
-    logro: {
+    congregacion: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    comentarios: {
-      type: DataTypes.TEXT,
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 1,
     },
-    informe_id: {
+    pais_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
   },
   {
     freezeTableName: true,
-    tableName: "logro",
+    tableName: "congregacion",
   }
 );
 
-export default Logro;
+export default Congregacion;

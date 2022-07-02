@@ -19,6 +19,7 @@ router.get("/", validarJWT, getMetas);
 router.post(
   "/",
   [
+    check("meta", "Debe describir la meta").not().isEmpty(),
     check("fecha", "La fecha de la meta es obligatoria").not().isEmpty(),
     check("informe_id", "Debe selecionar el informe de la actividad")
       .not()

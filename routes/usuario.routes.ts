@@ -30,6 +30,15 @@ router.post(
     check("fechaNacimiento", "La fecha de nacimiento es obligatoria")
       .not()
       .isEmpty(),
+    check("numeroCelular", "El número de celular es obligatorio")
+      .not()
+      .isEmpty(),
+    check("genero_id", "El género es obligatorio").not().isEmpty(),
+    check("pais_id", "El pais de recidencia es obligatorio").not().isEmpty(),
+    check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
+    check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
+    check("vacuna_id", "La vacuna es obligatoria").not().isEmpty(),
+    check("dosis_id", "La dosis es obligatoria").not().isEmpty(),
     validarCampos,
   ],
   crearUsuario
@@ -50,6 +59,15 @@ router.put(
     check("fechaNacimiento", "La fecha de nacimiento es obligatoria")
       .not()
       .isEmpty(),
+    check("numeroCelular", "El número de celular es obligatorio")
+      .not()
+      .isEmpty(),
+    check("genero_id", "El género es obligatorio").not().isEmpty(),
+    check("pais_id", "El pais de recidencia es obligatorio").not().isEmpty(),
+    check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
+    check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
+    check("vacuna_id", "La vacuna es obligatoria").not().isEmpty(),
+    check("dosis_id", "La dosis es obligatoria").not().isEmpty(),
     validarCampos,
   ],
   actualizarUsuario
