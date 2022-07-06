@@ -20,6 +20,9 @@ router.post(
   "/",
   [
     check("asunto", "El asunto es obligatorio").not().isEmpty(),
+    check("responsable", "Debe relacionar el responsable del asunto pendiente")
+      .not()
+      .isEmpty(),
     check("informe_id", "Debe selecionar el informe de la actividad")
       .not()
       .isEmpty(),

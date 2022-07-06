@@ -8,6 +8,10 @@ const AsuntoPendiente = db.define(
       type: DataTypes.TEXT,
       allowNull: false,
     },
+    responsable: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
     observaciones: {
       type: DataTypes.TEXT,
     },
