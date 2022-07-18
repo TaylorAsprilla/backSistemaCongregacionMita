@@ -5,9 +5,12 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarCongregacion,
   actualizarCongregacion,
   crearCongregacion,
+  eliminarCongregacion,
   getCongregacion,
+  getCongregaciones,
 } from "../controllers/congregacion.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -15,7 +18,8 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getCongregacion);
+router.get("/", validarJWT, getCongregaciones);
+router.get("/:id", validarJWT, getCongregacion);
 router.post(
   "/",
   [
@@ -29,5 +33,7 @@ router.post(
   crearCongregacion
 );
 router.put("/:id", validarJWT, actualizarCongregacion);
+router.put("/activar/:id", validarJWT, activarCongregacion);
+router.delete("/:id", validarJWT, eliminarCongregacion);
 
 export default router;
