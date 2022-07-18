@@ -19,9 +19,7 @@ router.get("/", validarJWT, getCampo);
 router.post(
   "/",
   [
-    check("campo", "El nombre de la congregación es obligatorio ")
-      .not()
-      .isEmpty(),
+    check("campo", "El nombre del campo es obligatorio").not().isEmpty(),
     check(
       "congregacion_id",
       "La congregación al cual pertenece el campo es obligatorio"

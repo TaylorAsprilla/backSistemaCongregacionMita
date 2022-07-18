@@ -8,6 +8,10 @@ const Logro = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    responsable: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     comentarios: {
       type: DataTypes.TEXT,
     },
