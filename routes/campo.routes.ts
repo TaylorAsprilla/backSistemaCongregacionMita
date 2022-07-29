@@ -8,6 +8,7 @@ import {
   actualizarCampo,
   crearCampo,
   getCampo,
+  getCampos,
 } from "../controllers/campo.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -15,7 +16,8 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getCampo);
+router.get("/", validarJWT, getCampos);
+router.get("/:id", validarJWT, getCampo);
 router.post(
   "/",
   [

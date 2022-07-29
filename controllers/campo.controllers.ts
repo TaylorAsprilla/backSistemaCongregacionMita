@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import db from "../database/connection";
 import Campo from "../models/campo.model";
 
-export const getCampo = async (req: Request, res: Response) => {
+export const getCampos = async (req: Request, res: Response) => {
   try {
     const campo = await Campo.findAll({
       order: db.col("campo"),
@@ -16,6 +16,24 @@ export const getCampo = async (req: Request, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const getCampo = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const campo = await Campo.findByPk(id);
+
+  if (campo) {
+    res.json({
+      ok: true,
+      pais: campo,
+      id,
+    });
+  } else {
+    res.status(404).json({
+      msg: `No existe el campo con el id ${id}`,
     });
   }
 };
