@@ -5,9 +5,12 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarPais,
   actualizarPais,
   crearPais,
+  eliminarPais,
   getPais,
+  getPaises,
 } from "../controllers/pais.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -15,7 +18,8 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getPais);
+router.get("/", validarJWT, getPaises);
+router.get("/:id", validarJWT, getPais);
 router.post(
   "/",
   [
@@ -27,5 +31,7 @@ router.post(
   crearPais
 );
 router.put("/:id", validarJWT, actualizarPais);
+router.put("/activar/:id", validarJWT, activarPais);
+router.delete("/:id", validarJWT, eliminarPais);
 
 export default router;
