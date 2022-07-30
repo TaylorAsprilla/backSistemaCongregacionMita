@@ -1,6 +1,13 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
+import Actividad from "../models/actividad.model";
+import AsuntoPendiente from "../models/asuntoPendiente.model";
+import Contabilidad from "../models/contabilidad.model";
 import Informe from "../models/informe.model";
+import Logro from "../models/logro.model";
+import Meta from "../models/meta.model";
+import SituacionVisita from "../models/situacionVisita.model";
+import Visita from "../models/visita.model";
 
 export const getInformes = async (req: Request, res: Response) => {
   try {
@@ -24,17 +31,76 @@ export const getInformes = async (req: Request, res: Response) => {
 export const getInforme = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const informe = await Informe.findByPk(id);
+  try {
+    const informe = await Informe.findByPk(id);
 
-  if (informe) {
-    res.json({
-      usuario: informe,
-      msg: "getInforme",
-      id,
-    });
-  } else {
-    res.status(404).json({
-      msg: `No existe el informe con el id ${id}`,
+    if (!!informe) {
+      const actividades = await Actividad.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const visitas = await Visita.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const situacionVisita = await SituacionVisita.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const aspectoContable = await Contabilidad.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const logros = await Logro.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const asuntoPendiente = await AsuntoPendiente.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const metas = await Meta.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      res.json({
+        ok: true,
+        msg: `Informe identificado con el ID: ${id}`,
+        informe: {
+          informacioninforme: informe,
+          actividades,
+          visitas,
+          situacionVisita,
+          aspectoContable,
+          logros,
+          asuntoPendiente,
+          metas,
+        },
+      });
+    } else {
+      res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
     });
   }
 };
