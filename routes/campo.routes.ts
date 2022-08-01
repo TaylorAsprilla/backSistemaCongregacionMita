@@ -5,8 +5,10 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarCampo,
   actualizarCampo,
   crearCampo,
+  eliminarCampo,
   getCampo,
   getCampos,
 } from "../controllers/campo.controllers";
@@ -34,5 +36,7 @@ router.post(
   crearCampo
 );
 router.put("/:id", validarJWT, actualizarCampo);
+router.put("/activar/:id", validarJWT, activarCampo);
+router.delete("/:id", validarJWT, eliminarCampo);
 
 export default router;
