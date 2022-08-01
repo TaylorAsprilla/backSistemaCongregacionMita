@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarUsuario,
   actualizarUsuario,
   crearUsuario,
   eliminarUsuario,
@@ -73,5 +74,6 @@ router.put(
   actualizarUsuario
 );
 router.delete("/:id", validarJWT, eliminarUsuario);
+router.put("/activar/:id", validarJWT, activarUsuario);
 
 export default router;

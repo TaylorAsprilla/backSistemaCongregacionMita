@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import db from "../database/connection";
+import { CustomRequest } from "../middlewares/validar-jwt";
 
 export const getUsuarios = async (req: Request, res: Response) => {
   const desde = Number(req.query.desde) || 0;
@@ -271,6 +272,48 @@ export const eliminarUsuario = async (req: Request, res: Response) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({
+      msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const activarUsuario = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const usuario = await Usuario.findByPk(id);
+    if (!!usuario) {
+      const primerNombre = await usuario.get().primerNombre;
+      const segundoNombre = await usuario.get().segundoNombre;
+      const primerApellido = await usuario.get().primerApellido;
+
+      if (usuario.get().estado === false) {
+        await usuario.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El usuario ${primerNombre} ${segundoNombre} ${primerApellido} se activó`,
+          usuario,
+          id: req.id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El usuario ${primerNombre} ${segundoNombre} ${primerApellido} esta activo`,
+          usuario,
+        });
+      }
+    }
+
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un usuario con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
       msg: "Hable con el administrador",
     });
   }

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
+import { CustomRequest } from "../middlewares/validar-jwt";
 import Campo from "../models/campo.model";
 
 export const getCampos = async (req: Request, res: Response) => {
@@ -28,7 +29,7 @@ export const getCampo = async (req: Request, res: Response) => {
   if (campo) {
     res.json({
       ok: true,
-      pais: campo,
+      campo,
       id,
     });
   } else {
@@ -92,6 +93,77 @@ export const actualizarCampo = async (req: Request, res: Response) => {
       ok: false,
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const eliminarCampo = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const campo = await Campo.findByPk(id);
+    if (campo) {
+      const nombre = await campo.get().campo;
+
+      await campo.update({ estado: false });
+
+      res.json({
+        ok: true,
+        msg: `El campo ${nombre} se eliminó`,
+        id: req.id,
+      });
+    }
+
+    if (!campo) {
+      return res.status(404).json({
+        msg: `No existe un campo con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const activarCampo = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const campo = await Campo.findByPk(id);
+    if (!!campo) {
+      const nombre = await campo.get().campo;
+
+      if (campo.get().estado === false) {
+        await campo.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El campo ${nombre} se activó`,
+          campo,
+          id: req.id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El campo ${nombre} esta activo`,
+          campo,
+        });
+      }
+    }
+
+    if (!campo) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un campo con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
     });
   }
 };
