@@ -28,6 +28,10 @@ const Contabilidad = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    idSeccion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,

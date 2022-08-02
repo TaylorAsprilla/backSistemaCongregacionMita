@@ -24,8 +24,8 @@ import estadoCivilRoutes from "../routes/estadoCivil.routes";
 import rolCasaRoutes from "../routes/rolCasa.routes";
 import vacunaRoutes from "../routes/vacuna.routes";
 import dosisRoutes from "../routes/dosis.routes";
-import situacionVisitaRoutes2 from "../routes/situacionVisita.routes";
 import situacionVisitaRoutes from "../routes/situacionVisita.routes";
+import seccionInformeRoutes from "../routes/seccionInforme.routes";
 import cors from "cors";
 import db from "../database/connection";
 
@@ -59,6 +59,7 @@ class Server {
     vacuna: "/api/vacuna",
     dosis: "/api/dosis",
     situacionVisita: "/api/situacionvisita",
+    seccionInforme: "/api/seccioninforme",
   };
 
   constructor() {
@@ -119,6 +120,7 @@ class Server {
     this.app.use(this.apiPaths.vacuna, vacunaRoutes);
     this.app.use(this.apiPaths.dosis, dosisRoutes);
     this.app.use(this.apiPaths.situacionVisita, situacionVisitaRoutes);
+    this.app.use(this.apiPaths.seccionInforme, seccionInformeRoutes);
   }
 
   listen() {
