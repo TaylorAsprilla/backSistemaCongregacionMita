@@ -22,7 +22,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
     ok: true,
     usuarios: usuarios,
     totalUsuarios: totalUsuarios,
-    msg: "Usuarios Registrados cpn paginación",
+    msg: "Usuarios Registrados con paginación",
   });
 };
 
@@ -47,6 +47,7 @@ export const getUsuario = async (req: Request, res: Response) => {
 
   if (usuario) {
     res.json({
+      ok: true,
       usuario,
       msg: "getUsuarios",
       id,
