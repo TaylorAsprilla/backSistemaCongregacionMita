@@ -22,6 +22,7 @@ router.post(
     check("nombre", "El nombre de la actividad es obligatorio ")
       .not()
       .isEmpty(),
+    check("idSeccion", "El id de la sección es obligatorio").not().isEmpty(),
     validarCampos,
     validarJWT,
   ],

@@ -12,6 +12,10 @@ const TipoActividad = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
     },
+    idSeccion: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,
