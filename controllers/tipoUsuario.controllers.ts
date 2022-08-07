@@ -14,7 +14,6 @@ export const getTipoUsuario = async (req: Request, res: Response) => {
       tipoUsuario,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -33,7 +32,6 @@ export const getUnTipoUsuario = async (req: Request, res: Response) => {
       tipoUsuario,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -65,7 +63,6 @@ export const crearTipoUsuario = async (req: Request, res: Response) => {
       tipoUsuarioCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -117,7 +114,6 @@ export const actualizarTipoUsuario = async (req: Request, res: Response) => {
       tipoUsuarioActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -151,9 +147,9 @@ export const eliminarTipoUsuario = async (
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };

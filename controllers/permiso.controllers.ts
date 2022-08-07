@@ -14,7 +14,6 @@ export const getPermiso = async (req: Request, res: Response) => {
       permiso,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -33,7 +32,6 @@ export const getUnPermiso = async (req: Request, res: Response) => {
       permiso,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -65,7 +63,6 @@ export const crearPermiso = async (req: Request, res: Response) => {
       permisoCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -117,7 +114,6 @@ export const actualizarPermiso = async (req: Request, res: Response) => {
       permisoActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -144,13 +140,13 @@ export const eliminarPermiso = async (req: CustomRequest, res: Response) => {
 
     if (!permiso) {
       return res.status(404).json({
-        msg: "No existe un permiso con el id " + id,
+        msg: `No existe un permiso con el id ${id}`,
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };

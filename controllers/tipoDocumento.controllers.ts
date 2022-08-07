@@ -14,7 +14,6 @@ export const getTipoDocumento = async (req: Request, res: Response) => {
       tipoDocumento,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -33,7 +32,6 @@ export const getUnTipoDocumento = async (req: Request, res: Response) => {
       tipoDocumento,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -65,7 +63,6 @@ export const crearTipoDocumento = async (req: Request, res: Response) => {
       tipoDocumentoCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -117,7 +114,6 @@ export const actualizarTipoDocumento = async (req: Request, res: Response) => {
       tipoDocumentoActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -151,9 +147,9 @@ export const eliminarTipoDocumento = async (
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };

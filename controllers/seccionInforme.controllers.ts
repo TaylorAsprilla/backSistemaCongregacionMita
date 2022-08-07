@@ -11,6 +11,24 @@ export const getSeccionesInformes = async (req: Request, res: Response) => {
   });
 };
 
+export const getSeccionInforme = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const seccionInforme = await SeccionInforme.findByPk(id);
+
+    res.json({
+      ok: true,
+      seccionInforme,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const crearSeccionInforme = async (req: Request, res: Response) => {
   const { body } = req;
   const { seccion } = req.body;

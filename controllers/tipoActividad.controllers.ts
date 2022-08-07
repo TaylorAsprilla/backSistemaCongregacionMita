@@ -4,7 +4,6 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 import TipoActividad from "../models/tipoActividad.model";
 
 export const getTipoActividad = async (req: Request, res: Response) => {
-  console.log("llegó");
   try {
     const tipoActividad = await TipoActividad.findAll({
       order: db.col("nombre"),
@@ -15,7 +14,6 @@ export const getTipoActividad = async (req: Request, res: Response) => {
       tipoActividad: tipoActividad,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -47,7 +45,6 @@ export const crearTipoActividad = async (req: Request, res: Response) => {
       tipoActividadCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -99,7 +96,6 @@ export const actualizarTipoActividad = async (req: Request, res: Response) => {
       tipoDocumentoActualizado: tipoActividadActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -133,9 +129,9 @@ export const eliminarTipoActividad = async (
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };
