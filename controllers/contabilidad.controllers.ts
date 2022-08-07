@@ -28,7 +28,6 @@ export const getUnaContabilidad = async (req: Request, res: Response) => {
       contabilidad,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,

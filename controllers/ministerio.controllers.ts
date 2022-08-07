@@ -14,7 +14,6 @@ export const getMinisterio = async (req: Request, res: Response) => {
       ministerio,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -33,7 +32,6 @@ export const getUnMinisterio = async (req: Request, res: Response) => {
       ministerio,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -65,7 +63,6 @@ export const crearMinisterio = async (req: Request, res: Response) => {
       ministerioCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -117,7 +114,6 @@ export const actualizarMinisterio = async (req: Request, res: Response) => {
       ministerioActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -148,9 +144,9 @@ export const eliminarMinisterio = async (req: CustomRequest, res: Response) => {
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };

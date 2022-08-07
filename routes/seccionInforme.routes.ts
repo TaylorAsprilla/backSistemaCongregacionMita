@@ -10,6 +10,7 @@ import {
   crearSeccionInforme,
   eliminarSeccionInforme,
   getSeccionesInformes,
+  getSeccionInforme,
 } from "../controllers/seccionInforme.controllers";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
@@ -17,6 +18,7 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getSeccionesInformes);
+router.get("/:id", validarJWT, getSeccionInforme);
 router.post(
   "/",
   [

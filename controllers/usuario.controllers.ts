@@ -139,7 +139,6 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
     res.json({ ok: true, msg: "Usuario creado ", token, usuario });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -239,7 +238,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     const usuarioActualizado = await usuario.update(campos, { new: true });
     res.json({ ok: true, msg: "Usuario Actualizado", usuarioActualizado });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
@@ -271,7 +269,6 @@ export const eliminarUsuario = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
     });

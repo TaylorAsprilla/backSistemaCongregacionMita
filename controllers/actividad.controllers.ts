@@ -13,7 +13,6 @@ export const getActividad = async (req: Request, res: Response) => {
       atividad,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -32,7 +31,6 @@ export const getUnaActividad = async (req: Request, res: Response) => {
       actividad,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -57,7 +55,6 @@ export const crearActividad = async (req: Request, res: Response) => {
       actividad,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,

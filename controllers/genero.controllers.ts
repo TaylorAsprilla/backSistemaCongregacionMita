@@ -14,7 +14,6 @@ export const getGenero = async (req: Request, res: Response) => {
       genero,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -46,7 +45,6 @@ export const crearGenero = async (req: Request, res: Response) => {
       generoCreado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -96,7 +94,6 @@ export const actualizarGenero = async (req: Request, res: Response) => {
       generoActualizado,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -127,9 +124,9 @@ export const eliminarGenero = async (req: CustomRequest, res: Response) => {
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };
