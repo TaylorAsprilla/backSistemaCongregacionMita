@@ -23,7 +23,7 @@ router.post(
     check("primerApellido", "El primer apellido es obligatorio")
       .not()
       .isEmpty(),
-    check("nacionalidad", "La nacionalidad es obligatoria").not().isEmpty(),
+    check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
     check("email", "El correo electrónico es obligatorio").isEmail(),
     check("numeroCelular", "El número de celular es obligatorio")
       .not()

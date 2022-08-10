@@ -4,6 +4,7 @@ import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 
 export const getUsuarios = async (req: Request, res: Response) => {
   const desde = Number(req.query.desde) || 0;
@@ -11,7 +12,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
   const [usuarios, totalUsuarios] = await Promise.all([
     Usuario.findAll({
       offset: desde,
-      limit: 5,
+      limit: 30,
       order: db.col("primerNombre"),
     }),
 
@@ -45,10 +46,17 @@ export const getUsuario = async (req: Request, res: Response) => {
 
   const usuario = await Usuario.findByPk(id);
 
+  const idUsuario = await usuario?.getDataValue("id");
+
+  const usuarioCongregacion = await UsuarioCongregacion.findOne({
+    where: { usuario_id: idUsuario },
+  });
+
   if (usuario) {
     res.json({
       ok: true,
       usuario,
+      usuarioCongregacion,
       msg: "getUsuarios",
       id,
     });
@@ -61,7 +69,16 @@ export const getUsuario = async (req: Request, res: Response) => {
 
 export const crearUsuario = async (req: Request, res: Response) => {
   const { body } = req;
-  const { email, password, numeroDocumento, numeroCelular, login } = req.body;
+  const {
+    email,
+    password,
+    numeroDocumento,
+    numeroCelular,
+    login,
+    pais_id,
+    congregacion_id,
+    campo_id,
+  } = req.body;
 
   // =======================================================================
   //                          Validaciones
@@ -107,18 +124,19 @@ export const crearUsuario = async (req: Request, res: Response) => {
         msg: `Ya existe un usuario con el número de celular ${numeroCelular}`,
       });
     }
-
-    const existeLogin = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
-
-    if (existeLogin) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el login ${login}`,
+    if (!!login) {
+      const existeLogin = await Usuario.findOne({
+        where: {
+          login: login,
+        },
       });
+
+      if (existeLogin) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el login ${login}`,
+        });
+      }
     }
 
     // =======================================================================
@@ -134,10 +152,25 @@ export const crearUsuario = async (req: Request, res: Response) => {
     const usuario = Usuario.build(body);
     await usuario.save();
 
+    const idUsuario = await usuario.getDataValue("id");
+
+    const usuarioCongregacion = await UsuarioCongregacion.create({
+      usuario_id: idUsuario,
+      pais_id,
+      congregacion_id,
+      campo_id,
+    });
+
     // Generar Token - JWT
     const token = await generarJWT(usuario.getDataValue("id"));
 
-    res.json({ ok: true, msg: "Usuario creado ", token, usuario });
+    res.json({
+      ok: true,
+      msg: "Usuario creado ",
+      token,
+      usuario,
+      usuarioCongregacion,
+    });
   } catch (error) {
     res.status(500).json({
       msg: "Hable con el administrador",
