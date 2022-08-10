@@ -16,6 +16,10 @@ const Congregacion = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    idObreroEncargado: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,
