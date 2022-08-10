@@ -21,10 +21,7 @@ const Usuario = db.define(
     numeroDocumento: {
       type: DataTypes.STRING,
     },
-    nacionalidad: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+
     fechaNacimiento: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -37,13 +34,19 @@ const Usuario = db.define(
         isEmail: true,
       },
     },
+    indicativoCasa: {
+      type: DataTypes.INTEGER,
+    },
+    telefonoCasa: {
+      type: DataTypes.STRING,
+    },
+    indicativoCelular: {
+      type: DataTypes.INTEGER,
+    },
     numeroCelular: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-    },
-    telefonoCasa: {
-      type: DataTypes.STRING,
     },
     direccion: {
       type: DataTypes.STRING,
@@ -65,26 +68,27 @@ const Usuario = db.define(
       defaultValue: 1,
     },
     genero_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
     },
     tipoDocumento_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
-    pais_id: {
-      type: DataTypes.STRING,
-    },
+
     estadoCivil_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
     },
     rolCasa_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
     },
     vacuna_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
     },
     dosis_id: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
+    },
+    nacionalidad_id: {
+      type: DataTypes.INTEGER,
     },
   },
   {
