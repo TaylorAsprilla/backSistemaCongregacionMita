@@ -34,14 +34,8 @@ const Usuario = db.define(
         isEmail: true,
       },
     },
-    indicativoCasa: {
-      type: DataTypes.INTEGER,
-    },
     telefonoCasa: {
       type: DataTypes.STRING,
-    },
-    indicativoCelular: {
-      type: DataTypes.INTEGER,
     },
     numeroCelular: {
       type: DataTypes.STRING,
