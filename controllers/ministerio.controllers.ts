@@ -59,7 +59,7 @@ export const crearMinisterio = async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      msg: `El ministerio ${ministerioNuevo} creado satisfactoriamente`,
+      msg: `El ministerio ${ministerio} fue creado satisfactoriamente`,
       ministerioCreado,
     });
   } catch (error) {
@@ -74,7 +74,6 @@ export const actualizarMinisterio = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   const { body } = req;
-  const { ministerio, ...campos } = body;
 
   try {
     const ministerio = await Ministerio.findByPk(id);
@@ -96,15 +95,13 @@ export const actualizarMinisterio = async (req: Request, res: Response) => {
       if (existeNombre) {
         return res.status(400).json({
           ok: false,
-          msg: "Ya existe un ministerio con el nombre " + ministerio,
+          msg: `Ya existe un ministerio con el nombre ${body.ministerio}`,
         });
       }
     }
 
-    campos.ministerio = ministerio;
-
     // Se actualiza el campo
-    const ministerioActualizado = await ministerio.update(campos, {
+    const ministerioActualizado = await ministerio.update(body, {
       new: true,
     });
 
@@ -147,6 +144,46 @@ export const eliminarMinisterio = async (req: CustomRequest, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const activarMinisterio = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const ministerio = await Ministerio.findByPk(id);
+    if (!!ministerio) {
+      const nombreMinisterio = await ministerio.get().ministerio;
+
+      if (ministerio.get().estado === false) {
+        await ministerio.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El ministerio ${nombreMinisterio} se activó`,
+          ministerio,
+          id: req.id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El ministerio ${nombreMinisterio} esta activo`,
+          ministerio,
+        });
+      }
+    }
+
+    if (!ministerio) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un ministerio con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
     });
   }
 };
