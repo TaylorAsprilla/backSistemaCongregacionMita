@@ -28,14 +28,16 @@ export const getUsuarios = async (req: Request, res: Response) => {
 };
 
 export const getTodosLosUsuarios = async (req: Request, res: Response) => {
-  const [usuarios, totalUsuarios] = await Promise.all([
+  const [usuarios, totalUsuarios, usuarioCongregacion] = await Promise.all([
     Usuario.findAll(),
     Usuario.count(),
+    UsuarioCongregacion.findAll(),
   ]);
 
   res.json({
     ok: true,
     usuarios: usuarios,
+    usuarioCongregacion,
     totalUsuarios: totalUsuarios,
     msg: "Todos los usuarios Registrados",
   });

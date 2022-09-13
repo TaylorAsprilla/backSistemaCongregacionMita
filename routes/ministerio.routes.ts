@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarMinisterio,
   actualizarMinisterio,
   crearMinisterio,
   eliminarMinisterio,
@@ -39,5 +40,6 @@ router.put(
   actualizarMinisterio
 );
 router.delete("/:id", validarJWT, eliminarMinisterio);
+router.put("/activar/:id", validarJWT, activarMinisterio);
 
 export default router;
