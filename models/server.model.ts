@@ -31,6 +31,8 @@ import direccionRoutes from "../routes/direccion.routes";
 import tipoDireccionRoutes from "../routes/tipoDireccion.routes";
 import fuenteIngresoRoutes from "../routes/fuenteIngreso.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
+import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
+import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
 import cors from "cors";
 import db from "../database/connection";
 
@@ -70,6 +72,8 @@ class Server {
     tipoDireccion: "/api/tipodireccion",
     fuenteIngreso: "/api/fuenteIngreso",
     gradoAcademico: "/api/gradoAcademico",
+    tipoEmpleo: "/api/tipoempleo",
+    tipoMiembro: "/api/tipomiembro",
   };
 
   constructor() {
@@ -136,6 +140,8 @@ class Server {
     this.app.use(this.apiPaths.tipoDireccion, tipoDireccionRoutes);
     this.app.use(this.apiPaths.fuenteIngreso, fuenteIngresoRoutes);
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
+    this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
+    this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
   }
 
   listen() {

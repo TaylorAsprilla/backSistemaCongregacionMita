@@ -15,7 +15,7 @@ const TipoMiembro = db.define(
   },
   {
     freezeTableName: true,
-    tableName: "tipoStatus",
+    tableName: "tipoMiembro",
   }
 );
 
