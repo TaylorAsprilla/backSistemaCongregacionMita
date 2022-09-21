@@ -1,11 +1,11 @@
 import { Sequelize } from "sequelize";
 
 const db = new Sequelize(
-  "kromatest_informesCMI",
-  "kromatest_tasprilla",
+  "u434635530_informesCMI",
+  "u434635530_tasprilla",
   "0GgQuZy^F9v",
   {
-    host: "162.213.210.29",
+    host: "212.1.211.203",
     dialect: "mysql",
     // logging: false,
   }
