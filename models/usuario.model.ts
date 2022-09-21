@@ -18,10 +18,12 @@ const Usuario = db.define(
     segundoApellido: {
       type: DataTypes.STRING,
     },
+    apodo: {
+      type: DataTypes.STRING,
+    },
     numeroDocumento: {
       type: DataTypes.STRING,
     },
-
     fechaNacimiento: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -42,10 +44,14 @@ const Usuario = db.define(
       allowNull: false,
       unique: true,
     },
-    direccion: {
+    ingresoMensual: {
       type: DataTypes.STRING,
     },
-    zipCode: {
+    esJoven: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 0,
+    },
+    especializacionEmpleo: {
       type: DataTypes.STRING,
     },
     login: {
@@ -68,12 +74,13 @@ const Usuario = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-
     estadoCivil_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
     },
     rolCasa_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
     },
     vacuna_id: {
       type: DataTypes.INTEGER,
@@ -83,6 +90,15 @@ const Usuario = db.define(
     },
     nacionalidad_id: {
       type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    tipoEmpleo_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    tipoMiembro_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
     },
   },
   {

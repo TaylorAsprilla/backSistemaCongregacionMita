@@ -36,9 +36,9 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
 
   res.json({
     ok: true,
-    usuarios: usuarios,
+    usuarios,
     usuarioCongregacion,
-    totalUsuarios: totalUsuarios,
+    totalUsuarios,
     msg: "Todos los usuarios Registrados",
   });
 };
