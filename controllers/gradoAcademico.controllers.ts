@@ -6,7 +6,7 @@ import GradoAcademico from "../models/gradoAcademico.model";
 export const getGradoAcademico = async (req: Request, res: Response) => {
   try {
     const gradoAcademico = await GradoAcademico.findAll({
-      order: db.col("gradoAcademico"),
+      order: db.col("id"),
     });
 
     res.json({
@@ -85,12 +85,12 @@ export const actualizarGradoAcademico = async (req: Request, res: Response) => {
     }
 
     const getNombre = await gradoAcademico.get().gradoAcademico;
-
+    console.log(getNombre, body.gradoAcademico);
     // Actualizaciones
     if (getNombre !== body.gradoAcademico) {
       const existeNombre = await GradoAcademico.findOne({
         where: {
-          gradoAcademico,
+          gradoAcademico: body.gradoAcademico,
         },
       });
       if (existeNombre) {
@@ -101,7 +101,7 @@ export const actualizarGradoAcademico = async (req: Request, res: Response) => {
       }
     }
 
-    // Se actualiza la fuente de ingreso
+    // Se actualiza el Grado Académico
     const gradoAcademicoActualizado = await gradoAcademico.update(body, {
       new: true,
     });
