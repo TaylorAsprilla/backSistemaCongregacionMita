@@ -6,7 +6,7 @@ import GradoAcademico from "../models/gradoAcademico.model";
 export const getGradoAcademico = async (req: Request, res: Response) => {
   try {
     const gradoAcademico = await GradoAcademico.findAll({
-      order: db.col("gradoAcademico"),
+      order: db.col("id"),
     });
 
     res.json({
