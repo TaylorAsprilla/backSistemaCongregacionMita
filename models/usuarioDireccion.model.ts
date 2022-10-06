@@ -7,14 +7,17 @@ const UsuarioDireccion = db.define(
     usuario_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
     direccion_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
   },
   {
     freezeTableName: true,
+    timestamps: false,
     tableName: "usuarioDireccion",
   }
 );

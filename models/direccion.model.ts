@@ -8,6 +8,10 @@ const Direccion = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    pais: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
     ciudad: {
       type: DataTypes.STRING,
       allowNull: false,

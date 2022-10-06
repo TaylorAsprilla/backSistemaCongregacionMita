@@ -7,14 +7,17 @@ const UsuarioPermiso = db.define(
     usuario_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
     permiso_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
   },
   {
     freezeTableName: true,
+    timestamps: false,
     tableName: "usuarioPermiso",
   }
 );

@@ -7,14 +7,17 @@ const UsuarioMinisterio = db.define(
     usuario_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
     ministerio_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      primaryKey: true,
     },
   },
   {
     freezeTableName: true,
+    timestamps: false,
     tableName: "usuarioMinisterio",
   }
 );

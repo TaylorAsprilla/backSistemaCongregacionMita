@@ -5,17 +5,28 @@ import generarJWT from "../helpers/tokenJwt";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import Direccion from "../models/direccion.model";
+import UsuarioDireccion from "../models/usuarioDireccion.model";
+import FuenteIngreso from "../models/fuenteIngreso.model";
+import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
+import UsuarioMinisterio from "../models/usuarioMinisterio.model";
+import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
+require("./../database/associations");
 
 export const getUsuarios = async (req: Request, res: Response) => {
   const desde = Number(req.query.desde) || 0;
 
   const [usuarios, totalUsuarios] = await Promise.all([
     Usuario.findAll({
+      include: [
+        {
+          all: true,
+        },
+      ],
       offset: desde,
       limit: 30,
       order: db.col("primerNombre"),
     }),
-
     Usuario.count(),
   ]);
 
@@ -28,16 +39,20 @@ export const getUsuarios = async (req: Request, res: Response) => {
 };
 
 export const getTodosLosUsuarios = async (req: Request, res: Response) => {
-  const [usuarios, totalUsuarios, usuarioCongregacion] = await Promise.all([
-    Usuario.findAll(),
+  const [usuarios, totalUsuarios] = await Promise.all([
+    Usuario.findAll({
+      include: [
+        {
+          all: true,
+        },
+      ],
+    }),
     Usuario.count(),
-    UsuarioCongregacion.findAll(),
   ]);
 
   res.json({
     ok: true,
     usuarios,
-    usuarioCongregacion,
     totalUsuarios,
     msg: "Todos los usuarios Registrados",
   });
@@ -46,19 +61,19 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
 export const getUsuario = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const usuario = await Usuario.findByPk(id);
-
-  const idUsuario = await usuario?.getDataValue("id");
-
-  const usuarioCongregacion = await UsuarioCongregacion.findOne({
-    where: { usuario_id: idUsuario },
+  const usuario = await Usuario.findByPk(id, {
+    include: [
+      {
+        all: true,
+        required: false,
+      },
+    ],
   });
 
   if (usuario) {
     res.json({
       ok: true,
       usuario,
-      usuarioCongregacion,
       msg: "getUsuarios",
       id,
     });
@@ -72,14 +87,16 @@ export const getUsuario = async (req: Request, res: Response) => {
 export const crearUsuario = async (req: Request, res: Response) => {
   const { body } = req;
   const {
+    direcciones,
+    fuentesDeIngreso,
+    ministerios,
+    voluntariados,
+    congregacion,
     email,
     password,
     numeroDocumento,
     numeroCelular,
     login,
-    pais_id,
-    congregacion_id,
-    campo_id,
   } = req.body;
 
   // =======================================================================
@@ -158,20 +175,76 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
     const usuarioCongregacion = await UsuarioCongregacion.create({
       usuario_id: idUsuario,
-      pais_id,
-      congregacion_id,
-      campo_id,
+      pais_id: congregacion.pais_id,
+      congregacion_id: congregacion.congregacion_id,
+      campo_id: congregacion.campo_id,
     });
+
+    const usuarioDireccion = await direcciones.forEach(
+      async (itemDireccion: {
+        direccion: string;
+        pais: string;
+        ciudad: string;
+        departamento: string;
+        codigoPostal: string;
+        tipoDireccion_id: number;
+      }) => {
+        const guardarDireccion = await Direccion.create({
+          direccion: itemDireccion.direccion,
+          pais: itemDireccion.pais,
+          ciudad: itemDireccion.ciudad,
+          departamento: itemDireccion.departamento,
+          codigoPostal: itemDireccion.codigoPostal,
+          tipoDireccion_id: itemDireccion.tipoDireccion_id,
+        });
+
+        const usuarioDireccion = await UsuarioDireccion.create({
+          usuario_id: idUsuario,
+          direccion_id: guardarDireccion.getDataValue("id"),
+        });
+      }
+    );
+
+    const usuarioFuenteIngresos = await fuentesDeIngreso.forEach(
+      async (fuenteIngreso: any) => {
+        const fuenteDeIngresos = await UsuarioFuenteIngreso.create({
+          usuario_id: idUsuario,
+          fuenteIngreso_id: fuenteIngreso,
+        });
+      }
+    );
+
+    const guardarMinisterios = await ministerios.forEach(
+      async (ministerio: any) => {
+        await UsuarioMinisterio.create({
+          usuario_id: idUsuario,
+          ministerio_id: ministerio,
+        });
+      }
+    );
+
+    const guardarVoluntariados = await voluntariados.forEach(
+      async (voluntariado: any) => {
+        await UsuarioVoluntariado.create({
+          usuario_id: idUsuario,
+          voluntariado_id: voluntariado,
+        });
+      }
+    );
 
     // Generar Token - JWT
     const token = await generarJWT(usuario.getDataValue("id"));
 
+    const usuarioNuevo = {
+      usuario,
+      usuarioCongregacion,
+      direcciones,
+    };
     res.json({
       ok: true,
       msg: "Usuario creado ",
       token,
-      usuario,
-      usuarioCongregacion,
+      usuarioNuevo,
     });
   } catch (error) {
     res.status(500).json({
@@ -349,5 +422,75 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
       error,
       msg: "Hable con el administrador",
     });
+  }
+};
+
+export const buscarCorreoElectronico = async (req: Request, res: Response) => {
+  const email = req.query.email;
+  if (!email) {
+    res.status(500).json({
+      ok: false,
+      msg: `No existe parametro en la petición`,
+    });
+  } else {
+    try {
+      const correoElectronico = await Usuario.findOne({
+        attributes: ["email"],
+        where: {
+          email: email,
+        },
+      });
+      if (!!correoElectronico) {
+        res.json({
+          ok: false,
+          msg: `Ya se encuentra registrado el correo electrónico ${email}`,
+        });
+      } else {
+        res.json({
+          ok: true,
+          msg: `Correo electrónico válido`,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        error,
+        msg: "Hable con el administrador",
+      });
+    }
+  }
+};
+
+export const buscarCelular = async (req: Request, res: Response) => {
+  const numeroCelular = req.query.numeroCelular;
+  if (!numeroCelular) {
+    res.status(500).json({
+      ok: false,
+      msg: `No existe parametro en la petición`,
+    });
+  } else {
+    try {
+      const numeroCelularEncontrado = await Usuario.findOne({
+        attributes: ["numeroCelular"],
+        where: {
+          numeroCelular: `+${numeroCelular}`,
+        },
+      });
+      if (!!numeroCelularEncontrado) {
+        res.json({
+          ok: false,
+          msg: `Ya se encuentra registrado el número de celular ${numeroCelular}`,
+        });
+      } else {
+        res.json({
+          ok: true,
+          msg: `Número de celular válido`,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        error,
+        msg: "Hable con el administrador",
+      });
+    }
   }
 };

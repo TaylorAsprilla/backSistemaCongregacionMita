@@ -35,8 +35,11 @@ import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
 import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
 import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
 import voluntariadoRoutes from "../routes/voluntariado.routes";
+import buscarCorreoRoutes from "../routes/buscarCorreo.routes";
+import buscarCelular from "../routes/buscarCelular.routes";
 import cors from "cors";
 import db from "../database/connection";
+require("../database/associations");
 
 class Server {
   private app: Application;
@@ -78,6 +81,8 @@ class Server {
     tipoMiembro: "/api/tipomiembro",
     accesoMultimedia: "/api/accesomultimedia",
     voluntariado: "/api/voluntariado",
+    buscarCorreo: "/api/buscarcorreo",
+    buscarcelular: "/api/buscarcelular",
   };
 
   constructor() {
@@ -148,6 +153,8 @@ class Server {
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
     this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
     this.app.use(this.apiPaths.voluntariado, voluntariadoRoutes);
+    this.app.use(this.apiPaths.buscarCorreo, buscarCorreoRoutes);
+    this.app.use(this.apiPaths.buscarcelular, buscarCelular);
   }
 
   listen() {
