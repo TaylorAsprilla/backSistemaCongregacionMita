@@ -1,6 +1,8 @@
 require("dotenv").config();
 
 const config = {
+  sinCongregacion: process.env.SIN_CONGREGACION || 9,
+  sinCampo: process.env.SIN_CAMPO || 14,
   development: {
     database: {
       username: process.env.DB_USERNAME || "u434635530_tasprilla",

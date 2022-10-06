@@ -1,6 +1,5 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
-import TipoDocumento from "./tipoDocumento.model";
 
 const Usuario = db.define(
   "Usuario",

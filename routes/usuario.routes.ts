@@ -41,10 +41,21 @@ router.post(
     check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
     check("vacuna_id", "La vacuna es obligatoria").not().isEmpty(),
     check("dosis_id", "La dosis es obligatoria").not().isEmpty(),
-    check("nacionalidad_id", "La dosis es obligatoria").not().isEmpty(),
-    check("gradoAcademico_id", "La dosis es obligatoria").not().isEmpty(),
-    check("tipoEmpleo_id", "La dosis es obligatoria").not().isEmpty(),
-    check("tipoMiembro_id", "La dosis es obligatoria").not().isEmpty(),
+    check("nacionalidad_id", "Selecciona una nacionalidad").not().isEmpty(),
+    check("gradoAcademico_id", "Selecione un grado académico").not().isEmpty(),
+    check("tipoEmpleo_id", "Selecciones a qué se dedica").not().isEmpty(),
+    check("tipoMiembro_id", "Seleccione un tipo de miembro (MN, MA, MNA, ME)")
+      .not()
+      .isEmpty(),
+    check(
+      "direcciones",
+      "Debe diligenciar una dirección de residencia y/o postal"
+    )
+      .not()
+      .isEmpty(),
+    check("congregacion", "Indique a que congregación pertenece")
+      .not()
+      .isEmpty(),
     validarCampos,
   ],
   crearUsuario

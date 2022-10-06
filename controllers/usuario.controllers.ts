@@ -7,10 +7,10 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import Direccion from "../models/direccion.model";
 import UsuarioDireccion from "../models/usuarioDireccion.model";
-import FuenteIngreso from "../models/fuenteIngreso.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
+import config from "../config/config";
 require("./../database/associations");
 
 export const getUsuarios = async (req: Request, res: Response) => {
@@ -176,8 +176,10 @@ export const crearUsuario = async (req: Request, res: Response) => {
     const usuarioCongregacion = await UsuarioCongregacion.create({
       usuario_id: idUsuario,
       pais_id: congregacion.pais_id,
-      congregacion_id: congregacion.congregacion_id,
-      campo_id: congregacion.campo_id,
+      congregacion_id: congregacion.congregacion_id
+        ? congregacion.congregacion_id
+        : config.sinCongregacion,
+      campo_id: congregacion.campo_id ? congregacion.campo_id : config.sinCampo,
     });
 
     const usuarioDireccion = await direcciones.forEach(
