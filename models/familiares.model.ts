@@ -1,35 +1,36 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const AccesoMultimedia = db.define(
-  "AccesosMultimedia",
+const Familiares = db.define(
+  "Familiares",
   {
-    login: {
+    nombre: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    password: {
+    telefono: {
+      type: DataTypes.STRING,
+    },
+    celular: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    solicitud_id: {
+    email: {
       type: DataTypes.STRING,
       allowNull: false,
+      validate: {
+        isEmail: true,
+      },
     },
-    tiempoAprobacion_id: {
+    pais: {
       type: DataTypes.STRING,
-      allowNull: false,
-    },
-    estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: 1,
       allowNull: false,
     },
   },
   {
     freezeTableName: true,
-    tableName: "accesosMultimedia",
+    tableName: "familiares",
   }
 );
 
-export default AccesoMultimedia;
+export default Familiares;

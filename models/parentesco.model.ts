@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const AccesoMultimedia = db.define(
-  "AccesosMultimedia",
+const Parentesco = db.define(
+  "Parentesco",
   {
     login: {
       type: DataTypes.STRING,
@@ -28,8 +28,8 @@ const AccesoMultimedia = db.define(
   },
   {
     freezeTableName: true,
-    tableName: "accesosMultimedia",
+    tableName: "parentesco",
   }
 );
 
-export default AccesoMultimedia;
+export default Parentesco;
