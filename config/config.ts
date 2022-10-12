@@ -11,6 +11,10 @@ const config = {
       host: process.env.DB_HOST || "212.1.211.203",
       dialect: process.env.DB_DIALECT || "mysql",
     },
+    email: {
+      email: process.env.EMAIL,
+      password: process.env.EMAIL_PASSWORD,
+    },
   },
   production: {
     database: {
@@ -19,6 +23,10 @@ const config = {
       database: process.env.DB_DATABASE,
       host: process.env.DB_HOST,
       dialect: process.env.DB_DIALECT,
+    },
+    email: {
+      email: process.env.EMAIL,
+      password: process.env.EMAIL_PASSWORD,
     },
   },
 };

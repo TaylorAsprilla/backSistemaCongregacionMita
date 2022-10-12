@@ -5,7 +5,7 @@ const Solicitud = db.define(
   "solicitudes",
   {
     nombre: {
-      type: DataTypes.DATE,
+      type: DataTypes.STRING,
       allowNull: false,
     },
     direccion: {
@@ -56,6 +56,10 @@ const Solicitud = db.define(
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
+    },
+    status: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 0,
     },
     razonSolicitud_id: {
       type: DataTypes.INTEGER,

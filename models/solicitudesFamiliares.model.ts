@@ -14,14 +14,11 @@ const SolicitudesFamiliares = db.define(
       allowNull: false,
       primaryKey: true,
     },
-    parentesco_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
   },
   {
     freezeTableName: true,
-    tableName: "tipoActividad",
+    timestamps: false,
+    tableName: "solicitudesFamiliares",
   }
 );
 

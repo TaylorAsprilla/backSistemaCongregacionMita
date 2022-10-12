@@ -26,6 +26,10 @@ const Familiares = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    parentesco_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,
