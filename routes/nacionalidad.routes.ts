@@ -11,7 +11,7 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getNacionalidades);
+router.get("/", getNacionalidades);
 router.get("/:id", validarJWT, getNacionalidad);
 
 export default router;

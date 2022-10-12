@@ -33,9 +33,15 @@ import fuenteIngresoRoutes from "../routes/fuenteIngreso.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
 import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
 import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
-import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
+import accesoMultimediaRoutes from "../routes/solicitudMultimedia.routes";
+import voluntariadoRoutes from "../routes/voluntariado.routes";
+import buscarCorreoRoutes from "../routes/buscarCorreo.routes";
+import buscarCelularRoutes from "../routes/buscarCelular.routes";
+import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
+import parentescoRoutes from "../routes/parentesco.routes";
 import cors from "cors";
 import db from "../database/connection";
+require("../database/associations");
 
 class Server {
   private app: Application;
@@ -75,7 +81,12 @@ class Server {
     gradoAcademico: "/api/gradoAcademico",
     tipoEmpleo: "/api/tipoempleo",
     tipoMiembro: "/api/tipomiembro",
-    accesoMultimedia: "/api/accesomultimedia",
+    solicitud: "/api/solicitud",
+    voluntariado: "/api/voluntariado",
+    buscarCorreo: "/api/buscarcorreo",
+    buscarCelular: "/api/buscarcelular",
+    razonSolicitud: "/api/razonsolicitud",
+    parentesco: "/api/parentesco",
   };
 
   constructor() {
@@ -144,7 +155,12 @@ class Server {
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
-    this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
+    this.app.use(this.apiPaths.solicitud, accesoMultimediaRoutes);
+    this.app.use(this.apiPaths.voluntariado, voluntariadoRoutes);
+    this.app.use(this.apiPaths.buscarCorreo, buscarCorreoRoutes);
+    this.app.use(this.apiPaths.buscarCelular, buscarCelularRoutes);
+    this.app.use(this.apiPaths.razonSolicitud, razonSolicitudRoutes);
+    this.app.use(this.apiPaths.parentesco, parentescoRoutes);
   }
 
   listen() {

@@ -85,7 +85,7 @@ export const actualizarGradoAcademico = async (req: Request, res: Response) => {
     }
 
     const getNombre = await gradoAcademico.get().gradoAcademico;
-    console.log(getNombre, body.gradoAcademico);
+
     // Actualizaciones
     if (getNombre !== body.gradoAcademico) {
       const existeNombre = await GradoAcademico.findOne({

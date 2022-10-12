@@ -1,15 +1,15 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const UsuarioPermiso = db.define(
-  "UsuarioPermiso",
+const SolicitudesFamiliares = db.define(
+  "SolicitudesFamiliares",
   {
-    usuario_id: {
+    solicitud_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
     },
-    permiso_id: {
+    familiares_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true,
@@ -18,8 +18,8 @@ const UsuarioPermiso = db.define(
   {
     freezeTableName: true,
     timestamps: false,
-    tableName: "usuarioPermiso",
+    tableName: "solicitudesFamiliares",
   }
 );
 
-export default UsuarioPermiso;
+export default SolicitudesFamiliares;

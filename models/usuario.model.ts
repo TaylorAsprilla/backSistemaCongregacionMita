@@ -72,7 +72,6 @@ const Usuario = db.define(
     },
     tipoDocumento_id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
     },
     estadoCivil_id: {
       type: DataTypes.INTEGER,
@@ -89,6 +88,10 @@ const Usuario = db.define(
       type: DataTypes.INTEGER,
     },
     nacionalidad_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    gradoAcademico_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },

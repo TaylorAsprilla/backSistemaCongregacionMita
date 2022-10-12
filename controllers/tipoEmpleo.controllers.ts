@@ -54,12 +54,12 @@ export const crearTipoEmpleo = async (req: Request, res: Response) => {
 
     const tipoEmpleoNuevo = await TipoEmpleo.build(req.body);
 
-    // Guardar Grado académico
+    // Guardar el Tipo de Empleo
     const tipoEmpleoCreado = await tipoEmpleoNuevo.save();
 
     res.json({
       ok: true,
-      msg: `El tipo de emplo ${nombreEmpleo} se ha creado satisfactoriamente`,
+      msg: `El tipo de empleo ${nombreEmpleo} se ha creado satisfactoriamente`,
       tipoEmpleoCreado,
     });
   } catch (error) {
@@ -96,7 +96,7 @@ export const actualizarTipoEmpleo = async (req: Request, res: Response) => {
       if (existeNombre) {
         return res.status(400).json({
           ok: false,
-          msg: `Ya existe el tipo de emplro ${getNombre}`,
+          msg: `Ya existe el tipo de empleo ${getNombre}`,
         });
       }
     }

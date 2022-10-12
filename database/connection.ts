@@ -1,11 +1,14 @@
 import { Sequelize } from "sequelize";
+import config from "../config/config";
+
+const environment = config["development"];
 
 const db = new Sequelize(
-  "u434635530_informesCMI",
-  "u434635530_tasprilla",
-  "0GgQuZy^F9v",
+  environment.database.database,
+  environment.database.username,
+  environment.database.password,
   {
-    host: "212.1.211.203",
+    host: environment.database.host,
     dialect: "mysql",
     // logging: false,
   }
