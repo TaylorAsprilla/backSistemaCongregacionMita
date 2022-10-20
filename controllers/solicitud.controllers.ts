@@ -78,7 +78,6 @@ export const crearSolicitud = async (req: Request, res: Response) => {
         pais: string;
         parentesco: number;
       }) => {
-        console.log(itemFamiliar);
         const guardarFamiliar = await Familiares.create({
           nombre: itemFamiliar.nombre,
           telefono: itemFamiliar.telefono.internationalNumber,
