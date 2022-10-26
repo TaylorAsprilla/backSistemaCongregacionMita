@@ -17,11 +17,11 @@ import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import Vacuna from "../models/vacuna.model";
 
 // Uno a uno
-Usuario.hasOne(TipoDocumento, {
-  as: "tipoDocumento",
-  sourceKey: "tipoDocumento_id",
-  foreignKey: "id",
-});
+// Usuario.hasOne(TipoDocumento, {
+//   as: "tipoDocumento",
+//   sourceKey: "tipoDocumento_id",
+//   foreignKey: "id",
+// });
 
 Usuario.hasOne(Genero, {
   as: "genero",

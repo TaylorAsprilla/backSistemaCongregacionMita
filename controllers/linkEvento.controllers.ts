@@ -5,7 +5,7 @@ import LinkEvento from "../models/linkEvento.model";
 export const getLinkEventos = async (req: Request, res: Response) => {
   try {
     const linkEvento = await LinkEvento.findAll({
-      order: db.col("id"),
+      order: [["fecha", "DESC"]],
     });
 
     res.json({
