@@ -30,7 +30,7 @@ const SituacionVisita = db.define(
     },
     idSeccion: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      // allowNull: false,
     },
   },
   {
