@@ -25,7 +25,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
       ],
       offset: desde,
       limit: 30,
-      order: db.col("primerNombre"),
+      order: [["id", "DESC"]],
     }),
     Usuario.count(),
   ]);
