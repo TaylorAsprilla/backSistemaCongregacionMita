@@ -68,7 +68,6 @@ const Usuario = db.define(
     genero_id: {
       type: DataTypes.INTEGER,
     },
-
     estadoCivil_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

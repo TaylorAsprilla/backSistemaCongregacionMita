@@ -18,7 +18,7 @@ const Pais = db.define(
     },
     idObreroEncargado: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      // allowNull: false,
     },
   },
   {
