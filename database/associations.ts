@@ -5,6 +5,7 @@ import EstadoCivil from "../models/estadoCivil.model";
 import FuenteIngreso from "../models/fuenteIngreso.model";
 import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
+import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
 import RolCasa from "../models/rolCasa.model";
 import TipoDocumento from "../models/tipoDocumento.model";
@@ -14,6 +15,7 @@ import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import UsuarioDireccion from "../models/usuarioDireccion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
+import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import Vacuna from "../models/vacuna.model";
 
 // Uno a uno
@@ -97,4 +99,11 @@ Usuario.belongsToMany(FuenteIngreso, {
   through: UsuarioFuenteIngreso,
   foreignKey: { name: "usuario_id", allowNull: false },
   otherKey: "fuenteIngreso_id",
+});
+
+Usuario.belongsToMany(Ministerio, {
+  as: "usuarioMinisterio",
+  through: UsuarioMinisterio,
+  foreignKey: { name: "usuario_id", allowNull: false },
+  otherKey: "ministerio_id",
 });
