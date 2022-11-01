@@ -12,7 +12,6 @@ export const getTodo = async (req: Request, res: Response) => {
           numeroCelular: { [Op.substring]: busqueda },
         },
         { email: { [Op.substring]: busqueda } },
-        { numeroDocumento: { [Op.substring]: busqueda } },
       ],
     },
   });

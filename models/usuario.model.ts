@@ -21,9 +21,7 @@ const Usuario = db.define(
     apodo: {
       type: DataTypes.STRING,
     },
-    numeroDocumento: {
-      type: DataTypes.STRING,
-    },
+
     fechaNacimiento: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -70,9 +68,7 @@ const Usuario = db.define(
     genero_id: {
       type: DataTypes.INTEGER,
     },
-    tipoDocumento_id: {
-      type: DataTypes.INTEGER,
-    },
+
     estadoCivil_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
