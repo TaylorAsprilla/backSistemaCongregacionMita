@@ -8,19 +8,11 @@ const Contabilidad = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    transferencia: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     restrictos: {
       type: DataTypes.BIGINT,
       allowNull: false,
     },
     noRestrictos: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-    },
-    depositoActividades: {
       type: DataTypes.BIGINT,
       allowNull: false,
     },

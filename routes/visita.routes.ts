@@ -20,11 +20,6 @@ router.post(
   "/",
   [
     check("fecha", "La fecha de la visita es obligatoria").not().isEmpty(),
-    check("visitasHogares", "El número de visitas a hogares es obligatorio")
-      .not()
-      .isEmpty(),
-    check("cantidad", "La cantidad es obligatoria").not().isEmpty(),
-    check("efectivo", "La cantidad en efectivo es obligatorio").not().isEmpty(),
     check("referidasOots", "Las situaciones referidas a OOTS es obligatorio")
       .not()
       .isEmpty(),

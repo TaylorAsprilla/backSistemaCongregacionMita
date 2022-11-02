@@ -8,18 +8,6 @@ const Visita = db.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
-    visitasHogares: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    cantidad: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-    },
-    efectivo: {
-      type: DataTypes.BIGINT,
-      allowNull: false,
-    },
     referidasOots: {
       type: DataTypes.INTEGER,
       allowNull: false,

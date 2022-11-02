@@ -22,19 +22,10 @@ router.post(
   "/",
   [
     check("sobres", "La cantidad de sobres es obligatorio ").not().isEmpty(),
-    check("transferencia", "La cantidad de transferencias es obligatoria")
-      .not()
-      .isEmpty(),
     check("restrictos", "La cantidad de diezmos restrictos es obligatorio")
       .not()
       .isEmpty(),
     check("noRestrictos", "La cantidad de diezmos no restrictos es obligatorio")
-      .not()
-      .isEmpty(),
-    check(
-      "depositoActividades",
-      "La cantidad del deposito de actividades es obligatorio"
-    )
       .not()
       .isEmpty(),
     check("informe_id", "Debe selecionar el id del informe").not().isEmpty(),
