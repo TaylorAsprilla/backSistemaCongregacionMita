@@ -18,6 +18,24 @@ export const getMetas = async (req: Request, res: Response) => {
   }
 };
 
+export const getMeta = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const meta = await Meta.findByPk(id);
+
+  if (meta) {
+    res.json({
+      ok: true,
+      meta,
+      id,
+    });
+  } else {
+    res.status(404).json({
+      msg: `No existe la meta con el id ${id}`,
+    });
+  }
+};
+
 export const crearMeta = async (req: Request, res: Response) => {
   const { body } = req;
 

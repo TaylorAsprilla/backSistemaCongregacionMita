@@ -40,6 +40,7 @@ import buscarCelularRoutes from "../routes/buscarCelular.routes";
 import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
+import obreroRoutes from "../routes/obrero.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -89,6 +90,7 @@ class Server {
     razonSolicitud: "/api/razonsolicitud",
     parentesco: "/api/parentesco",
     evento: "/api/evento",
+    obrero: "/api/obrero",
   };
 
   constructor() {
@@ -164,6 +166,7 @@ class Server {
     this.app.use(this.apiPaths.razonSolicitud, razonSolicitudRoutes);
     this.app.use(this.apiPaths.parentesco, parentescoRoutes);
     this.app.use(this.apiPaths.evento, linkEventosRoutes);
+    this.app.use(this.apiPaths.obrero, obreroRoutes);
   }
 
   listen() {
