@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   actualizarMeta,
   crearMeta,
+  getMeta,
   getMetas,
 } from "../controllers/meta.controllers";
 
@@ -16,6 +17,7 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getMetas);
+router.get("/:id", validarJWT, getMeta);
 router.post(
   "/",
   [

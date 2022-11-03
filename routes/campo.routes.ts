@@ -30,9 +30,9 @@ router.post(
     )
       .not()
       .isEmpty(),
-    // check("idObreroEncargado", "Debe seleccionar un obrero encargado")
-    //   .not()
-    //   .isEmpty(),
+    check("idObreroEncargado", "Debe seleccionar un obrero encargado")
+      .not()
+      .isEmpty(),
     validarCampos,
     validarJWT,
   ],
