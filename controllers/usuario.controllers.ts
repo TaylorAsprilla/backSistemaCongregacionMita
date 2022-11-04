@@ -11,6 +11,7 @@ import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import config from "../config/config";
+import enviarEmail from "../helpers/email";
 require("./../database/associations");
 
 export const getUsuarios = async (req: Request, res: Response) => {
@@ -173,6 +174,11 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
     const idUsuario = await usuario.getDataValue("id");
 
+    const primerNombre = await usuario.getDataValue("primerNombre");
+    const segundoNombre = await usuario.getDataValue("segundoNombre");
+    const primerApellido = await usuario.getDataValue("primerApellido");
+    const segundoApellido = await usuario.getDataValue("segundoApellido");
+
     const usuarioCongregacion = await UsuarioCongregacion.create({
       usuario_id: idUsuario,
       pais_id: congregacion.pais_id,
@@ -236,6 +242,30 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
     // Generar Token - JWT
     const token = await generarJWT(usuario.getDataValue("id"));
+
+    const html = `
+      <div style="text-align: center; font-size: 22px">
+      <img
+        src="https://kromatest.pw/sistemacmi/assets/images/multimedia.png"
+        alt="CMAR Multimedia"
+        style="text-align: center; width: 400px"
+      />
+      <p>Saludos, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}</p>
+      <p>Su código Mita es ${idUsuario} </p>
+      <b>Muchas gracias</b>
+     
+    
+      <p style="margin-top: 2%; font-size: 18px">
+        Para mayor información puede contactarse a
+        <a href="mailto:multimedia@congregacionmita.com">
+          multimedia@congregacionmita.com</a
+        >
+      </p>
+    
+      <b class="margin-top:2%">Congregación Mita inc</b>
+    </div>`;
+
+    enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);
 
     const usuarioNuevo = {
       usuario,
