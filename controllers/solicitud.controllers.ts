@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { transporter } from "../config/mailer";
 import db from "../database/connection";
+import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import Familiares from "../models/familiares.model";
 import Solicitud from "../models/solicitud.model";
@@ -97,11 +97,7 @@ export const crearSolicitud = async (req: Request, res: Response) => {
     // =======================================================================
     //                         Enviar Correo de Verificación
     // =======================================================================
-    await transporter.sendMail({
-      from: '"CMA Multimedia" <taylor.asprilla@gmail.com>',
-      to: email,
-      subject: "Verificar Correo - CMA Multimedia",
-      html: `
+    const html = `
       <div style="text-align: center; font-size: 22px">
       <img
         src="https://kromatest.pw/sistemacmi/assets/images/multimedia.png"
@@ -121,8 +117,9 @@ export const crearSolicitud = async (req: Request, res: Response) => {
       </p>
     
       <b class="margin-top:2%">Congregación Mita inc</b>
-    </div>`,
-    });
+    </div>`;
+
+    enviarEmail(email, "Verificar Correo - CMA Multimedia", html);
 
     res.json({
       ok: true,
