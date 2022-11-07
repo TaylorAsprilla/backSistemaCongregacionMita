@@ -3,7 +3,7 @@ import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import Permiso from "../models/permiso.model";
 
-export const getPermiso = async (req: Request, res: Response) => {
+export const getPermisos = async (req: Request, res: Response) => {
   try {
     const permiso = await Permiso.findAll({
       order: db.col("permiso"),
@@ -59,7 +59,7 @@ export const crearPermiso = async (req: Request, res: Response) => {
 
     res.json({
       ok: true,
-      msg: `El permiso ${permisoNuevo} ha sido creado satisfactoriamente`,
+      msg: `El permiso ${permiso} ha sido creado satisfactoriamente`,
       permisoCreado,
     });
   } catch (error) {
@@ -72,49 +72,32 @@ export const crearPermiso = async (req: Request, res: Response) => {
 
 export const actualizarPermiso = async (req: Request, res: Response) => {
   const { id } = req.params;
-
   const { body } = req;
-  const { permiso, ...campos } = body;
 
   try {
     const permiso = await Permiso.findByPk(id);
     if (!permiso) {
       return res.status(404).json({
-        msg: "No existe un permiso con el id " + id,
+        ok: false,
+        msg: `No existe un permiso con el id ${id}`,
       });
     }
 
-    const getNombre = await permiso.get().permiso;
+    // =======================================================================
+    //                          Actualizar el Permiso
+    // =======================================================================
 
-    // Actualizaciones
-    if (getNombre !== body.permiso) {
-      const existeNombre = await Permiso.findOne({
-        where: {
-          permiso: body.permiso,
-        },
-      });
-      if (existeNombre) {
-        return res.status(400).json({
-          ok: false,
-          msg: "Ya existe un permiso con el nombre " + permiso,
-        });
-      }
-    }
-
-    campos.permiso = permiso;
-
-    // Se actualiza el campo
-    const permisoActualizado = await permiso.update(campos, {
+    const permisoActualizado = await permiso.update(body, {
       new: true,
     });
-
     res.json({
       ok: true,
-      msg: "Permiso actualizado",
+      msg: "El permiso se actualizó satisfactoriamente",
       permisoActualizado,
     });
   } catch (error) {
     res.status(500).json({
+      ok: false,
       msg: "Hable con el administrador",
       error,
     });
@@ -147,6 +130,68 @@ export const eliminarPermiso = async (req: CustomRequest, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const activarPermiso = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const permiso = await Permiso.findByPk(id);
+    if (!!permiso) {
+      const nombre = await permiso.get().permiso;
+
+      if (permiso.get().estado === false) {
+        await permiso.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El permiso ${nombre} se activó`,
+          permiso,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El permiso ${nombre} esta activo`,
+          permiso,
+        });
+      }
+    }
+
+    if (!permiso) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un permiso con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const getPermisoUsuario = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const [permisos, metadata] = await db.query(
+      `SELECT up.usuario_id, up.permiso_id, p.permiso, p.estado 
+        FROM usuarioPermiso up 
+        INNER JOIN permiso p ON up.permiso_id  = p.id  
+        WHERE up.usuario_id  = ${id}`
+    );
+
+    res.json({
+      ok: true,
+      permisos,
+      id: id,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
     });
   }
 };

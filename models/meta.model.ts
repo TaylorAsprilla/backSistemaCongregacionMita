@@ -8,6 +8,9 @@ const Meta = db.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    meta: {
+      type: DataTypes.STRING,
+    },
     accion: {
       type: DataTypes.TEXT,
     },
