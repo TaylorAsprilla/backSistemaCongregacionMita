@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
-import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import Direccion from "../models/direccion.model";
@@ -132,18 +131,6 @@ export const crearUsuario = async (req: Request, res: Response) => {
       }
     }
 
-    const existeNumeroCelular = await Usuario.findOne({
-      where: {
-        numeroCelular: numeroCelular,
-      },
-    });
-
-    if (existeNumeroCelular) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el número de celular ${numeroCelular}`,
-      });
-    }
     if (!!login) {
       const existeLogin = await Usuario.findOne({
         where: {
