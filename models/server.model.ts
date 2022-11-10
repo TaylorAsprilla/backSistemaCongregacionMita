@@ -99,6 +99,11 @@ class Server {
     this.app = express();
     this.port = process.env.PORT || "4000";
 
+    this.app.get("/", (req, res) => {
+      res.status(200);
+      res.send({ data: "OK" });
+    });
+
     // Métodos Iniciales
     this.dbConnection();
     this.midedlewares();
@@ -127,7 +132,7 @@ class Server {
   }
 
   routes() {
-    this.app.use(this.apiPaths.home, homeRoutes);
+    // this.app.use(this.apiPaths.home, homeRoutes);
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
     this.app.use(this.apiPaths.busquedas, busquedasRoutes);
