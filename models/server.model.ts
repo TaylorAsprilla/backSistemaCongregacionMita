@@ -50,7 +50,7 @@ class Server {
   private app: Application;
   private port: string;
   private apiPaths = {
-    home: "/api/",
+    home: "/",
     usuarios: "/api/usuarios",
     login: "/api/login",
     busquedas: "/api/busquedas",
@@ -123,7 +123,7 @@ class Server {
     this.app.use(express.json());
 
     // Carpeta pública
-    this.app.use(express.static("public"));
+    // this.app.use(express.static("public")); //TODO Carpeta pública
   }
 
   routes() {
