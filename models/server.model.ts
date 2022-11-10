@@ -100,7 +100,7 @@ class Server {
     this.port = process.env.PORT || "4000";
     this.app.get("/", (req, res) => {
       res.status(200);
-      res.send({ data: "OK" });
+      res.send({ data: "OK!!!" });
     });
 
     // Métodos Iniciales
