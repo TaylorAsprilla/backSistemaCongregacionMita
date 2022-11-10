@@ -41,6 +41,7 @@ import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
+import homeRoutes from "../routes/home.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -49,6 +50,7 @@ class Server {
   private app: Application;
   private port: string;
   private apiPaths = {
+    home: "/api/",
     usuarios: "/api/usuarios",
     login: "/api/login",
     busquedas: "/api/busquedas",
@@ -125,6 +127,7 @@ class Server {
   }
 
   routes() {
+    this.app.use(this.apiPaths.home, homeRoutes);
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
     this.app.use(this.apiPaths.busquedas, busquedasRoutes);
