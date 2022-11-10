@@ -10,7 +10,7 @@
     "dev": "concurrently \"tsc -w\" \"nodemon build/app.js\"",
     "dev:dev": "nodemon build/app.js",
     "start": "npm run build && node build/app.js",
-    "deploy:prod": "eb deploy Sistemacmiv1-env"
+    "deploy:prod": "eb deploy Sistemacmiv3-env"
   },
   "keywords": [],
   "author": "",
