@@ -41,6 +41,7 @@ import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
+import homeRoutes from "../routes/home.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -49,6 +50,7 @@ class Server {
   private app: Application;
   private port: string;
   private apiPaths = {
+    home: "/",
     usuarios: "/api/usuarios",
     login: "/api/login",
     busquedas: "/api/busquedas",
@@ -95,7 +97,12 @@ class Server {
 
   constructor() {
     this.app = express();
-    this.port = process.env.PORT || "4000";
+    this.port = process.env.PORT || "80";
+
+    // this.app.get("/", (req, res) => {
+    //   res.status(200);
+    //   res.send({ data: "OK!" });
+    // });
 
     // Métodos Iniciales
     this.dbConnection();
@@ -121,10 +128,14 @@ class Server {
     this.app.use(express.json());
 
     // Carpeta pública
-    this.app.use(express.static("public"));
+    // this.app.use(express.static("public")); //TODO Carpeta pública
+    this.app.get("/", (req, res, next) =>
+      res.status(200).json({ hello: "world" })
+    );
   }
 
   routes() {
+    // this.app.use(this.apiPaths.home, homeRoutes);
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
     this.app.use(this.apiPaths.busquedas, busquedasRoutes);
