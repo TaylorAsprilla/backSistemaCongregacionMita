@@ -2,15 +2,16 @@
   "name": "backsistemacongregacionmita",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "build/app.js",
   "scripts": {
     "build": "tsc",
     "build:dev": "tsc -w",
     "clean": "rm -rf build",
     "dev": "nodemon build/app.js",
     "dev:dev": "nodemon build/app.js",
-    "start": "node app.js",
-    "deploy:prod": "eb deploy Sistemacmiv3-env"
+    "start": "node build/app.js",
+    "deploy:prod": "eb deploy Sistemacmiv3-env",
+    "dist": "sh ./scripts/dist.sh"
   },
   "keywords": [],
   "author": "",

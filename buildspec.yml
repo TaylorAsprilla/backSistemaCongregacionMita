@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: latest
+      nodejs: 16.18.0
     commands:
       - npm install -g typescript
       - npm install
@@ -12,6 +12,7 @@ phases:
       - tsc
 
 artifacts:
+  type: zip
   files:
     - package.json
     - package-lock.json
