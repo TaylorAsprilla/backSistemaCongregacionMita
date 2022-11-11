@@ -99,10 +99,10 @@ class Server {
     this.app = express();
     this.port = process.env.PORT || "80";
 
-    this.app.get("/", (req, res) => {
-      res.status(200);
-      res.send({ data: "OK!" });
-    });
+    // this.app.get("/", (req, res) => {
+    //   res.status(200);
+    //   res.send({ data: "OK!" });
+    // });
 
     // Métodos Iniciales
     this.dbConnection();
@@ -129,6 +129,9 @@ class Server {
 
     // Carpeta pública
     // this.app.use(express.static("public")); //TODO Carpeta pública
+    this.app.get("/", (req, res, next) =>
+      res.status(200).json({ hello: "world" })
+    );
   }
 
   routes() {
