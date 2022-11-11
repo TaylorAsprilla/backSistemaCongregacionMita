@@ -1,15 +1,18 @@
 version: 0.2
 
 phases:
-  install:
-    runtime-versions:
-      nodejs: 16.18.0
+  pre_build:
     commands:
-      - npm install -g typescript
+      - echo Install packages...
       - npm install
   build:
     commands:
-      - tsc
+      - echo Create build...
+      - npm run build
+  post_build:
+    commands:
+      - echo Removing unnecessary files...
+      - rm -rf node_modules/
 
 artifacts:
   type: zip
@@ -17,4 +20,3 @@ artifacts:
     - package.json
     - package-lock.json
     - "build/**/*"
-  discard-paths: yes
