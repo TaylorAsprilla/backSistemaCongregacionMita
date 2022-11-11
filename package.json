@@ -2,7 +2,7 @@
   "name": "backsistemacongregacionmita",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "build/app.js",
   "scripts": {
     "build": "tsc",
     "build:dev": "tsc -w",
