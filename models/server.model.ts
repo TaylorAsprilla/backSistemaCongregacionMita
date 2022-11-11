@@ -97,7 +97,7 @@ class Server {
 
   constructor() {
     this.app = express();
-    this.port = process.env.PORT || "8080";
+    this.port = process.env.PORT || "80";
 
     this.app.get("/", (req, res) => {
       res.status(200);
