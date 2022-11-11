@@ -9,7 +9,7 @@
     "clean": "rm -rf build",
     "dev": "nodemon build/app.js",
     "dev:dev": "nodemon build/app.js",
-    "start": "node build/app.js",
+    "start": "node app.js",
     "deploy:prod": "eb deploy Sistemacmiv3-env"
   },
   "keywords": [],
