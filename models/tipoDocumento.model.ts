@@ -12,6 +12,10 @@ const TipoDocumento = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
     },
+    pais_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,

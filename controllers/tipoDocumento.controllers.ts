@@ -153,3 +153,46 @@ export const eliminarTipoDocumento = async (
     });
   }
 };
+
+export const activarTipoDeDocumento = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const tipoDocumento = await TipoDocumento.findByPk(id);
+    if (!!tipoDocumento) {
+      const documento = await tipoDocumento.get().documento;
+
+      if (tipoDocumento.get().estado === false) {
+        await tipoDocumento.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El tipo de documento ${documento} se activó`,
+          tipoDocumento,
+          id: req.id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El tipo de documento ${documento} está activo`,
+          tipoDocumento,
+        });
+      }
+    }
+
+    if (!tipoDocumento) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un tipo de documento con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};

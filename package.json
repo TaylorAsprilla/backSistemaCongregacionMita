@@ -10,7 +10,7 @@
     "dev": "nodemon build/app.js",
     "dev:dev": "nodemon build/app.js",
     "start": "node build/app.js",
-    "deploy:prod": "eb deploy Sistemacmiv3-env",
+    "deploy:prod": "eb deploy Sistemacmi-env",
     "dist": "sh ./scripts/dist.sh"
   },
   "keywords": [],

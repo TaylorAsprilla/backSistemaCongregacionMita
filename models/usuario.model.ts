@@ -52,6 +52,9 @@ const Usuario = db.define(
     especializacionEmpleo: {
       type: DataTypes.STRING,
     },
+    numeroDocumento: {
+      type: DataTypes.STRING,
+    },
     login: {
       type: DataTypes.STRING,
     },
@@ -95,6 +98,10 @@ const Usuario = db.define(
       allowNull: true,
     },
     tipoMiembro_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    tipoDocumento_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
     },
