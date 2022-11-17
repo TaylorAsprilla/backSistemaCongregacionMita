@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarTipoDeDocumento,
   actualizarTipoDocumento,
   crearTipoDocumento,
   eliminarTipoDocumento,
@@ -42,5 +43,6 @@ router.put(
   actualizarTipoDocumento
 );
 router.delete("/:id", validarJWT, eliminarTipoDocumento);
+router.put("/activar/:id", validarJWT, activarTipoDeDocumento);
 
 export default router;
