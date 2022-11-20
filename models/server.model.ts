@@ -41,7 +41,6 @@ import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
-import homeRoutes from "../routes/home.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -97,12 +96,7 @@ class Server {
 
   constructor() {
     this.app = express();
-    this.port = process.env.PORT || "80";
-
-    // this.app.get("/", (req, res) => {
-    //   res.status(200);
-    //   res.send({ data: "OK!" });
-    // });
+    this.port = process.env.PORT || "4000";
 
     // Métodos Iniciales
     this.dbConnection();

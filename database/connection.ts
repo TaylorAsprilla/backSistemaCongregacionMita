@@ -1,7 +1,8 @@
 import { Sequelize } from "sequelize";
 import config from "../config/config";
+require("dotenv").config();
 
-const environment = config["development"];
+const environment = config[process.env.NODE_ENV || "development"];
 
 const db = new Sequelize(
   environment.database.database,
