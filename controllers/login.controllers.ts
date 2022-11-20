@@ -6,6 +6,7 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
+
   try {
     // Verificar Usuario
 
