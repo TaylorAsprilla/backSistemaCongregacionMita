@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
+import { PLATAFORMA } from "../enum/plataforma.enum";
 
 const LinkEvento = db.define(
   "LinkEvento",
@@ -15,6 +16,11 @@ const LinkEvento = db.define(
     fecha: {
       type: DataTypes.DATE,
       allowNull: false,
+    },
+    plataforma: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      values: [PLATAFORMA.YOUTUBE, PLATAFORMA.VIMEO],
     },
     tipoEvento_id: {
       type: DataTypes.INTEGER,
