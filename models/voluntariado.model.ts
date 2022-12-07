@@ -9,6 +9,10 @@ const Voluntariado = db.define(
       allowNull: false,
       unique: true,
     },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 1,
+    },
   },
   {
     freezeTableName: true,
