@@ -5,7 +5,10 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarLinkEvento,
+  actualizarLinkEvento,
   crearLinkEvento,
+  eliminarLinkEvento,
   getLinkEventos,
 } from "../controllers/linkEvento.controllers";
 
@@ -28,5 +31,8 @@ router.post(
   ],
   crearLinkEvento
 );
+router.put("/:id", validarJWT, actualizarLinkEvento);
+router.put("/activar/:id", validarJWT, activarLinkEvento);
+router.delete("/:id", validarJWT, eliminarLinkEvento);
 
 export default router;

@@ -22,6 +22,10 @@ const LinkEvento = db.define(
       allowNull: false,
       values: [PLATAFORMA.YOUTUBE, PLATAFORMA.VIMEO],
     },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 1,
+    },
     tipoEvento_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
