@@ -43,7 +43,7 @@ export const getUnaSolicitud = async (req: Request, res: Response) => {
 export const crearSolicitud = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, nombre } = body;
-  const url = "https://cmar.live/sistemacmi/#/validaremail";
+  const urlDeValidacion = "https://cmar.live/sistemacmi/#/validaremail";
 
   try {
     // =======================================================================
@@ -60,14 +60,14 @@ export const crearSolicitud = async (req: Request, res: Response) => {
     const html = `
       <div style="text-align: center; font-size: 22px">
       <img
-        src="https://cmar.live/sistemacmi/#/assets/images/cmar-multimedia.png"
+        src="https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png"
         alt="CMAR Multimedia"
         style="text-align: center; width: 400px"
       />
       <p>Saludos, ${nombre}</p>
       <p>Su solicitud será tramitada en breve</p>
       <b>Por favor verifique su cuenta de correo electrónico haciendo clic en</b>
-      <a href="${url}/${idUsuario}" target="_blank">Verificar Cuenta </a>
+      <a href="${urlDeValidacion}/${idUsuario}" target="_blank">Verificar Cuenta </a>
     
       <p style="margin-top: 2%; font-size: 18px">
         Para mayor información puede contactarse a
