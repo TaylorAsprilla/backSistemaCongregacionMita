@@ -459,6 +459,7 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
           email: email,
         },
       });
+
       if (!!correoElectronico) {
         res.json({
           ok: false,

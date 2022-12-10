@@ -46,12 +46,8 @@ const Solicitud = db.define(
     congregacionCercana: {
       type: DataTypes.STRING,
     },
-    distancia: {
+    otraRazon: {
       type: DataTypes.STRING,
-    },
-    familiaEnPR: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
     },
     estado: {
       type: DataTypes.BOOLEAN,
@@ -66,6 +62,10 @@ const Solicitud = db.define(
       allowNull: false,
     },
     nacionalidad_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    usuarioQueRegistra_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },

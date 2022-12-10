@@ -38,7 +38,6 @@ import voluntariadoRoutes from "../routes/voluntariado.routes";
 import buscarCorreoRoutes from "../routes/buscarCorreo.routes";
 import buscarCelularRoutes from "../routes/buscarCelular.routes";
 import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
-import parentescoRoutes from "../routes/parentesco.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
 import cors from "cors";
@@ -84,7 +83,7 @@ class Server {
     gradoAcademico: "/api/gradoAcademico",
     tipoEmpleo: "/api/tipoempleo",
     tipoMiembro: "/api/tipomiembro",
-    solicitud: "/api/solicitud",
+    solicitudmultimedia: "/api/solicitudmultimedia",
     voluntariado: "/api/voluntariado",
     buscarCorreo: "/api/buscarcorreo",
     buscarCelular: "/api/buscarcelular",
@@ -164,12 +163,11 @@ class Server {
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
-    this.app.use(this.apiPaths.solicitud, accesoMultimediaRoutes);
+    this.app.use(this.apiPaths.solicitudmultimedia, accesoMultimediaRoutes);
     this.app.use(this.apiPaths.voluntariado, voluntariadoRoutes);
     this.app.use(this.apiPaths.buscarCorreo, buscarCorreoRoutes);
     this.app.use(this.apiPaths.buscarCelular, buscarCelularRoutes);
     this.app.use(this.apiPaths.razonSolicitud, razonSolicitudRoutes);
-    this.app.use(this.apiPaths.parentesco, parentescoRoutes);
     this.app.use(this.apiPaths.evento, linkEventosRoutes);
     this.app.use(this.apiPaths.obrero, obreroRoutes);
   }

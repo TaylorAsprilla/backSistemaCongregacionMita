@@ -2,9 +2,7 @@ import { Request, Response } from "express";
 import db from "../database/connection";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import Familiares from "../models/familiares.model";
 import Solicitud from "../models/solicitud.model";
-import SolicitudesFamiliares from "../models/solicitudesFamiliares.model";
 
 export const getSolicitudes = async (req: Request, res: Response) => {
   try {
@@ -44,7 +42,8 @@ export const getUnaSolicitud = async (req: Request, res: Response) => {
 
 export const crearSolicitud = async (req: Request, res: Response) => {
   const { body } = req;
-  const { familiares, email, nombre } = body;
+  const { email, nombre } = body;
+  const url = "https://cmar.live/sistemacmi/#/validaremail";
 
   try {
     // =======================================================================
@@ -55,59 +54,20 @@ export const crearSolicitud = async (req: Request, res: Response) => {
     await solicitudDeAcceso.save();
     const idUsuario = solicitudDeAcceso.getDataValue("id");
 
-    const solicitudFamiliares = await familiares.forEach(
-      async (itemFamiliar: {
-        nombre: string;
-        telefono: {
-          number: string;
-          internationalNumber: string;
-          nationalNumber: string;
-          e164Number: string;
-          countryCode: string;
-          dialCode: string;
-        };
-        celular: {
-          number: string;
-          internationalNumber: string;
-          nationalNumber: string;
-          e164Number: string;
-          countryCode: string;
-          dialCode: string;
-        };
-        email: string;
-        pais: string;
-        parentesco: number;
-      }) => {
-        const guardarFamiliar = await Familiares.create({
-          nombre: itemFamiliar.nombre,
-          telefono: itemFamiliar.telefono.internationalNumber,
-          celular: itemFamiliar.celular.internationalNumber,
-          email: itemFamiliar.email,
-          pais: itemFamiliar.pais,
-          parentesco_id: itemFamiliar.parentesco,
-        });
-
-        const solicitudFamiliar = await SolicitudesFamiliares.create({
-          solicitud_id: idUsuario,
-          familiares_id: guardarFamiliar.getDataValue("id"),
-        });
-      }
-    );
-
     // =======================================================================
     //                         Enviar Correo de Verificación
     // =======================================================================
     const html = `
       <div style="text-align: center; font-size: 22px">
       <img
-        src="https://kromatest.pw/sistemacmi/assets/images/multimedia.png"
+        src="https://cmar.live/sistemacmi/#/assets/images/cmar-multimedia.png"
         alt="CMAR Multimedia"
         style="text-align: center; width: 400px"
       />
       <p>Saludos, ${nombre}</p>
       <p>Su solicitud será tramitada en breve</p>
       <b>Por favor verifique su cuenta de correo electrónico haciendo clic en</b>
-      <a href="http://localhost:4200/#/validaremail/${idUsuario}" target="_blank">Verificar Cuenta </a>
+      <a href="${url}/${idUsuario}" target="_blank">Verificar Cuenta </a>
     
       <p style="margin-top: 2%; font-size: 18px">
         Para mayor información puede contactarse a
@@ -235,6 +195,43 @@ export const activarSolicitud = async (req: CustomRequest, res: Response) => {
       error,
       msg: "Hable con el administrador",
     });
+  }
+};
+
+export const buscarCorreoElectronico = async (req: Request, res: Response) => {
+  const email = req.params.email;
+
+  if (!email) {
+    res.status(500).json({
+      ok: false,
+      msg: `No existe parametro en la petición`,
+    });
+  } else {
+    try {
+      const correoElectronico = await Solicitud.findOne({
+        attributes: ["email"],
+        where: {
+          email: email,
+        },
+      });
+
+      if (!!correoElectronico) {
+        res.json({
+          ok: false,
+          msg: `Ya se encuentra registrado el correo electrónico ${email}`,
+        });
+      } else {
+        res.json({
+          ok: true,
+          msg: `Correo electrónico válido`,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        error,
+        msg: "Hable con el administrador",
+      });
+    }
   }
 };
 
