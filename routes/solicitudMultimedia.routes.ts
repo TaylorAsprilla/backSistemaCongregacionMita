@@ -1,5 +1,5 @@
 /* 
-  Path: '/api/accesomultimedia'
+  Path: '/api/solicitudmultimedia'
 */
 
 import { Router } from "express";
@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   activarSolicitud,
   actualizarSolicitud,
+  buscarCorreoElectronico,
   crearSolicitud,
   eliminarSolicitud,
   getSolicitudes,
@@ -42,6 +43,7 @@ router.post(
 router.put("/:id", validarJWT, actualizarSolicitud);
 router.delete("/:id", validarJWT, eliminarSolicitud);
 router.put("/activar/:id", validarJWT, activarSolicitud);
+router.get("/buscarcorreo/:email", buscarCorreoElectronico);
 router.put("/validaremail/:id", validarEmail);
 
 export default router;
