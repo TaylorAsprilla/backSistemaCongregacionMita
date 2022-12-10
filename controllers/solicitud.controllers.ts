@@ -43,7 +43,7 @@ export const getUnaSolicitud = async (req: Request, res: Response) => {
 export const crearSolicitud = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, nombre } = body;
-  const url = "https://cmar.live/validaremail/";
+  const url = "https://cmar.live/sistemacmi/#/validaremail";
 
   try {
     // =======================================================================
@@ -60,7 +60,7 @@ export const crearSolicitud = async (req: Request, res: Response) => {
     const html = `
       <div style="text-align: center; font-size: 22px">
       <img
-        src="https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png"
+        src="https://cmar.live/sistemacmi/#/assets/images/cmar-multimedia.png"
         alt="CMAR Multimedia"
         style="text-align: center; width: 400px"
       />
