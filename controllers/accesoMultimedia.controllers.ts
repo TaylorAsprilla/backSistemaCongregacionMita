@@ -19,7 +19,7 @@ export const loginMultimedia = async (req: Request, res: Response) => {
     if (!loginUsuarioCmarLive) {
       return res.status(404).json({
         ok: false,
-        msg: "Usuario no válidooooo",
+        msg: "Usuario no válido",
       });
     }
 
@@ -33,7 +33,7 @@ export const loginMultimedia = async (req: Request, res: Response) => {
     if (!validarPassword) {
       return res.status(404).json({
         ok: false,
-        msg: "Contraseña no válidaaaaaaaa",
+        msg: "Contraseña no válida",
       });
     }
 

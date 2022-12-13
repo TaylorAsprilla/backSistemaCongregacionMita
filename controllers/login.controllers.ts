@@ -5,6 +5,7 @@ import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import { loginMultimedia } from "./accesoMultimedia.controllers";
 import Solicitud from "../models/solicitud.model";
+import AccesoMultimedia from "../models/accesoMultimedia.model";
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
@@ -19,6 +20,7 @@ export const login = async (req: Request, res: Response) => {
     });
 
     if (!loginUsuario) {
+      //TODO Login para la solicitudes de acceso Multimedia
       const loginMultimediaS = loginMultimedia(req, res);
       if (!loginMultimediaS) {
         return res.status(404).json({
@@ -66,28 +68,39 @@ export const login = async (req: Request, res: Response) => {
 
 export const renewToken = async (req: CustomRequest, res: Response) => {
   const idUsuario = req.id;
-  const { tipoAcceso } = req.params;
   const { body } = req;
   let usuario;
   let usuarioID;
   let token;
+  let buscarUsuario;
 
-  if (tipoAcceso === "login") {
+  console.log("IIIIIDDDDDD", idUsuario);
+
+  buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
+
+  if (buscarUsuario) {
+    console.log("buscarUsuario", buscarUsuario);
     usuario = Usuario.build(body);
-  } else if (tipoAcceso === "accesoMultimedia") {
-    usuario = Solicitud.build(body);
+    console.log("Usuario...............", usuario);
+    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
+    usuarioID = await Usuario.findByPk(idUsuario);
+    console.log("Login.........");
+  } else {
+    usuario = AccesoMultimedia.build(body);
+    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
+    usuarioID = await AccesoMultimedia.findByPk(idUsuario);
+    console.log("Usuario Solicitudd.........");
   }
+
+  // usuario = Solicitud.build(body);
 
   // Generar el TOKEN - JWT
-  if (!!usuario) {
-    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-  }
-  if (tipoAcceso === "login") {
-    // Obtener el usuario por UID
-    usuarioID = await Usuario.findByPk(idUsuario);
-  } else if (tipoAcceso === "accesoMultimedia") {
-    usuarioID = await Solicitud.findByPk(idUsuario);
-  }
+
+  // token = await generarJWT(idUsuario, usuario.getDataValue("login"));
+
+  // Obtener el usuario por UID
+
+  // usuarioID = await Solicitud.findByPk(idUsuario);
 
   res.json({
     ok: true,
