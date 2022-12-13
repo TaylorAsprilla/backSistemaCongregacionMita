@@ -46,7 +46,7 @@ export const loginMultimedia = async (req: Request, res: Response) => {
     const datosUsuario = await Solicitud.findByPk(
       loginUsuarioCmarLive.getDataValue("solicitud_id")
     );
-    console.log("Token", token);
+
     res.json({
       ok: true,
       token,
