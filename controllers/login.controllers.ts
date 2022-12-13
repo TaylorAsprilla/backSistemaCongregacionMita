@@ -74,22 +74,16 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let token;
   let buscarUsuario;
 
-  console.log("IIIIIDDDDDD", idUsuario);
-
   buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
-    console.log("buscarUsuario", buscarUsuario);
     usuario = Usuario.build(body);
-    console.log("Usuario...............", usuario);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await Usuario.findByPk(idUsuario);
-    console.log("Login.........");
   } else {
     usuario = AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await AccesoMultimedia.findByPk(idUsuario);
-    console.log("Usuario Solicitudd.........");
   }
 
   // usuario = Solicitud.build(body);
