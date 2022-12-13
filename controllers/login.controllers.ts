@@ -3,6 +3,9 @@ import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
+import { loginMultimedia } from "./accesoMultimedia.controllers";
+import Solicitud from "../models/solicitud.model";
+import AccesoMultimedia from "../models/accesoMultimedia.model";
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
@@ -17,37 +20,43 @@ export const login = async (req: Request, res: Response) => {
     });
 
     if (!loginUsuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Usuario no válido",
-      });
+      //TODO Login para la solicitudes de acceso Multimedia
+      const loginMultimediaS = loginMultimedia(req, res);
+      if (!loginMultimediaS) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Usuario no válido",
+        });
+      }
     }
 
     // Verificar contraseña
+    if (loginUsuario) {
+      const validarPassword = bcrypt.compareSync(
+        password,
+        loginUsuario.getDataValue("password")
+      );
 
-    const validarPassword = bcrypt.compareSync(
-      password,
-      loginUsuario.getDataValue("password")
-    );
+      if (!validarPassword) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Contraseña no válida",
+        });
+      }
 
-    if (!validarPassword) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Contraseña no válida",
-      });
+      if (loginUsuario && validarPassword) {
+        // Generar Token - JWT
+        const token = await generarJWT(
+          loginUsuario.getDataValue("id"),
+          loginUsuario.getDataValue("login")
+        );
+        res.json({
+          ok: true,
+          token: token,
+          usuario: loginUsuario,
+        });
+      }
     }
-
-    // Generar Token - JWT
-    const token = await generarJWT(
-      loginUsuario.getDataValue("id"),
-      loginUsuario.getDataValue("login")
-    );
-
-    res.json({
-      ok: true,
-      token: token,
-      usuario: loginUsuario,
-    });
   } catch (error) {
     res.status(500).json({
       ok: false,
@@ -58,20 +67,31 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const renewToken = async (req: CustomRequest, res: Response) => {
-  const idUsaurio = req.id;
+  const idUsuario = req.id;
   const { body } = req;
+  let usuario;
+  let usuarioID;
+  let token;
+  let buscarUsuario;
+  let accesoMultimedia: boolean = false;
 
-  const usuario = await Usuario.build(body);
+  buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
 
-  // Generar el TOKEN - JWT
-  const token = await generarJWT(idUsaurio, usuario.getDataValue("login"));
-
-  // Obtener el usuario por UID
-  const usuarioID = await Usuario.findByPk(idUsaurio);
+  if (buscarUsuario) {
+    usuario = await Usuario.build(body);
+    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
+    usuarioID = await Usuario.findByPk(idUsuario);
+  } else {
+    usuario = await AccesoMultimedia.build(body);
+    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
+    usuarioID = await Solicitud.findByPk(idUsuario);
+    accesoMultimedia = true;
+  }
 
   res.json({
     ok: true,
     token,
     usuario: usuarioID,
+    accesoMultimedia,
   });
 };
