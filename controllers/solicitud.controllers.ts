@@ -69,6 +69,9 @@ export const crearSolicitud = async (req: Request, res: Response) => {
       <b>Por favor verifique su cuenta de correo electrónico haciendo clic en</b>
       <a href="${urlDeValidacion}/${idUsuario}" target="_blank">Verificar Cuenta </a>
     
+      <p>Si no solicitó verificar esta dirección, puede ignorar este correo electrónico.</p>
+
+      <p>Gracias</p>
       <p style="margin-top: 2%; font-size: 18px">
         Para mayor información puede contactarse a
         <a href="mailto:multimedia@congregacionmita.com">
@@ -79,7 +82,7 @@ export const crearSolicitud = async (req: Request, res: Response) => {
       <b class="margin-top:2%">Congregación Mita inc</b>
     </div>`;
 
-    enviarEmail(email, "Verificar Correo - CMA Multimedia", html);
+    enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
 
     res.json({
       ok: true,

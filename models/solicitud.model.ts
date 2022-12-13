@@ -75,4 +75,5 @@ const Solicitud = db.define(
     tableName: "solicitudes",
   }
 );
+
 export default Solicitud;
