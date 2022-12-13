@@ -73,32 +73,25 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let usuarioID;
   let token;
   let buscarUsuario;
+  let accesoMultimedia: boolean = false;
 
   buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
-    usuario = Usuario.build(body);
+    usuario = await Usuario.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await Usuario.findByPk(idUsuario);
   } else {
-    usuario = AccesoMultimedia.build(body);
+    usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await AccesoMultimedia.findByPk(idUsuario);
+    usuarioID = await Solicitud.findByPk(idUsuario);
+    accesoMultimedia = true;
   }
-
-  // usuario = Solicitud.build(body);
-
-  // Generar el TOKEN - JWT
-
-  // token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-
-  // Obtener el usuario por UID
-
-  // usuarioID = await Solicitud.findByPk(idUsuario);
 
   res.json({
     ok: true,
     token,
     usuario: usuarioID,
+    accesoMultimedia,
   });
 };
