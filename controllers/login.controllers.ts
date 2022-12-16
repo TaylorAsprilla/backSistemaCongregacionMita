@@ -80,7 +80,14 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   if (buscarUsuario) {
     usuario = await Usuario.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await Usuario.findByPk(idUsuario);
+    usuarioID = await Usuario.findByPk(idUsuario, {
+      include: [
+        {
+          all: true,
+          required: false,
+        },
+      ],
+    });
   } else {
     usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
