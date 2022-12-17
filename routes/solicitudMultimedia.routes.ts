@@ -26,6 +26,7 @@ router.post(
   "/",
   [
     check("nombre", "El nombre es obligatorio").not().isEmpty(),
+    check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
     check("direccion", "La dirección es obligatoria").not().isEmpty(),
     check("ciudad", "La ciudad es obligatoria").not().isEmpty(),
     check("celular", "El número de celular es obligatorio").not().isEmpty(),
@@ -34,6 +35,9 @@ router.post(
       "miembroCongregacion",
       "Selecciones si es o no miembro de la congregación Mita"
     )
+      .not()
+      .isEmpty(),
+    check("razonSolicitud_id", "Seleccione la razón de la solicitud")
       .not()
       .isEmpty(),
     validarCampos,

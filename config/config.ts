@@ -15,6 +15,7 @@ const config: any = {
       email: process.env.EMAIL,
       password: process.env.EMAIL_PASSWORD,
     },
+    urlDeValidacion: "http://localhost:4200/#/validaremail",
   },
   production: {
     database: {
@@ -30,6 +31,7 @@ const config: any = {
       email: process.env.EMAIL,
       password: process.env.EMAIL_PASSWORD,
     },
+    urlDeValidacion: "https://cmar.live/sistemacmi/#/validaremail",
   },
 };
 
