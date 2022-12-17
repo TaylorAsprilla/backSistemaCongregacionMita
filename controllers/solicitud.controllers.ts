@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import config from "../config/config";
 import db from "../database/connection";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
@@ -43,7 +44,8 @@ export const getUnaSolicitud = async (req: Request, res: Response) => {
 export const crearSolicitud = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, nombre } = body;
-  const urlDeValidacion = "https://cmar.live/sistemacmi/#/validaremail";
+  const environment = config[process.env.NODE_ENV || "development"];
+  const urlDeValidacion = environment.urlDeValidacion;
 
   try {
     // =======================================================================
