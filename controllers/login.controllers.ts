@@ -75,7 +75,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let buscarUsuario;
   let accesoMultimedia: boolean = false;
 
-  buscarUsuario = await Usuario.findByPk(idUsuario);
+  buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
     usuario = await Usuario.build(body);
@@ -91,13 +91,8 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   } else {
     usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-
-    usuarioID = await SolicitudMultimedia.findOne({
-      where: {
-        solicitud_id: idUsuario,
-      },
-    });
-    console.log("solicitud ID", usuarioID);
+    usuarioID = await SolicitudMultimedia.findByPk(idUsuario);
+    console.log("Usuario ID", idUsuario);
     accesoMultimedia = true;
   }
 
