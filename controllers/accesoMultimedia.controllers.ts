@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
@@ -23,6 +22,12 @@ export const loginMultimedia = async (req: Request, res: Response) => {
       },
     });
 
+    if (!loginUsuarioCmarLive?.getDataValue("estado")) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Este usuario no esta activo, por favor contáctese con el obrero más cercano",
+      });
+    }
     if (!loginUsuarioCmarLive) {
       return res.status(404).json({
         ok: false,

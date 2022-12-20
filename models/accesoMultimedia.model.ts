@@ -16,8 +16,8 @@ const AccesoMultimedia = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    tiempoAprobacion_id: {
-      type: DataTypes.STRING,
+    tiempoAprobacion: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
     estado: {
