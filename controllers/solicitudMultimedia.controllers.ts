@@ -3,11 +3,18 @@ import config from "../config/config";
 import db from "../database/connection";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import Solicitud from "../models/solicitud.model";
+import AccesoMultimedia from "../models/accesoMultimedia.model";
+import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 
-export const getSolicitudes = async (req: Request, res: Response) => {
+export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
   try {
-    const solicitudDeAccesos = await Solicitud.findAll({
+    const solicitudDeAccesos = await SolicitudMultimedia.findAll({
+      include: [
+        {
+          all: true,
+        },
+      ],
+
       order: db.col("id"),
     });
 
@@ -23,15 +30,32 @@ export const getSolicitudes = async (req: Request, res: Response) => {
   }
 };
 
-export const getUnaSolicitud = async (req: Request, res: Response) => {
+export const getUnaSolicitudMultimedia = async (
+  req: Request,
+  res: Response
+) => {
   const { id } = req.params;
 
-  const solicitudDeAcceso = await Solicitud.findByPk(id);
+  const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id, {
+    include: [
+      {
+        all: true,
+        required: false,
+      },
+    ],
+  });
+
+  const accesoMultimedia = await AccesoMultimedia.findOne({
+    where: {
+      solicitud_id: solicitudDeAcceso?.get().id,
+    },
+  });
 
   if (solicitudDeAcceso) {
     res.json({
       ok: true,
       solicitudDeAcceso,
+      accesoMultimedia,
       id,
     });
   } else {
@@ -41,7 +65,7 @@ export const getUnaSolicitud = async (req: Request, res: Response) => {
   }
 };
 
-export const crearSolicitud = async (req: Request, res: Response) => {
+export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, nombre } = body;
   const environment = config[process.env.NODE_ENV || "development"];
@@ -52,7 +76,7 @@ export const crearSolicitud = async (req: Request, res: Response) => {
     //                          Guardar Acceso Multimedia
     // =======================================================================
 
-    const solicitudDeAcceso = Solicitud.build(body);
+    const solicitudDeAcceso = SolicitudMultimedia.build(body);
     await solicitudDeAcceso.save();
     const idUsuario = solicitudDeAcceso.getDataValue("id");
 
@@ -99,12 +123,15 @@ export const crearSolicitud = async (req: Request, res: Response) => {
   }
 };
 
-export const actualizarSolicitud = async (req: Request, res: Response) => {
+export const actualizarSolicitudMultimedia = async (
+  req: Request,
+  res: Response
+) => {
   const { id } = req.params;
   const { body } = req;
 
   try {
-    const solicitudDeAcceso = await Solicitud.findByPk(id);
+    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
     if (!solicitudDeAcceso) {
       return res.status(404).json({
         ok: false,
@@ -133,12 +160,15 @@ export const actualizarSolicitud = async (req: Request, res: Response) => {
   }
 };
 
-export const eliminarSolicitud = async (req: CustomRequest, res: Response) => {
+export const eliminarSolicitudMultimedia = async (
+  req: CustomRequest,
+  res: Response
+) => {
   const { id } = req.params;
   const { body } = req;
 
   try {
-    const solicitudDeAcceso = await Solicitud.findByPk(id);
+    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
     if (solicitudDeAcceso) {
       const nombre = await solicitudDeAcceso.get().nombre;
 
@@ -164,12 +194,15 @@ export const eliminarSolicitud = async (req: CustomRequest, res: Response) => {
   }
 };
 
-export const activarSolicitud = async (req: CustomRequest, res: Response) => {
+export const activarSolicitudMultimedia = async (
+  req: CustomRequest,
+  res: Response
+) => {
   const { id } = req.params;
   const { body } = req;
 
   try {
-    const solicitudDeAcceso = await Solicitud.findByPk(id);
+    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
     if (!!solicitudDeAcceso) {
       const nombre = await solicitudDeAcceso.get().nombre;
 
@@ -213,7 +246,7 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
     });
   } else {
     try {
-      const correoElectronico = await Solicitud.findOne({
+      const correoElectronico = await SolicitudMultimedia.findOne({
         attributes: ["email"],
         where: {
           email: email,
@@ -243,7 +276,7 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
 export const validarEmail = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
   try {
-    const verificarStatus = await Solicitud.findByPk(id);
+    const verificarStatus = await SolicitudMultimedia.findByPk(id);
     if (!!verificarStatus) {
       const nombre = await verificarStatus.get().nombre;
 

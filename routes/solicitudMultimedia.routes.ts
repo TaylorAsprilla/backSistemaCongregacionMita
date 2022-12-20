@@ -5,23 +5,23 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
-  activarSolicitud,
-  actualizarSolicitud,
+  activarSolicitudMultimedia,
+  actualizarSolicitudMultimedia,
   buscarCorreoElectronico,
-  crearSolicitud,
-  eliminarSolicitud,
-  getSolicitudes,
-  getUnaSolicitud,
+  crearSolicitudMultimedia,
+  eliminarSolicitudMultimedia,
+  getSolicitudesMultimedia,
+  getUnaSolicitudMultimedia,
   validarEmail,
-} from "../controllers/solicitud.controllers";
+} from "../controllers/solicitudMultimedia.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getSolicitudes);
-router.get("/:id", validarJWT, getUnaSolicitud);
+router.get("/", validarJWT, getSolicitudesMultimedia);
+router.get("/:id", validarJWT, getUnaSolicitudMultimedia);
 router.post(
   "/",
   [
@@ -42,11 +42,11 @@ router.post(
       .isEmpty(),
     validarCampos,
   ],
-  crearSolicitud
+  crearSolicitudMultimedia
 );
-router.put("/:id", validarJWT, actualizarSolicitud);
-router.delete("/:id", validarJWT, eliminarSolicitud);
-router.put("/activar/:id", validarJWT, activarSolicitud);
+router.put("/:id", validarJWT, actualizarSolicitudMultimedia);
+router.delete("/:id", validarJWT, eliminarSolicitudMultimedia);
+router.put("/activar/:id", validarJWT, activarSolicitudMultimedia);
 router.get("/buscarcorreo/:email", buscarCorreoElectronico);
 router.put("/validaremail/:id", validarEmail);
 

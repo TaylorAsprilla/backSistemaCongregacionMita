@@ -1,3 +1,4 @@
+import AccesoMultimedia from "../models/accesoMultimedia.model";
 import Congregacion from "../models/congregacion.model";
 import Direccion from "../models/direccion.model";
 import Dosis from "../models/dosis.model";
@@ -8,7 +9,10 @@ import GradoAcademico from "../models/gradoAcademico.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
 import Permiso from "../models/permiso.model";
+import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
+import SolicitudMultimedia from "../models/solicitudMultimedia.model";
+import TiempoAprobacion from "../models/tiempoAprobacion.model";
 import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEmpleo from "../models/tipoEmpleo.model";
 import TipoMiembro from "../models/tipoMiembro.model";
@@ -78,6 +82,29 @@ Usuario.hasOne(TipoEmpleo, {
 Usuario.hasOne(TipoMiembro, {
   as: "tipoMiembro",
   sourceKey: "tipoMiembro_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(Usuario, {
+  as: "usuarioQueRegistra",
+  sourceKey: "usuarioQueRegistra_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(RazonSolicitud, {
+  as: "razonSolicitud",
+  sourceKey: "razonSolicitud_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(AccesoMultimedia, {
+  as: "accesoMultimedia",
+  foreignKey: "solicitud_id",
+});
+
+AccesoMultimedia.hasOne(TiempoAprobacion, {
+  as: "tiempoAprobación",
+  sourceKey: "tiempoAprobacion_id",
   foreignKey: "id",
 });
 

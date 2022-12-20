@@ -4,7 +4,7 @@ import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import { loginMultimedia } from "./accesoMultimedia.controllers";
-import Solicitud from "../models/solicitud.model";
+import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 
 export const login = async (req: Request, res: Response) => {
@@ -91,7 +91,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   } else {
     usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await Solicitud.findByPk(idUsuario);
+    usuarioID = await SolicitudMultimedia.findByPk(idUsuario);
     accesoMultimedia = true;
   }
 
