@@ -92,7 +92,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
     usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await SolicitudMultimedia.findByPk(idUsuario);
-    console.log("Usuario ID", idUsuario);
+
     accesoMultimedia = true;
   }
 
