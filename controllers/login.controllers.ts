@@ -75,7 +75,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let buscarUsuario;
   let accesoMultimedia: boolean = false;
 
-  buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
+  buscarUsuario = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
     usuario = await Usuario.build(body);
@@ -96,8 +96,8 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
       usuario.getDataValue("solicitud_id")
     );
     console.log(
-      "Usuario ID",
-      idUsuario,
+      "solicitud ID",
+      solicitud_id,
       await SolicitudMultimedia.findByPk(idUsuario)
     );
     accesoMultimedia = true;
