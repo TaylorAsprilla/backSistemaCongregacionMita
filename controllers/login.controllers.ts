@@ -91,15 +91,13 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   } else {
     usuario = await AccesoMultimedia.build(body);
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    const solicitud_id = await usuario.getDataValue("solicitud_id");
-    usuarioID = await SolicitudMultimedia.findByPk(
-      usuario.getDataValue("solicitud_id")
-    );
-    console.log(
-      "solicitud ID",
-      solicitud_id,
-      await SolicitudMultimedia.findByPk(idUsuario)
-    );
+
+    usuarioID = await SolicitudMultimedia.findOne({
+      where: {
+        solicitud_id: idUsuario,
+      },
+    });
+    console.log("solicitud ID", usuarioID);
     accesoMultimedia = true;
   }
 
