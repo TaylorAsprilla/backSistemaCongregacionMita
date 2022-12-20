@@ -19,14 +19,12 @@ const router = Router();
 router.post(
   "/",
   [
-    check("login", "La fecha de la actividad es obligatoria ").not().isEmpty(),
-    check("password", "La asistencia de la actividad es obligatoria")
-      .not()
-      .isEmpty(),
+    check("login", "Diligencia el Login del usuario ").not().isEmpty(),
+    check("password", "Diligencia la contraseña del usuario").not().isEmpty(),
     check("solicitud_id", "El ID de la solicitud es obligatorio")
       .not()
       .isEmpty(),
-    check("tiempoAprobacion_id", "El tiempo de aprobación es obligatorio")
+    check("tiempoAprobacion", "Selecciona el tiempo de aprobación")
       .not()
       .isEmpty(),
     validarCampos,

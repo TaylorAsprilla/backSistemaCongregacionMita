@@ -97,15 +97,15 @@ SolicitudMultimedia.hasOne(RazonSolicitud, {
   foreignKey: "id",
 });
 
+SolicitudMultimedia.hasOne(Nacionalidad, {
+  as: "nacionalidad",
+  sourceKey: "nacionalidad_id",
+  foreignKey: "id",
+});
+
 SolicitudMultimedia.hasOne(AccesoMultimedia, {
   as: "accesoMultimedia",
   foreignKey: "solicitud_id",
-});
-
-AccesoMultimedia.hasOne(TiempoAprobacion, {
-  as: "tiempoAprobación",
-  sourceKey: "tiempoAprobacion_id",
-  foreignKey: "id",
 });
 
 // Muchos a Muchos
