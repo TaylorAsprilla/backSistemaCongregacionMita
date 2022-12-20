@@ -33,13 +33,14 @@ import fuenteIngresoRoutes from "../routes/fuenteIngreso.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
 import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
 import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
-import accesoMultimediaRoutes from "../routes/solicitudMultimedia.routes";
+import solicitudMultimediaRoutes from "../routes/solicitudMultimedia.routes";
 import voluntariadoRoutes from "../routes/voluntariado.routes";
 import buscarCorreoRoutes from "../routes/buscarCorreo.routes";
 import buscarCelularRoutes from "../routes/buscarCelular.routes";
 import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
+import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -91,6 +92,7 @@ class Server {
     parentesco: "/api/parentesco",
     evento: "/api/evento",
     obrero: "/api/obrero",
+    accesoMultimedia: "/api/accesomultimedia",
   };
 
   constructor() {
@@ -163,13 +165,14 @@ class Server {
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
-    this.app.use(this.apiPaths.solicitudmultimedia, accesoMultimediaRoutes);
+    this.app.use(this.apiPaths.solicitudmultimedia, solicitudMultimediaRoutes);
     this.app.use(this.apiPaths.voluntariado, voluntariadoRoutes);
     this.app.use(this.apiPaths.buscarCorreo, buscarCorreoRoutes);
     this.app.use(this.apiPaths.buscarCelular, buscarCelularRoutes);
     this.app.use(this.apiPaths.razonSolicitud, razonSolicitudRoutes);
     this.app.use(this.apiPaths.evento, linkEventosRoutes);
     this.app.use(this.apiPaths.obrero, obreroRoutes);
+    this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
   }
 
   listen() {

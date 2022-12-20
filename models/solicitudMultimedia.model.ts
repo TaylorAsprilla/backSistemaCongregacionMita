@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const Solicitud = db.define(
-  "solicitudes",
+const SolicitudMultimedia = db.define(
+  "solicitudMultimedia",
   {
     nombre: {
       type: DataTypes.STRING,
@@ -72,8 +72,8 @@ const Solicitud = db.define(
   },
   {
     freezeTableName: true,
-    tableName: "solicitudes",
+    tableName: "solicitudMultimedia",
   }
 );
 
-export default Solicitud;
+export default SolicitudMultimedia;
