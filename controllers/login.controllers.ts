@@ -75,7 +75,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let buscarUsuario;
   let accesoMultimedia: boolean = false;
 
-  buscarUsuario = usuarioID = await Usuario.findByPk(idUsuario);
+  buscarUsuario = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
     usuario = await Usuario.build(body);
