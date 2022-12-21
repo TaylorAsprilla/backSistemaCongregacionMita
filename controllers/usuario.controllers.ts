@@ -24,8 +24,8 @@ export const getUsuarios = async (req: Request, res: Response) => {
         },
       ],
       offset: desde,
-      limit: 30,
-      order: [["id", "DESC"]],
+      limit: 50,
+      order: ["id"],
     }),
     Usuario.count(),
   ]);
