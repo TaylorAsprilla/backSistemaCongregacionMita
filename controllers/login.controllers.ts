@@ -68,6 +68,7 @@ export const login = async (req: Request, res: Response) => {
 
 export const renewToken = async (req: CustomRequest, res: Response) => {
   const idUsuario = req.id;
+
   const { body } = req;
   let usuario;
   let usuarioID;
@@ -75,10 +76,13 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let buscarUsuario;
   let accesoMultimedia: boolean = false;
 
+  // console.log("idUsuario primerooo", req, idUsuario);
+
   buscarUsuario = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
     usuario = await Usuario.build(body);
+
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await Usuario.findByPk(idUsuario, {
       include: [
@@ -89,10 +93,11 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
       ],
     });
   } else {
-    usuario = await AccesoMultimedia.build(body);
-    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await SolicitudMultimedia.findByPk(idUsuario);
-
+    usuario = await AccesoMultimedia.findByPk(idUsuario);
+    token = await generarJWT(idUsuario, usuario?.getDataValue("login"));
+    usuarioID = await SolicitudMultimedia.findOne({
+      where: { id: usuario?.getDataValue("solicitud_id") },
+    });
     accesoMultimedia = true;
   }
 
