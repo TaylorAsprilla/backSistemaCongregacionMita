@@ -49,6 +49,12 @@ const SolicitudMultimedia = db.define(
     otraRazon: {
       type: DataTypes.STRING,
     },
+    tiempoDistancia: {
+      type: DataTypes.STRING,
+    },
+    observaciones: {
+      type: DataTypes.TEXT,
+    },
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
