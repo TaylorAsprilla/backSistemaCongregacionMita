@@ -27,9 +27,6 @@ router.post(
       .not()
       .isEmpty(),
     check("pais_id", "El pais es obligatorio").not().isEmpty(),
-    // check("idObreroEncargado", "Debe seleccionar un obrero encargado")
-    //   .not()
-    //   .isEmpty(),
     validarCampos,
     validarJWT,
   ],

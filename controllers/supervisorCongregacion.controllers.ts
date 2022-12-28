@@ -1,22 +1,26 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
-import SupervisorCongregacion from "../models/supervisorCongregacion.model";
 
-export const getFeligres = async (req: Request, res: Response) => {
+export const getFeligreses = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const solicitudDeAccesos = await SupervisorCongregacion.findAll({
-      include: [
-        {
-          all: true,
-        },
-      ],
-
-      order: db.col("id"),
-    });
+    const [feligres, metadata] =
+      await db.query(`SELECT u.id, u.primerNombre, u.segundoNombre, u.primerApellido, 
+                        u.segundoApellido , p.pais, sc.obrero_id, c.congregacion,sc.obrero_id  FROM  
+                        usuario u INNER JOIN usuarioCongregacion uc 
+                        ON u.id = uc.usuario_id 
+                        INNER JOIN pais p 
+                        ON uc.pais_id = p.id
+                        INNER  JOIN congregacion c 
+                        ON  uc.congregacion_id = c.id 
+                        INNER JOIN supervisorCongregacion sc 
+                        ON sc.pais_id = p.id 
+                        WHERE sc.obrero_id = ${id}
+                        ORDER BY u.primerNombre;`);
 
     res.json({
       ok: true,
-      solicitudDeAccesos,
+      feligres,
     });
   } catch (error) {
     res.status(500).json({

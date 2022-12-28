@@ -41,6 +41,7 @@ import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
 import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
 import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
+import supervisorCongregacionRoutes from "../routes/supervisorCongregacion.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -93,6 +94,7 @@ class Server {
     evento: "/api/evento",
     obrero: "/api/obrero",
     accesoMultimedia: "/api/accesomultimedia",
+    supervisorCongregacion: "/api/supervisorcongregacion",
   };
 
   constructor() {
@@ -173,6 +175,10 @@ class Server {
     this.app.use(this.apiPaths.evento, linkEventosRoutes);
     this.app.use(this.apiPaths.obrero, obreroRoutes);
     this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
+    this.app.use(
+      this.apiPaths.supervisorCongregacion,
+      supervisorCongregacionRoutes
+    );
   }
 
   listen() {
