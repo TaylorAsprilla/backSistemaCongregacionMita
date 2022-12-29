@@ -18,7 +18,6 @@ const Campo = db.define(
     },
     idObreroEncargado: {
       type: DataTypes.INTEGER,
-      // allowNull: false,
     },
   },
   {

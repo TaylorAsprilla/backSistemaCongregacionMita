@@ -76,8 +76,7 @@ export const loginMultimedia = async (req: Request, res: Response) => {
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
-  const { login, password, solicitud_id, tiempoAprobacion_id, estado } =
-    req.body;
+  const { login, password, solicitud_id, tiempoAprobacion, estado } = req.body;
 
   // =======================================================================
   //                          Validaciones
@@ -148,13 +147,16 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
         <p><b>Credenciales de ingreso</b></p>  
         <ul style="list-style: none">
           <li>
-            <b>Link de Acceso:&nbsp; </b> ${urlCmarLive}
+            <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a> 
           </li>      
           <li>
             <b>Usuario:&nbsp; </b> ${loginAcceso}
           </li>  
           <li>
             <b>Contraseña:&nbsp;</b> ${password}      
+          </li>
+          <li>
+            <b>Tiempo de aprobación:&nbsp;</b> ${tiempoAprobacion}      
           </li>
         </ul>
   
