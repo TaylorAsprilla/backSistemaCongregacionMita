@@ -42,6 +42,9 @@ import linkEventosRoutes from "../routes/linkEventos.routes";
 import obreroRoutes from "../routes/obrero.routes";
 import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
 import supervisorCongregacionRoutes from "../routes/supervisorCongregacion.routes";
+import tipoEstudioRoutes from "../routes/tipoEstudio.routes";
+import opcionTransporteRoutes from "../routes/opcionTransporte.routes";
+import parentescoRoutes from "../routes/parentesco.routes";
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -95,6 +98,8 @@ class Server {
     obrero: "/api/obrero",
     accesoMultimedia: "/api/accesomultimedia",
     supervisorCongregacion: "/api/supervisorcongregacion",
+    tipoEstudio: "/api/tipoestudio",
+    opcionTransporte: "/api/opciontransporte",
   };
 
   constructor() {
@@ -179,6 +184,9 @@ class Server {
       this.apiPaths.supervisorCongregacion,
       supervisorCongregacionRoutes
     );
+    this.app.use(this.apiPaths.tipoEstudio, tipoEstudioRoutes);
+    this.app.use(this.apiPaths.opcionTransporte, opcionTransporteRoutes);
+    this.app.use(this.apiPaths.parentesco, parentescoRoutes);
   }
 
   listen() {
