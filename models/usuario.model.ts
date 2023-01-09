@@ -54,9 +54,11 @@ const Usuario = db.define(
     },
     numeroDocumento: {
       type: DataTypes.STRING,
+      unique: true,
     },
     login: {
       type: DataTypes.STRING,
+      unique: true,
     },
     password: {
       type: DataTypes.STRING,
@@ -103,7 +105,6 @@ const Usuario = db.define(
     },
     tipoDocumento_id: {
       type: DataTypes.INTEGER,
-      allowNull: true,
     },
   },
   {

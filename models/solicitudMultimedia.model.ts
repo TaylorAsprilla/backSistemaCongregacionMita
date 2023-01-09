@@ -52,6 +52,36 @@ const SolicitudMultimedia = db.define(
     tiempoDistancia: {
       type: DataTypes.STRING,
     },
+    horaTemploMasCercano: {
+      type: DataTypes.STRING,
+    },
+    personaEncamada: {
+      type: DataTypes.BOOLEAN,
+    },
+    personaEncargada: {
+      type: DataTypes.STRING,
+    },
+    celularPersonaEncargada: {
+      type: DataTypes.STRING,
+    },
+    enfermedadCronica: {
+      type: DataTypes.BOOLEAN,
+    },
+    enfermedadQuePadece: {
+      type: DataTypes.STRING,
+    },
+    paisDondeEstudia: {
+      type: DataTypes.STRING,
+    },
+    ciudadDondeEstudia: {
+      type: DataTypes.STRING,
+    },
+    duracionDelPeriodoDeEstudio: {
+      type: DataTypes.DATE,
+    },
+    baseMilitar: {
+      type: DataTypes.STRING,
+    },
     observaciones: {
       type: DataTypes.TEXT,
     },
@@ -74,6 +104,18 @@ const SolicitudMultimedia = db.define(
     usuarioQueRegistra_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    opcionTransporte_id: {
+      type: DataTypes.INTEGER,
+    },
+    tipoDeEstudio_id: {
+      type: DataTypes.INTEGER,
+    },
+    parentesco_id: {
+      type: DataTypes.INTEGER,
+    },
+    terminos: {
+      type: DataTypes.BOOLEAN,
     },
   },
   {
