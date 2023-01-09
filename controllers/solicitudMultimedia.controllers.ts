@@ -171,8 +171,38 @@ export const eliminarSolicitudMultimedia = async (
     const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
     if (solicitudDeAcceso) {
       const nombre = await solicitudDeAcceso.get().nombre;
+      const email = await solicitudDeAcceso.get().email;
 
       await solicitudDeAcceso.update({ estado: false });
+
+      // =======================================================================
+      //                         Enviar Correo de Verificación
+      // =======================================================================
+      const html = `
+      <div style="text-align: center; font-size: 22px">
+      <img
+        src="https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png"
+        alt="CMAR Multimedia"
+        style="text-align: center; width: 400px"
+      />
+      <p>Saludos, ${nombre}</p>
+      <p>Su solicitud ha sido denegada</p>
+    
+    
+      <p>Por favor comuniquese con su obrero más cercano.</p>
+
+    
+      <p style="margin-top: 2%; font-size: 18px">
+        Para mayor información puede contactarse a
+        <a href="mailto:multimedia@congregacionmita.com">
+          multimedia@congregacionmita.com</a
+        >
+      </p>
+    
+      <b class="margin-top:2%">Congregación Mita inc</b>
+    </div>`;
+
+      enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
 
       res.json({
         ok: true,
