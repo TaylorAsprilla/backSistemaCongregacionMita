@@ -10,6 +10,7 @@ import {
   crearLinkEvento,
   eliminarLinkEvento,
   getLinkEventos,
+  getUnLinkEvento,
 } from "../controllers/linkEvento.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -18,6 +19,7 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getLinkEventos);
+router.get("/:id", validarJWT, getUnLinkEvento);
 router.post(
   "/",
   [

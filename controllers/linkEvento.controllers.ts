@@ -21,6 +21,24 @@ export const getLinkEventos = async (req: Request, res: Response) => {
   }
 };
 
+export const getUnLinkEvento = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const linkEvento = await LinkEvento.findByPk(id);
+
+    res.json({
+      ok: true,
+      linkEvento,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const crearLinkEvento = async (req: Request, res: Response) => {
   const { body } = req;
 
