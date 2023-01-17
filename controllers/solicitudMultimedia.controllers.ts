@@ -6,6 +6,10 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 
+const environment = config[process.env.NODE_ENV || "development"];
+const imagenEmail = environment.imagenEmail;
+const urlDeValidacion = environment.urlDeValidacion;
+
 export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
   try {
     const solicitudDeAccesos = await SolicitudMultimedia.findAll({
@@ -68,8 +72,6 @@ export const getUnaSolicitudMultimedia = async (
 export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, nombre } = body;
-  const environment = config[process.env.NODE_ENV || "development"];
-  const urlDeValidacion = environment.urlDeValidacion;
 
   try {
     // =======================================================================
@@ -84,29 +86,99 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
     //                         Enviar Correo de Verificación
     // =======================================================================
     const html = `
-      <div style="text-align: center; font-size: 22px">
-      <img
-        src="https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png"
-        alt="CMAR Multimedia"
-        style="text-align: center; width: 400px"
-      />
-      <p>Saludos, ${nombre}</p>
-      <p>Su solicitud será tramitada en breve</p>
-      <b>Por favor verifique su cuenta de correo electrónico haciendo clic en</b>
-      <a href="${urlDeValidacion}/${idUsuario}" target="_blank">Verificar Cuenta </a>
-    
-      <p>Si no solicitó verificar esta dirección, puede ignorar este correo electrónico.</p>
-
-      <p>Gracias</p>
-      <p style="margin-top: 2%; font-size: 18px">
-        Para mayor información puede contactarse a
-        <a href="mailto:multimedia@congregacionmita.com">
-          multimedia@congregacionmita.com</a
+      <div
+        style="
+          max-width: 100%;
+          width: 600px;
+          margin: 0 auto;
+          box-sizing: border-box;
+          font-family: Arial, Helvetica, 'sans-serif';
+          font-weight: normal;
+          font-size: 16px;
+          line-height: 22px;
+          color: #252525;
+          word-wrap: break-word;
+          word-break: break-word;
+          text-align: justify;
+        "
+      >
+        <div style="text-align: center">
+          <img
+            src="${imagenEmail}"
+            alt="CMAR Multimedia"
+            style="text-align: center; width: 200px"
+          />
+        </div>
+        <h3>Verifica tu cuenta de correo electrónico</h3>
+        <p>Hola, ${nombre}</p>
+        <p>
+          Ha registrado ${email} como cuenta de correo electrónico para CMAR LIVE. Por
+          favor verifique su cuenta de correo electrónico haciendo clic en el
+          sifuiente enlace:
+        </p>
+      
+        <div
+          title="Verificar Cuenta"
+          style="text-align: center; margin: 24px 0 40px 0; padding: 0"
         >
-      </p>
-    
-      <b class="margin-top:2%">Congregación Mita inc</b>
-    </div>`;
+          <a
+            href="${urlDeValidacion}/${idUsuario}"
+            style="
+              display: inline-block;
+              margin: 0 auto;
+              min-width: 180px;
+              line-height: 28px;
+              border-radius: 22px;
+              padding: 8px 16px 7px 16px;
+              vertical-align: middle;
+              background-color: #0072de;
+              color: #fff;
+              box-sizing: border-box;
+              text-align: center;
+              text-decoration: none;
+              font-family: Arial, Helvetica, 'sans-serif';
+              font-weight: normal;
+              word-wrap: break-word;
+              word-break: break-all;
+            "
+            target="_blank"
+          >
+            Verificar cuenta
+          </a>
+        </div>
+      
+        <p>
+          Si el enlace anterior no funciona, introduzca la dirección su navegador.
+        </p>
+      
+        <a href="${urlDeValidacion}/${idUsuario}">${urlDeValidacion}/${idUsuario}</a>
+      
+        <div>
+          <p
+            style="
+              margin: 30px 0 12px 0;
+              padding: 0;
+              color: #252525;
+              font-family: Arial, Helvetica, 'sans-serif';
+              font-weight: normal;
+              word-wrap: break-word;
+              word-break: break-word;
+              font-size: 12px;
+              line-height: 16px;
+              color: #909090;
+            "
+          >
+            Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+            en contacto con nosotros mediante nuestro correo electrónico
+            <a href="mailto:multimedia@congregacionmita.com">
+              multimedia@congregacionmita.com</a
+            >
+          </p>
+      
+          <br />
+          <b>Congregación Mita Inc</b>
+        </div>
+      </div>`;
 
     enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
 
@@ -172,35 +244,78 @@ export const eliminarSolicitudMultimedia = async (
     if (solicitudDeAcceso) {
       const nombre = await solicitudDeAcceso.get().nombre;
       const email = await solicitudDeAcceso.get().email;
+      const motivoDeNegacion = await body.motivoDeNegacion;
 
-      await solicitudDeAcceso.update({ estado: false });
+      solicitudDeAcceso.set({
+        estado: false,
+        motivoDeNegacion,
+      });
+      await solicitudDeAcceso.save();
 
       // =======================================================================
       //                         Enviar Correo de Verificación
       // =======================================================================
       const html = `
-      <div style="text-align: center; font-size: 22px">
-      <img
-        src="https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png"
-        alt="CMAR Multimedia"
-        style="text-align: center; width: 400px"
-      />
-      <p>Saludos, ${nombre}</p>
-      <p>Su solicitud ha sido denegada</p>
-    
-    
-      <p>Por favor comuniquese con su obrero más cercano.</p>
-
-    
-      <p style="margin-top: 2%; font-size: 18px">
-        Para mayor información puede contactarse a
-        <a href="mailto:multimedia@congregacionmita.com">
-          multimedia@congregacionmita.com</a
+      <div
+          style="
+            max-width: 100%;
+            width: 600px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, 'sans-serif';
+            font-weight: normal;
+            font-size: 16px;
+            line-height: 22px;
+            color: #252525;
+            word-wrap: break-word;
+            word-break: break-word;
+            text-align: justify;
+          "
         >
-      </p>
-    
-      <b class="margin-top:2%">Congregación Mita inc</b>
-    </div>`;
+          <div style="text-align: center">
+            <img
+              src="${imagenEmail}"
+              alt="CMAR Multimedia"
+              style="text-align: center; width: 200px"
+            />
+          </div>
+          <h3>Solicitud de Acceso</h3>
+          <p>Hola, ${nombre}</p>
+          <p>
+            Su solicitud de acceso a CMAR LIVE para disfrutar de los servicios, vigilias
+            y eventos especiales de la Congregación Mita, lamentablemente ha sido
+            denegada por los motivos relacionados a continuación:
+          </p>
+        
+          <b>Motivos:</b>
+          <p>${motivoDeNegacion}</p>
+        
+          <div>
+            <p
+              style="
+                margin: 30px 0 12px 0;
+                padding: 0;
+                color: #252525;
+                font-family: Arial, Helvetica, 'sans-serif';
+                font-weight: normal;
+                word-wrap: break-word;
+                word-break: break-word;
+                font-size: 12px;
+                line-height: 16px;
+                color: #909090;
+              "
+            >
+              Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+              en contacto con nosotros mediante nuestro correo electrónico
+              <a href="mailto:multimedia@congregacionmita.com">
+                multimedia@congregacionmita.com</a
+              >
+            </p>
+        
+            <br />
+            <b>Congregación Mita Inc</b>
+          </div>
+        </div>`;
 
       enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
 

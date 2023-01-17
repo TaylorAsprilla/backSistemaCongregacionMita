@@ -16,9 +16,11 @@ const config: any = {
       password: process.env.EMAIL_PASSWORD,
     },
     urlDeValidacion: "http://localhost:4200/#/validaremail",
+    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
+    jwtSecretReset: process.env.JWT_SECRET_RESET,
   },
   production: {
     database: {
@@ -35,9 +37,11 @@ const config: any = {
       password: process.env.EMAIL_PASSWORD,
     },
     urlDeValidacion: "https://cmar.live/sistemacmi/#/validaremail",
+    verificarLink: "https://cmar.live/sistemacmi/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
+    jwtSecretReset: process.env.JWT_SECRET_RESET,
   },
 };
 

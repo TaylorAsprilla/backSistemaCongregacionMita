@@ -127,49 +127,78 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     if (!!usuario && !!loginAcceso) {
       // Generar Token - JWT
       const token = await generarJWT(accesoMultimedia.getDataValue("id"));
+      const nombre = await usuario.getDataValue("nombre");
 
       // =======================================================================
       //                          Correo Electrónico
       // =======================================================================
 
       const html = `
-      <div style="text-align: center; font-size: 22px">
-        <img
-          src=${imagenEmail}
-          alt="CMAR Multimedia"
-          style="text-align: center; width: 400px"
-        />
-        <p>Hola, ${usuario.getDataValue("nombre")}</p>
-        <p>Su registro está listo, le damos la bienvenida a <b>CMAR LIVE</b> donde podrá disfrutar de los servicios, vigilias y eventos especiales que se transmitirán</p>
-      </div>  
-      
-      <div style="font-size: 22px">
-        <p><b>Credenciales de ingreso</b></p>  
-        <ul style="list-style: none">
-          <li>
-            <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a> 
-          </li>      
-          <li>
-            <b>Usuario:&nbsp; </b> ${loginAcceso}
-          </li>  
-          <li>
-            <b>Contraseña:&nbsp;</b> ${password}      
-          </li>
-          <li>
-            <b>Tiempo de aprobación:&nbsp;</b> ${tiempoAprobacion}      
-          </li>
-        </ul>
-  
-        <p>Gracias,</p>
-        <p style="margin-top: 2%; font-size: 18px">
-          Para mayor información puede contactarse a
-          <a href="mailto:multimedia@congregacionmita.com">
-            multimedia@congregacionmita.com</a
+                <div
+            style="
+              max-width: 100%;
+              width: 600px;
+              margin: 0 auto;
+              box-sizing: border-box;
+              font-family: Arial, Helvetica, 'sans-serif';
+              font-weight: normal;
+              font-size: 16px;
+              line-height: 22px;
+              color: #252525;
+              word-wrap: break-word;
+              word-break: break-word;
+              text-align: justify;
+            "
           >
-        </p>
-      
-        <b class="margin-top:2%">Congregación Mita inc</b>
-    </div>`;
+            <div style="text-align: center">
+              <img
+                src="${imagenEmail}"
+                alt="CMAR Multimedia"
+                style="text-align: center; width: 200px"
+              />
+            </div>
+            <h3>Bienvenido(a) a CMAR LIVE</h3>
+            <p>Hola, ${nombre} </p>
+            <p>
+              Le damos la bienvenida a CMAR LIVE donde podrá disfrutar de los servicios,
+              vigilias y eventos especiales de la Congregación Mita.
+            </p>
+          
+            <div>
+              <p><b>Credenciales de ingreso:</b></p>
+              <ul style="list-style: none">
+                <li>
+                  <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+                </li>
+                <li><b>Usuario:&nbsp; </b> ${loginAcceso}</li>
+                <li><b>Contraseña:&nbsp;</b> ${password}</li>
+                <li><b>Tiempo de aprobación:&nbsp;</b> ${tiempoAprobacion}</li>
+              </ul>
+              <p
+                style="
+                  margin: 30px 0 12px 0;
+                  padding: 0;
+                  color: #252525;
+                  font-family: Arial, Helvetica, 'sans-serif';
+                  font-weight: normal;
+                  word-wrap: break-word;
+                  word-break: break-word;
+                  font-size: 12px;
+                  line-height: 16px;
+                  color: #909090;
+                "
+              >
+                Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+                en contacto con nosotros mediante nuestro correo electrónico
+                <a href="mailto:multimedia@congregacionmita.com">
+                  multimedia@congregacionmita.com</a
+                >
+              </p>
+          
+              <br />
+              <b>Congregación Mita Inc</b>
+            </div>
+          </div>`;
 
       enviarEmail(usuario.getDataValue("email"), "Acceso a CMAR LIVE", html);
 

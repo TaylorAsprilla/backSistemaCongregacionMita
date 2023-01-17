@@ -85,11 +85,14 @@ const SolicitudMultimedia = db.define(
     observaciones: {
       type: DataTypes.TEXT,
     },
+    motivoDeNegacion: {
+      type: DataTypes.TEXT,
+    },
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
     },
-    status: {
+    emailVerificado: {
       type: DataTypes.BOOLEAN,
       defaultValue: 0,
     },
