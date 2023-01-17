@@ -315,7 +315,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       !!numeroDocumento &&
       getNumeroDocumento !== numeroDocumento.toString()
     ) {
-      console.log("Entra 2");
       const existeNumeroDocumento = await Usuario.findOne({
         where: {
           numeroDocumento: numeroDocumento,
@@ -330,7 +329,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     }
 
     if (!!numeroCelular && getNumeroCelular !== numeroCelular) {
-      console.log("Entra 3");
       const existeNumeroCelular = await Usuario.findOne({
         where: {
           numeroCelular: numeroCelular,
@@ -343,7 +341,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
         });
       }
     }
-    console.log("Entra 4.1");
 
     if (!!login && getLogin !== login) {
       const existeLogin = await Usuario.findOne({
@@ -358,13 +355,13 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
         });
       }
     }
-    console.log("Entra 5.1");
+
     // Encriptar contraseña
     if (!!password) {
       const salt = bcrypt.genSaltSync();
       campos.password = await bcrypt.hashSync(password, salt);
     }
-    console.log("Entra 6.1");
+
     campos.email = await email;
     campos.numeroDocumento = await numeroDocumento;
     campos.numeroCelular = await numeroCelular;

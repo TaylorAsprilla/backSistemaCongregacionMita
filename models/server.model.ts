@@ -45,6 +45,7 @@ import supervisorCongregacionRoutes from "../routes/supervisorCongregacion.route
 import tipoEstudioRoutes from "../routes/tipoEstudio.routes";
 import opcionTransporteRoutes from "../routes/opcionTransporte.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
+
 import cors from "cors";
 import db from "../database/connection";
 require("../database/associations");
@@ -100,6 +101,7 @@ class Server {
     supervisorCongregacion: "/api/supervisorcongregacion",
     tipoEstudio: "/api/tipoestudio",
     opcionTransporte: "/api/opciontransporte",
+    password: "/api/password",
   };
 
   constructor() {

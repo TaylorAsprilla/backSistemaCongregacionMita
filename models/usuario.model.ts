@@ -70,6 +70,9 @@ const Usuario = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
     },
+    resetToken: {
+      type: DataTypes.STRING,
+    },
     genero_id: {
       type: DataTypes.INTEGER,
     },
