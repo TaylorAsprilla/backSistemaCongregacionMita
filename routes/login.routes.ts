@@ -53,6 +53,7 @@ router.put(
     check("idUsuario", "El identificador del usuario es obligatorio")
       .not()
       .isEmpty(),
+    check("login", "El login del usuario es obligatorio").not().isEmpty(),
     check("passwordNuevo", "Se requiere la nueva contraseña").not().isEmpty(),
     validarCampos,
     validarJWT,

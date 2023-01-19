@@ -351,3 +351,70 @@ export const activarAccesoMultimedia = async (
     });
   }
 };
+
+export const cambiarPasswordAccesoMultimedia = async (
+  req: Request,
+  res: Response
+) => {
+  const { body } = req;
+  const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
+
+  let usuario;
+  let usuarioActualizado;
+  let password;
+
+  try {
+    usuario = await AccesoMultimedia.findOne({
+      where: {
+        login: login,
+      },
+    });
+  } catch (error) {
+    return res.status(404).json({
+      ok: false,
+      msg: `Ha ocurrido un error, por favor comuniquese con el administrador`,
+      error,
+    });
+  }
+
+  if (!!usuario) {
+    const validarPassword = bcrypt.compareSync(
+      passwordAntiguo,
+      usuario.getDataValue("password")
+    );
+
+    if (!validarPassword) {
+      return res.status(404).json({
+        ok: false,
+        msg: "La contraseña antigua no es válida",
+      });
+    }
+
+    if (usuario && validarPassword) {
+      try {
+        const salt = bcrypt.genSaltSync();
+        password = bcrypt.hashSync(passwordNuevo, salt);
+
+        usuarioActualizado = await usuario.update({
+          password,
+        });
+      } catch (error) {
+        return res.status(404).json({
+          ok: false,
+          msg: "No se cambió la contraseña, hable con el administrador",
+          error,
+        });
+      }
+      res.json({
+        ok: true,
+        msg: "La contraseña se cambió satisfactoriamente",
+        usuarioActualizado,
+      });
+    }
+  } else {
+    return res.status(404).json({
+      ok: false,
+      msg: `No existe la cuenta de usuario ${login}`,
+    });
+  }
+};
