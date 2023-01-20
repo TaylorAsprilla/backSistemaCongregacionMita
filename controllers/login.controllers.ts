@@ -3,7 +3,10 @@ import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import { loginMultimedia } from "./accesoMultimedia.controllers";
+import {
+  cambiarPasswordAccesoMultimedia,
+  loginMultimedia,
+} from "./accesoMultimedia.controllers";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import config from "../config/config";
@@ -27,8 +30,8 @@ export const login = async (req: Request, res: Response) => {
 
     if (!loginUsuario) {
       //TODO Login para la solicitudes de acceso Multimedia
-      const loginMultimediaS = loginMultimedia(req, res);
-      if (!loginMultimediaS) {
+      const loginUsuarioMultimedia = loginMultimedia(req, res);
+      if (!loginUsuarioMultimedia) {
         return res.status(404).json({
           ok: false,
           msg: "Usuario no válido",
@@ -345,18 +348,32 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
 
 export const cambiarpassword = async (req: Request, res: Response) => {
   const { body } = req;
-  const { passwordAntiguo, passwordNuevo, idUsuario } = body;
+  const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
 
   let usuario;
   let usuarioActualizado;
   let password;
 
   try {
-    usuario = await Usuario.findByPk(idUsuario);
+    usuario = await Usuario.findOne({
+      where: {
+        login: login,
+      },
+    });
+    if (!usuario) {
+      //TODO Cambio de contraseña para acceso Multimedia
+      const loginUsuarioMultimedia = cambiarPasswordAccesoMultimedia(req, res);
+      if (!loginUsuarioMultimedia) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Usuario no válido",
+        });
+      }
+    }
   } catch (error) {
     return res.status(404).json({
       ok: false,
-      msg: `No existe el usuario con el id ${idUsuario}`,
+      msg: `No existe el usuario con el id ${login}`,
       error,
     });
   }
@@ -367,7 +384,6 @@ export const cambiarpassword = async (req: Request, res: Response) => {
       usuario.getDataValue("password")
     );
 
-    console.log("validarPassword", validarPassword);
     if (!validarPassword) {
       return res.status(404).json({
         ok: false,
