@@ -36,5 +36,6 @@ router.put(
   actualizarGenero
 );
 router.delete("/:id", validarJWT, eliminarGenero);
+router.put("/activar/:id", validarJWT, eliminarGenero);
 
 export default router;

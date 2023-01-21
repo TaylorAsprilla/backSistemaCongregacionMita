@@ -130,3 +130,42 @@ export const eliminarGenero = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
+export const activarGenero = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const genero = await Genero.findByPk(id);
+    if (!!genero) {
+      const nombre = await genero.get().genero;
+
+      if (genero.get().estado === false) {
+        await genero.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El genero ${nombre} se activó`,
+          genero,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El genero ${nombre} esta activo`,
+          genero,
+        });
+      }
+    }
+
+    if (!genero) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el genero identificado con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};
