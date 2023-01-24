@@ -16,8 +16,8 @@ import { Op } from "sequelize";
 import generarPassword from "../helpers/generarPassword";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
-import { transporter } from "../config/mailer";
-import db from "../database/connection";
+import Congregacion from "../models/congregacion.model";
+import Campo from "../models/campo.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -424,9 +424,10 @@ export const cambiarpassword = async (req: Request, res: Response) => {
 
 export const envioDeCredenciales = async (req: Request, res: Response) => {
   const { body } = req;
-  let usuarios;
+  let usuarios = [];
   let cantidad;
-  let permisos: string[] = [ROLES_ID.OBRERO, ROLES_ID.MULTIMEDIA];
+  let permisosObreroCongregacion: string = ROLES_ID.OBRERO_CIUDAD;
+  let permisosObreroCampo: string = ROLES_ID.OBRERO_CAMPO;
 
   try {
     const { count, rows } = await Usuario.findAndCountAll({
@@ -444,7 +445,6 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
         email: { [Op.ne]: "" },
       },
     });
-
     usuarios = rows;
     cantidad = count;
   } catch (error) {
@@ -456,7 +456,8 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
   }
 
   if (!!usuarios.length) {
-    usuarios.forEach((usuario) => {
+    usuarios.forEach(async (usuario) => {
+      console.log(usuario);
       let email = usuario.getDataValue("email");
       let login = usuario.getDataValue("login");
       let id = usuario.getDataValue("id");
@@ -466,12 +467,21 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
               ${usuario.getDataValue("primerApellido")}
               ${usuario.getDataValue("segundoApellido")}
               `;
+
+      let obreroEncargadoCongregacion = await Congregacion.findOne({
+        where: { idObreroEncargado: id },
+      });
+
+      let obreroEncargadoCampo = await Campo.findOne({
+        where: { idObreroEncargado: id },
+      });
+
       if (!!email && !login) {
         const salt = bcrypt.genSaltSync();
         const password = generarPassword();
         const passwordEncriptada = bcrypt.hashSync(password, salt);
         try {
-          usuario.update({
+          await usuario.update({
             login: email,
             password: passwordEncriptada,
           });
@@ -485,12 +495,17 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
 
         try {
           // Guarda los permisos
-          permisos.forEach((permiso) => {
-            UsuarioPermiso.create({
+          if (!!obreroEncargadoCongregacion) {
+            await UsuarioPermiso.create({
               usuario_id: id,
-              permiso_id: permiso,
+              permiso_id: permisosObreroCongregacion,
             });
-          });
+          } else if (!!obreroEncargadoCampo) {
+            await UsuarioPermiso.create({
+              usuario_id: id,
+              permiso_id: permisosObreroCampo,
+            });
+          }
         } catch (error) {
           return res.status(404).json({
             ok: false,
