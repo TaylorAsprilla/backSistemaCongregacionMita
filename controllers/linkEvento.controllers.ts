@@ -164,3 +164,83 @@ export const activarLinkEvento = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
+export const agregarALaBiblioteca = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const linkEvento = await LinkEvento.findByPk(id);
+    if (!!linkEvento) {
+      const nombreEvento = await linkEvento.get().titulo;
+
+      if (linkEvento.get().eventoEnBiblioteca === false) {
+        await linkEvento.update({ eventoEnBiblioteca: true });
+        res.json({
+          ok: true,
+          msg: `El evento ${nombreEvento} se agregó a la biblioteca`,
+          linkEvento,
+          id: id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El evento ${nombreEvento} está en la biblioteca`,
+          linkEvento,
+        });
+      }
+    }
+
+    if (!linkEvento) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un evento con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const eliminarDeLaBiblioteca = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { body } = req;
+
+  try {
+    const linkEvento = await LinkEvento.findByPk(id);
+    if (!!linkEvento) {
+      const nombreEvento = await linkEvento.get().titulo;
+
+      if (linkEvento.get().eventoEnBiblioteca === true) {
+        await linkEvento.update({ eventoEnBiblioteca: false });
+        res.json({
+          ok: true,
+          msg: `El evento ${nombreEvento} se eliminó a la biblioteca`,
+          linkEvento,
+          id: id,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El evento ${nombreEvento} no se encuentra en la biblioteca`,
+          linkEvento,
+        });
+      }
+    }
+
+    if (!linkEvento) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un evento con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
+    });
+  }
+};

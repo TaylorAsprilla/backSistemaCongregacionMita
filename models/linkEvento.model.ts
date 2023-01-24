@@ -26,6 +26,10 @@ const LinkEvento = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: 1,
     },
+    eventoEnBiblioteca: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 0,
+    },
     tipoEvento_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
