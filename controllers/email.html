@@ -21,18 +21,22 @@
       style="text-align: center; width: 200px"
     />
   </div>
-  <h3>Solicitud de Acceso</h3>
+  <h3>Registro exitoso</h3>
   <p>Hola, ${nombre}</p>
   <p>
-    Su solicitud de acceso a CMAR LIVE para disfrutar de los servicios, vigilias
-    y eventos especiales de la Congregación Mita, lamentablemente ha sido
-    denegada por los motivos relacionados a continuación:
+    Tu registro está listo, te damos la bienvenida a CMAR LIVE, donde podrá
+    distrutar de los servicios, vigilias y eventos especiales de la Congregación
+    Mita.
   </p>
 
-  <b>Motivos:</b>
-  <p>${motivoDeNegacion}</p>
-
-  <p>Para</p>
+  <p><b>Credenciales de ingreso:</b></p>
+  <ul style="list-style: none">
+    <li>
+      <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+    </li>
+    <li><b>Usuario:&nbsp; </b> ${login}</li>
+    <li><b>Contraseña:&nbsp;</b> ${password}</li>
+  </ul>
 
   <div>
     <p
@@ -58,33 +62,5 @@
 
     <br />
     <b>Congregación Mita Inc</b>
-  </div>
-</div>
-
-<div>
-  <h3 style="text-align: center">
-    <span style="color: #f3c862"><strong>VERIFICACIÓN DE EDAD</strong></span>
-  </h3>
-  Al hacer clic en ingresar, está verificando que tiene más
-  de <strong>18</strong> años y puede consumir alcohol legalmente.
-  <div class="age-checker__actions">
-    <button
-      type="button"
-      class="pum-close popmake-close sc_button_hover_slide_left btnIngresar"
-      aria-label="Close"
-      style=""
-    >
-      INGRESAR
-    </button>
-    <p>
-      <button
-        type="button"
-        class="sc_button_hover_slide_left btnSalir"
-        aria-label="Close"
-        style=""
-      >
-        SALIR
-      </button>
-    </p>
   </div>
 </div>

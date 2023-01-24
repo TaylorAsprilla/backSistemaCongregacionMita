@@ -12,9 +12,16 @@ import AccesoMultimedia from "../models/accesoMultimedia.model";
 import config from "../config/config";
 import * as jwt from "jsonwebtoken";
 import enviarEmail from "../helpers/email";
+import { Op } from "sequelize";
+import generarPassword from "../helpers/generarPassword";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
+import { ROLES_ID } from "../enum/roles.enum";
+import { transporter } from "../config/mailer";
+import db from "../database/connection";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
+const urlCmarLive = environment.urlCmarLive;
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
@@ -413,4 +420,170 @@ export const cambiarpassword = async (req: Request, res: Response) => {
       });
     }
   }
+};
+
+export const envioDeCredenciales = async (req: Request, res: Response) => {
+  const { body } = req;
+  let usuarios;
+  let cantidad;
+  let permisos: string[] = [ROLES_ID.OBRERO, ROLES_ID.MULTIMEDIA];
+
+  try {
+    const { count, rows } = await Usuario.findAndCountAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "email",
+        "login",
+      ],
+      where: {
+        login: "",
+        email: { [Op.ne]: "" },
+      },
+    });
+
+    usuarios = rows;
+    cantidad = count;
+  } catch (error) {
+    return res.status(404).json({
+      ok: false,
+      msg: `Error en la busqueda de usuarios sin login`,
+      error,
+    });
+  }
+
+  if (!!usuarios.length) {
+    usuarios.forEach((usuario) => {
+      let email = usuario.getDataValue("email");
+      let login = usuario.getDataValue("login");
+      let id = usuario.getDataValue("id");
+      let nombre = `
+              ${usuario.getDataValue("primerNombre")}
+              ${usuario.getDataValue("segundoNombre")}
+              ${usuario.getDataValue("primerApellido")}
+              ${usuario.getDataValue("segundoApellido")}
+              `;
+      if (!!email && !login) {
+        const salt = bcrypt.genSaltSync();
+        const password = generarPassword();
+        const passwordEncriptada = bcrypt.hashSync(password, salt);
+        try {
+          usuario.update({
+            login: email,
+            password: passwordEncriptada,
+          });
+        } catch (error) {
+          return res.status(404).json({
+            ok: false,
+            msg: `Error en la actualización del usuario ${id}`,
+            error,
+          });
+        }
+
+        try {
+          // Guarda los permisos
+          permisos.forEach((permiso) => {
+            UsuarioPermiso.create({
+              usuario_id: id,
+              permiso_id: permiso,
+            });
+          });
+        } catch (error) {
+          return res.status(404).json({
+            ok: false,
+            msg: `Error al enviar dar permisos al usuario ${id}`,
+            error,
+          });
+        }
+
+        try {
+          const html = `
+            <div
+              style="
+                max-width: 100%;
+                width: 600px;
+                margin: 0 auto;
+                box-sizing: border-box;
+                font-family: Arial, Helvetica, 'sans-serif';
+                font-weight: normal;
+                font-size: 16px;
+                line-height: 22px;
+                color: #252525;
+                word-wrap: break-word;
+                word-break: break-word;
+                text-align: justify;
+              "
+            >
+              <div style="text-align: center">
+                <img
+                  src="${imagenEmail}"
+                  alt="CMAR Multimedia"
+                  style="text-align: center; width: 200px"
+                />
+              </div>
+              <h3>Registro exitoso</h3>
+              <p>Hola, ${nombre}</p>
+              <p>
+                Tu registro está listo, te damos la bienvenida a CMAR LIVE, donde podrá
+                distrutar de los servicios, vigilias y eventos especiales de la Congregación
+                Mita.
+              </p>
+
+              <p><b>Credenciales de ingreso:</b></p>
+              <ul style="list-style: none">
+                <li>
+                  <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+                </li>
+                <li><b>Usuario:&nbsp; </b> ${email}</li>
+                <li><b>Contraseña:&nbsp;</b> ${password}</li>
+              </ul>
+
+              <div>
+                <p
+                  style="
+                    margin: 30px 0 12px 0;
+                    padding: 0;
+                    color: #252525;
+                    font-family: Arial, Helvetica, 'sans-serif';
+                    font-weight: normal;
+                    word-wrap: break-word;
+                    word-break: break-word;
+                    font-size: 12px;
+                    line-height: 16px;
+                    color: #909090;
+                  "
+                >
+                  Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+                  en contacto con nosotros mediante nuestro correo electrónico
+                  <a href="mailto:multimedia@congregacionmita.com">
+                    multimedia@congregacionmita.com</a
+                  >
+                </p>
+
+                <br />
+                <b>Congregación Mita Inc</b>
+              </div>
+            </div>
+            `;
+
+          enviarEmail(email, "Registro Exitoso", html);
+        } catch (error) {
+          return res.status(404).json({
+            ok: false,
+            msg: `Error al enviar el correo electronico al email ${email}`,
+            error,
+          });
+        }
+      }
+    });
+  }
+  res.json({
+    cantidad,
+    ok: true,
+    msg: "Credenciales creadas",
+    usuarios,
+  });
 };

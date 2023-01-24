@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   cambiarpassword,
   crearNuevoPassword,
+  envioDeCredenciales,
   forgotPassword,
   login,
   renewToken,
@@ -60,6 +61,8 @@ router.put(
   ],
   cambiarpassword
 );
+
+router.put("/enviocredenciales", envioDeCredenciales);
 
 router.get("/renew", validarJWT, renewToken);
 

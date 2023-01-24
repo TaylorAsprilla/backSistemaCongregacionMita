@@ -7,10 +7,13 @@ export const transporter = nodemailer.createTransport({
   service: "Outlook365",
   host: "smtp.office365.com",
   port: 587,
-  secure: false, // true for 465, false for other ports
+  pool: true,
+  maxConnections: 3,
+  maxMessages: 30,
+  secure: false,
   auth: {
-    user: environment.email.email, // generated ethereal user
-    pass: environment.email.password, // generated ethereal password
+    user: environment.email.email,
+    pass: environment.email.password,
   },
   tls: {
     ciphers: "SSLv3",
