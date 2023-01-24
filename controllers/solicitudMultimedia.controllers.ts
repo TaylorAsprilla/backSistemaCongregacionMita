@@ -425,8 +425,8 @@ export const validarEmail = async (req: CustomRequest, res: Response) => {
     if (!!verificarStatus) {
       const nombre = await verificarStatus.get().nombre;
 
-      if (verificarStatus.get().status === false) {
-        await verificarStatus.update({ status: true });
+      if (verificarStatus.get().emailVerificado === false) {
+        await verificarStatus.update({ emailVerificado: true });
         res.json({
           ok: true,
           msg: `El correo electrónico de ${nombre} esta verificado`,

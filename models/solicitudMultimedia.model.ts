@@ -8,6 +8,10 @@ const SolicitudMultimedia = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    fechaNacimiento: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     direccion: {
       type: DataTypes.STRING,
       allowNull: false,

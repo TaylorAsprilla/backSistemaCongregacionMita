@@ -26,6 +26,9 @@ router.post(
   "/",
   [
     check("nombre", "El nombre es obligatorio").not().isEmpty(),
+    check("fechaNacimiento", "La fecha de nacimiento es obligatoria")
+      .not()
+      .isEmpty(),
     check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
     check("direccion", "La dirección es obligatoria").not().isEmpty(),
     check("ciudad", "La ciudad es obligatoria").not().isEmpty(),
