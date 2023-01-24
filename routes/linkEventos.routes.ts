@@ -7,7 +7,9 @@ import { check } from "express-validator";
 import {
   activarLinkEvento,
   actualizarLinkEvento,
+  agregarALaBiblioteca,
   crearLinkEvento,
+  eliminarDeLaBiblioteca,
   eliminarLinkEvento,
   getLinkEventos,
   getUnLinkEvento,
@@ -35,6 +37,8 @@ router.post(
 );
 router.put("/:id", validarJWT, actualizarLinkEvento);
 router.put("/activar/:id", validarJWT, activarLinkEvento);
+router.put("/agregarbiblioteca/:id", validarJWT, agregarALaBiblioteca);
+router.put("/eliminarDeBiblioteca/:id", validarJWT, eliminarDeLaBiblioteca);
 router.delete("/:id", validarJWT, eliminarLinkEvento);
 
 export default router;
