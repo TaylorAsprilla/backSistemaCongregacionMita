@@ -17,7 +17,6 @@ const UsuarioPermiso = db.define(
   },
   {
     freezeTableName: true,
-    timestamps: false,
     tableName: "usuarioPermiso",
   }
 );
