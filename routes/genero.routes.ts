@@ -5,6 +5,7 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarGenero,
   actualizarGenero,
   crearGenero,
   eliminarGenero,
@@ -36,6 +37,6 @@ router.put(
   actualizarGenero
 );
 router.delete("/:id", validarJWT, eliminarGenero);
-router.put("/activar/:id", validarJWT, eliminarGenero);
+router.put("/activar/:id", validarJWT, activarGenero);
 
 export default router;
