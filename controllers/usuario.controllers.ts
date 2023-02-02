@@ -249,7 +249,9 @@ export const crearUsuario = async (req: Request, res: Response) => {
         >
       </p>
     
-      <b class="margin-top:2%">Congregación Mita inc</b>
+      < /br>
+      Cordialmente,< /br>
+      <b class="margin-top:2%">Congregación Mita, Inc.</b>
     </div>`;
 
     enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);

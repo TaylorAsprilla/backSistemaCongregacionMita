@@ -176,7 +176,8 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
           </p>
       
           <br />
-          <b>Congregación Mita Inc</b>
+          Cordialmente,<br />
+          <b>Congregación Mita, Inc.</b>
         </div>
       </div>`;
 
@@ -282,13 +283,21 @@ export const eliminarSolicitudMultimedia = async (
           <h3>Solicitud de Acceso</h3>
           <p>Hola, ${nombre}</p>
           <p>
-            Su solicitud de acceso a CMAR LIVE para disfrutar de los servicios, vigilias
-            y eventos especiales de la Congregación Mita, lamentablemente ha sido
-            denegada por los motivos relacionados a continuación:
+            Hemos recibido su solicitud para poder acceder a CMAR LIVE para disfrutar de
+            los servicios, vigilias y eventos especiales de la Congregación Mita,
+            lamentablemente hemos revisado su solicitud y esta ha sido denegada.
           </p>
         
           <b>Motivos:</b>
           <p>${motivoDeNegacion}</p>
+        
+          <p>
+            En un futuro puede presentar nuevamente su solicitud, si es que considera
+            que algún factor en su solicitud original cambio para acceder a la
+            plataforma CMAR LIVE, recuerda también explicarle a su obrero o persona que
+            llene la solicitud sus motivos por el cual cualificaría para un acceso a la
+            plataforma CMAR LIVE.
+          </p>
         
           <div>
             <p
@@ -313,11 +322,12 @@ export const eliminarSolicitudMultimedia = async (
             </p>
         
             <br />
-            <b>Congregación Mita Inc</b>
+            Cordialmente, <br />
+            <b>Congregación Mita, Inc.</b>
           </div>
         </div>`;
 
-      enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
+      enviarEmail(email, "Solicitud de Acceso - CMAR Multimedia", html);
 
       res.json({
         ok: true,
