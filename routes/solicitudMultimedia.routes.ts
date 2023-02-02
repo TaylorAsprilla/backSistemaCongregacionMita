@@ -36,7 +36,7 @@ router.post(
     check("email", "El correo electrónico es obligatorio").isEmail(),
     check(
       "miembroCongregacion",
-      "Selecciones si es o no miembro de la congregación Mita"
+      "Selecciones si es o no miembro de la Congregación Mita"
     )
       .not()
       .isEmpty(),
