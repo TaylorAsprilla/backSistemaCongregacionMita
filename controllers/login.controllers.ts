@@ -95,7 +95,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   buscarUsuario = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
-    usuario = await Usuario.build(body);
+    usuario = Usuario.build(body);
 
     token = await generarJWT(idUsuario, usuario.getDataValue("login"));
     usuarioID = await Usuario.findByPk(idUsuario, {

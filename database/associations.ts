@@ -22,7 +22,9 @@ import UsuarioDireccion from "../models/usuarioDireccion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
+import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import Vacuna from "../models/vacuna.model";
+import Voluntariado from "../models/voluntariado.model";
 
 // Uno a uno
 // Usuario.hasOne(TipoDocumento, {
@@ -142,4 +144,11 @@ Usuario.belongsToMany(Permiso, {
   through: UsuarioPermiso,
   foreignKey: { name: "usuario_id", allowNull: false },
   otherKey: "permiso_id",
+});
+
+Usuario.belongsToMany(Voluntariado, {
+  as: "usuarioVoluntariado",
+  through: UsuarioVoluntariado,
+  foreignKey: { name: "usuario_id", allowNull: false },
+  otherKey: "voluntariado_id",
 });
