@@ -452,7 +452,7 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
 };
 
 export const buscarCorreoElectronico = async (req: Request, res: Response) => {
-  const email = req.query.email;
+  const email = req.params.email;
   if (!email) {
     res.status(500).json({
       ok: false,
