@@ -11,6 +11,7 @@ import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
+import { Op } from "sequelize";
 require("./../database/associations");
 
 export const getUsuarios = async (req: Request, res: Response) => {
@@ -278,8 +279,28 @@ export const crearUsuario = async (req: Request, res: Response) => {
 export const actualizarUsuario = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
-  const { password, email, numeroDocumento, login, numeroCelular, ...campos } =
-    body;
+  const {
+    password,
+    email,
+    numeroDocumento,
+    login,
+    numeroCelular,
+    direcciones,
+    fuentesDeIngreso,
+    ministerios,
+    voluntariados,
+    congregacion,
+    ...campos
+  } = body;
+
+  let usuarioActualizado;
+  let getEmail: any;
+  let getNumeroCelular: string;
+  let getLogin: string;
+  let getNumeroDocumento: string;
+  let idUsuario: number;
+  let usuarioDireccion;
+  let usuarioCongregacion;
 
   try {
     const usuario = await Usuario.findByPk(id);
@@ -290,10 +311,11 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       });
     }
 
-    const getEmail = await usuario.get().email;
-    const getNumeroCelular = await usuario.get().numeroCelular;
-    const getLogin = await usuario.get().login;
-    const getNumeroDocumento = await usuario.get().numeroDocumento;
+    getEmail = await usuario.get().email;
+    getNumeroCelular = await usuario.get().numeroCelular;
+    getLogin = await usuario.get().login;
+    getNumeroDocumento = await usuario.get().numeroDocumento;
+    idUsuario = await usuario.get().id;
 
     // =======================================================================
     //                          Actualizar Usuario
@@ -302,9 +324,15 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     if (!!email && getEmail !== email) {
       const existeEmail = await Usuario.findOne({
         where: {
-          email: email,
+          someAttribute: {
+            email: email,
+            [Op.ne]: {
+              usuario_id: idUsuario,
+            },
+          },
         },
       });
+
       if (existeEmail) {
         return res.status(400).json({
           ok: false,
@@ -358,19 +386,95 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
       }
     }
 
-    // Encriptar contraseña
-    if (!!password) {
-      const salt = bcrypt.genSaltSync();
-      campos.password = await bcrypt.hashSync(password, salt);
+    try {
+      // Encriptar contraseña
+      if (!!password) {
+        const salt = bcrypt.genSaltSync();
+        campos.password = await bcrypt.hashSync(password, salt);
+      }
+
+      campos.email = await email;
+      campos.numeroDocumento = await numeroDocumento;
+      campos.numeroCelular = await numeroCelular;
+      campos.login = await login;
+
+      usuarioActualizado = await usuario.update(campos, { new: true });
+    } catch (error) {
+      res.status(404).json({
+        ok: false,
+        msg: "Hable con el administrador, no se logró actualizar el usuario",
+        error,
+      });
     }
 
-    campos.email = await email;
-    campos.numeroDocumento = await numeroDocumento;
-    campos.numeroCelular = await numeroCelular;
-    campos.login = await login;
+    try {
+      usuarioCongregacion = await UsuarioCongregacion.update(
+        {
+          usuario_id: idUsuario,
+          pais_id: congregacion.pais_id,
+          congregacion_id: congregacion.congregacion_id
+            ? congregacion.congregacion_id
+            : config.sinCongregacion,
+          campo_id: congregacion.campo_id
+            ? congregacion.campo_id
+            : config.sinCampo,
+        },
+        {
+          where: {
+            usuario_id: idUsuario,
+          },
+        }
+      );
+    } catch (error) {
+      res.status(404).json({
+        ok: false,
+        msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
+        error,
+      });
+    }
 
-    const usuarioActualizado = await usuario.update(campos, { new: true });
-    res.json({ ok: true, msg: "Usuario Actualizado", usuarioActualizado });
+    try {
+      usuarioDireccion = direcciones.map((itemDireccion: any) => {
+        return {
+          direccion: itemDireccion.direccion,
+          pais: itemDireccion.pais,
+          ciudad: itemDireccion.ciudad,
+          departamento: itemDireccion.departamento,
+          codigoPostal: itemDireccion.codigoPostal,
+          tipoDireccion_id: itemDireccion.tipoDireccion_id,
+        };
+      });
+      await Direccion.bulkCreate(usuarioDireccion);
+      // await UsuarioDireccion.update(
+      //   {
+      //     usuario_id: idUsuario,
+      //     direccion_id: guardarDireccion.getDataValue("id"),
+      //   },
+      //   {
+      //     where: {
+      //       someAttribute: {
+      //         direccion_id: email,
+
+      //           usuario_id: idUsuario,
+
+      //       },
+      //     },
+      //   }
+      // );
+    } catch (error) {
+      res.status(404).json({
+        ok: false,
+        msg: "Hable con el administrador, no se actualizó la tabla Direccion",
+        error,
+      });
+    }
+
+    res.json({
+      ok: true,
+      msg: "Usuario Actualizado",
+      usuario: usuarioActualizado,
+      direcciones: usuarioDireccion,
+    });
   } catch (error) {
     res.status(500).json({
       ok: false,

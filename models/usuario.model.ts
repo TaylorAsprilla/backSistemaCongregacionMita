@@ -108,7 +108,6 @@ const Usuario = db.define(
     },
     tipoDocumento_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
       defaultValue: null,
     },
   },
