@@ -457,7 +457,6 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
 
   if (!!usuarios.length) {
     usuarios.forEach(async (usuario) => {
-      console.log(usuario);
       let email = usuario.getDataValue("email");
       let login = usuario.getDataValue("login");
       let id = usuario.getDataValue("id");

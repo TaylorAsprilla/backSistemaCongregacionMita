@@ -1,18 +1,18 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
-import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
-import Direccion from "../models/direccion.model";
-import UsuarioDireccion from "../models/usuarioDireccion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
-import UsuarioMinisterio from "../models/usuarioMinisterio.model";
-import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
+
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
 import { Op } from "sequelize";
+import db from "../database/connection";
 require("./../database/associations");
+
+const environment = config[process.env.NODE_ENV || "development"];
+const imagenEmail = environment.imagenEmail;
 
 export const getUsuarios = async (req: Request, res: Response) => {
   const desde = Number(req.query.desde) || 0;
@@ -88,190 +88,157 @@ export const getUsuario = async (req: Request, res: Response) => {
 export const crearUsuario = async (req: Request, res: Response) => {
   const { body } = req;
   const {
-    direcciones,
-    fuentesDeIngreso,
-    ministerios,
-    voluntariados,
-    congregacion,
     email,
     password,
     numeroDocumento,
-    numeroCelular,
     login,
+    primerNombre,
+    segundoNombre,
+    primerApellido,
+    segundoApellido,
   } = req.body;
+
+  let id: number = 0;
 
   // =======================================================================
   //                          Validaciones
   // =======================================================================
-  try {
-    const existeEmail = await Usuario.findOne({
+
+  const existeEmail = await Usuario.findOne({
+    where: {
+      email: email,
+    },
+  });
+
+  if (existeEmail) {
+    return res.status(400).json({
+      ok: false,
+      msg: `Ya existe un usuario con el email ${email}`,
+    });
+  }
+
+  if (numeroDocumento) {
+    const existeDocumento = await Usuario.findOne({
       where: {
-        email: email,
+        numeroDocumento: numeroDocumento,
       },
     });
 
-    if (existeEmail) {
+    if (existeDocumento) {
       return res.status(400).json({
         ok: false,
-        msg: `Ya existe un usuario con el email ${email}`,
+        msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
       });
     }
+  }
 
-    if (numeroDocumento) {
-      const existeDocumento = await Usuario.findOne({
-        where: {
-          numeroDocumento: numeroDocumento,
-        },
-      });
-
-      if (existeDocumento) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
-        });
-      }
-    }
-
-    if (!!login) {
-      const existeLogin = await Usuario.findOne({
-        where: {
-          login: login,
-        },
-      });
-
-      if (existeLogin) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
-        });
-      }
-    }
-
-    // =======================================================================
-    //                          Guardar Usuario
-    // =======================================================================
-
-    // Encriptar contraseña
-    if (password) {
-      const salt = bcrypt.genSaltSync();
-      body.password = bcrypt.hashSync(password, salt);
-    }
-
-    const usuario = Usuario.build(body);
-    await usuario.save();
-
-    const idUsuario = await usuario.getDataValue("id");
-
-    const primerNombre = await usuario.getDataValue("primerNombre");
-    const segundoNombre = await usuario.getDataValue("segundoNombre");
-    const primerApellido = await usuario.getDataValue("primerApellido");
-    const segundoApellido = await usuario.getDataValue("segundoApellido");
-
-    const usuarioCongregacion = await UsuarioCongregacion.create({
-      usuario_id: idUsuario,
-      pais_id: congregacion.pais_id,
-      congregacion_id: congregacion.congregacion_id
-        ? congregacion.congregacion_id
-        : config.sinCongregacion,
-      campo_id: congregacion.campo_id ? congregacion.campo_id : config.sinCampo,
+  if (!!login) {
+    const existeLogin = await Usuario.findOne({
+      where: {
+        login: login,
+      },
     });
 
-    const usuarioDireccion = await direcciones.forEach(
-      async (itemDireccion: {
-        direccion: string;
-        pais: string;
-        ciudad: string;
-        departamento: string;
-        codigoPostal: string;
-        tipoDireccion_id: number;
-      }) => {
-        const guardarDireccion = await Direccion.create({
-          direccion: itemDireccion.direccion,
-          pais: itemDireccion.pais,
-          ciudad: itemDireccion.ciudad,
-          departamento: itemDireccion.departamento,
-          codigoPostal: itemDireccion.codigoPostal,
-          tipoDireccion_id: itemDireccion.tipoDireccion_id,
-        });
+    if (existeLogin) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con el login ${login}`,
+      });
+    }
+  }
 
-        const usuarioDireccion = await UsuarioDireccion.create({
-          usuario_id: idUsuario,
-          direccion_id: guardarDireccion.getDataValue("id"),
-        });
+  // =======================================================================
+  //                          Guardar Usuario
+  // =======================================================================
+
+  // Encriptar contraseña
+  if (password) {
+    const salt = bcrypt.genSaltSync();
+    body.password = bcrypt.hashSync(password, salt);
+  }
+  try {
+    const results = await db.query(
+      `CALL insertar_usuario(:p_usuario, @idUsuario)`,
+      {
+        replacements: {
+          p_usuario: JSON.stringify(body),
+        },
       }
     );
 
-    const usuarioFuenteIngresos = await fuentesDeIngreso.forEach(
-      async (fuenteIngreso: any) => {
-        const fuenteDeIngresos = await UsuarioFuenteIngreso.create({
-          usuario_id: idUsuario,
-          fuenteIngreso_id: fuenteIngreso,
-        });
-      }
-    );
-
-    const guardarMinisterios = await ministerios.forEach(
-      async (ministerio: any) => {
-        await UsuarioMinisterio.create({
-          usuario_id: idUsuario,
-          ministerio_id: ministerio,
-        });
-      }
-    );
-
-    const guardarVoluntariados = await voluntariados.forEach(
-      async (voluntariado: any) => {
-        await UsuarioVoluntariado.create({
-          usuario_id: idUsuario,
-          voluntariado_id: voluntariado,
-        });
-      }
-    );
-
-    // Generar Token - JWT
-    const token = await generarJWT(usuario.getDataValue("id"));
+    const [idUsuario] = await db.query("SELECT @idUsuario");
+    id = (idUsuario as { "@idUsuario": number }[])[0]["@idUsuario"];
 
     const html = `
-      <div style="text-align: center; font-size: 22px">
-      <img
-        src="https://kromatest.pw/sistemacmi/assets/images/multimedia.png"
-        alt="CMAR Multimedia"
-        style="text-align: center; width: 400px"
-      />
-      <p>Saludos, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}</p>
-      <p>Su código Mita es ${idUsuario} </p>
-      <b>Muchas gracias</b>
-     
-    
-      <p style="margin-top: 2%; font-size: 18px">
-        Para mayor información puede contactarse a
-        <a href="mailto:multimedia@congregacionmita.com">
-          multimedia@congregacionmita.com</a
+        <div
+          style="
+            max-width: 100%;
+            width: 600px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, 'sans-serif';
+            font-weight: normal;
+            font-size: 16px;
+            line-height: 22px;
+            color: #252525;
+            word-wrap: break-word;
+            word-break: break-word;
+            text-align: justify;
+          "
         >
-      </p>
-    
-      < /br>
-      Cordialmente,< /br>
-      <b class="margin-top:2%">Congregación Mita, Inc.</b>
-    </div>`;
+          <div style="text-align: center">
+            <img
+              src="${imagenEmail}"
+              alt="CMAR Multimedia"
+              style="text-align: center; width: 200px"
+            />
+          </div>
+          <h3>Bienvenido(a) a CMAR LIVE</h3>
+          <p>
+            Hola, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}
+          </p>
+          <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
+        
+          <p>Su código Mita es ${id}</p>
+        
+          <p
+            style="
+              margin: 30px 0 12px 0;
+              padding: 0;
+              color: #252525;
+              font-family: Arial, Helvetica, 'sans-serif';
+              font-weight: normal;
+              word-wrap: break-word;
+              word-break: break-word;
+              font-size: 12px;
+              line-height: 16px;
+              color: #909090;
+            "
+          >
+            Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+            en contacto con nosotros mediante nuestro correo electrónico
+            <a href="mailto:multimedia@congregacionmita.com">
+              multimedia@congregacionmita.com</a
+            >
+          </p>
+        
+          <br />
+          Cordialmente, <br />
+          <b>Congregación Mita, Inc.</b>
+        </div>`;
 
     enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);
 
-    const usuarioNuevo = {
-      usuario,
-      usuarioCongregacion,
-      direcciones,
-    };
-    res.json({
+    res.status(201).json({
       ok: true,
-      msg: "Usuario creado ",
-      token,
-      usuarioNuevo,
+      id,
+      msg: `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`,
+      results,
     });
   } catch (error) {
     res.status(500).json({
-      msg: "Hable con el administrador",
       error,
+      msg: "Hable con el administrador",
     });
   }
 };
@@ -299,187 +266,180 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
   let getLogin: string;
   let getNumeroDocumento: string;
   let idUsuario: number;
-  let usuarioDireccion;
-  let usuarioCongregacion;
+  let usuarioCongregacion: any;
+  let usuarioFuenteIngreso: any;
+
+  const usuario = await Usuario.findByPk(id);
+
+  if (!usuario) {
+    return res.status(404).json({
+      ok: false,
+      msg: `No existe un usuario con el id ${id}`,
+    });
+  }
+
+  getEmail = await usuario.get().email;
+  getNumeroCelular = await usuario.get().numeroCelular;
+  getLogin = await usuario.get().login;
+  getNumeroDocumento = await usuario.get().numeroDocumento;
+  idUsuario = await usuario.get().id;
+
+  // =======================================================================
+  //                          Actualizar Usuario
+  // =======================================================================
+
+  if (!!email && getEmail !== email) {
+    const existeEmail = await Usuario.findOne({
+      where: {
+        email: email,
+        someAttribute: {
+          [Op.ne]: [
+            {
+              id: idUsuario,
+            },
+          ],
+        },
+      },
+    });
+
+    if (existeEmail) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con este email ${email}`,
+      });
+    }
+  }
+
+  if (!!numeroDocumento && getNumeroDocumento !== numeroDocumento.toString()) {
+    const existeNumeroDocumento = await Usuario.findOne({
+      where: {
+        numeroDocumento: numeroDocumento,
+      },
+    });
+    if (existeNumeroDocumento) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con este Número de Documento ${numeroDocumento}`,
+      });
+    }
+  }
+
+  if (!!numeroCelular && getNumeroCelular !== numeroCelular) {
+    const existeNumeroCelular = await Usuario.findOne({
+      where: {
+        numeroCelular: numeroCelular,
+      },
+    });
+    if (existeNumeroCelular) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con este Número de Celular ${numeroCelular}`,
+      });
+    }
+  }
+
+  if (!!login && getLogin !== login) {
+    const existeLogin = await Usuario.findOne({
+      where: {
+        login: login,
+      },
+    });
+    if (existeLogin) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con el login ${login}`,
+      });
+    }
+  }
 
   try {
-    const usuario = await Usuario.findByPk(id);
-    if (!usuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe un usuario con el id ${id}`,
-      });
+    // Encriptar contraseña
+    if (!!password) {
+      const salt = bcrypt.genSaltSync();
+      campos.password = await bcrypt.hashSync(password, salt);
     }
 
-    getEmail = await usuario.get().email;
-    getNumeroCelular = await usuario.get().numeroCelular;
-    getLogin = await usuario.get().login;
-    getNumeroDocumento = await usuario.get().numeroDocumento;
-    idUsuario = await usuario.get().id;
+    campos.email = await email;
+    campos.numeroDocumento = await numeroDocumento;
+    campos.numeroCelular = await numeroCelular;
+    campos.login = await login;
 
-    // =======================================================================
-    //                          Actualizar Usuario
-    // =======================================================================
+    usuarioActualizado = await usuario.update(campos, { new: true });
+  } catch (error) {
+    res.status(404).json({
+      ok: false,
+      msg: "Hable con el administrador, no se logró actualizar el usuario",
+      error,
+    });
+  }
 
-    if (!!email && getEmail !== email) {
-      const existeEmail = await Usuario.findOne({
+  try {
+    usuarioCongregacion = await UsuarioCongregacion.update(
+      {
+        usuario_id: idUsuario,
+        pais_id: congregacion.pais_id,
+        congregacion_id: congregacion.congregacion_id
+          ? congregacion.congregacion_id
+          : config.sinCongregacion,
+        campo_id: congregacion.campo_id
+          ? congregacion.campo_id
+          : config.sinCampo,
+      },
+      {
         where: {
-          someAttribute: {
-            email: email,
-            [Op.ne]: {
-              usuario_id: idUsuario,
-            },
-          },
-        },
-      });
-
-      if (existeEmail) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con este email ${email}`,
-        });
-      }
-    }
-
-    if (
-      !!numeroDocumento &&
-      getNumeroDocumento !== numeroDocumento.toString()
-    ) {
-      const existeNumeroDocumento = await Usuario.findOne({
-        where: {
-          numeroDocumento: numeroDocumento,
-        },
-      });
-      if (existeNumeroDocumento) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con este Número de Documento ${numeroDocumento}`,
-        });
-      }
-    }
-
-    if (!!numeroCelular && getNumeroCelular !== numeroCelular) {
-      const existeNumeroCelular = await Usuario.findOne({
-        where: {
-          numeroCelular: numeroCelular,
-        },
-      });
-      if (existeNumeroCelular) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con este Número de Celular ${numeroCelular}`,
-        });
-      }
-    }
-
-    if (!!login && getLogin !== login) {
-      const existeLogin = await Usuario.findOne({
-        where: {
-          login: login,
-        },
-      });
-      if (existeLogin) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
-        });
-      }
-    }
-
-    try {
-      // Encriptar contraseña
-      if (!!password) {
-        const salt = bcrypt.genSaltSync();
-        campos.password = await bcrypt.hashSync(password, salt);
-      }
-
-      campos.email = await email;
-      campos.numeroDocumento = await numeroDocumento;
-      campos.numeroCelular = await numeroCelular;
-      campos.login = await login;
-
-      usuarioActualizado = await usuario.update(campos, { new: true });
-    } catch (error) {
-      res.status(404).json({
-        ok: false,
-        msg: "Hable con el administrador, no se logró actualizar el usuario",
-        error,
-      });
-    }
-
-    try {
-      usuarioCongregacion = await UsuarioCongregacion.update(
-        {
           usuario_id: idUsuario,
-          pais_id: congregacion.pais_id,
-          congregacion_id: congregacion.congregacion_id
-            ? congregacion.congregacion_id
-            : config.sinCongregacion,
-          campo_id: congregacion.campo_id
-            ? congregacion.campo_id
-            : config.sinCampo,
         },
-        {
-          where: {
-            usuario_id: idUsuario,
-          },
-        }
-      );
-    } catch (error) {
-      res.status(404).json({
-        ok: false,
-        msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
-        error,
-      });
-    }
+      }
+    );
+  } catch (error) {
+    res.status(404).json({
+      ok: false,
+      msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
+      error,
+    });
+  }
 
+  if (!!fuentesDeIngreso) {
     try {
-      usuarioDireccion = direcciones.map((itemDireccion: any) => {
-        return {
-          direccion: itemDireccion.direccion,
-          pais: itemDireccion.pais,
-          ciudad: itemDireccion.ciudad,
-          departamento: itemDireccion.departamento,
-          codigoPostal: itemDireccion.codigoPostal,
-          tipoDireccion_id: itemDireccion.tipoDireccion_id,
-        };
+      await UsuarioFuenteIngreso.destroy({
+        where: {
+          usuario_id: idUsuario,
+        },
       });
-      await Direccion.bulkCreate(usuarioDireccion);
-      // await UsuarioDireccion.update(
-      //   {
-      //     usuario_id: idUsuario,
-      //     direccion_id: guardarDireccion.getDataValue("id"),
-      //   },
-      //   {
-      //     where: {
-      //       someAttribute: {
-      //         direccion_id: email,
-
-      //           usuario_id: idUsuario,
-
-      //       },
-      //     },
-      //   }
-      // );
     } catch (error) {
       res.status(404).json({
         ok: false,
-        msg: "Hable con el administrador, no se actualizó la tabla Direccion",
+        msg: "Hable con el administrador, no se borró las fuentes de ingreso para la actualización",
         error,
       });
+
+      try {
+        usuarioFuenteIngreso = await fuentesDeIngreso.map(
+          (itemIngreso: any) => {
+            return {
+              fuenteIngreso_id: itemIngreso,
+              usuario_id: idUsuario,
+            };
+          }
+        );
+
+        await UsuarioFuenteIngreso.bulkCreate(usuarioFuenteIngreso, {
+          updateOnDuplicate: ["fuenteIngreso_id", "usuario_id"],
+        });
+      } catch (error) {
+        res.status(404).json({
+          ok: false,
+          msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
+          error,
+        });
+      }
     }
 
     res.json({
       ok: true,
       msg: "Usuario Actualizado",
       usuario: usuarioActualizado,
-      direcciones: usuarioDireccion,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      msg: "Hable con el administrador",
-      error,
+      congregacion: usuarioCongregacion,
     });
   }
 };

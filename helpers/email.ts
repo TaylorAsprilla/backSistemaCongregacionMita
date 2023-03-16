@@ -11,7 +11,7 @@ const enviarEmail = (to: string, subject: string, html: string) => {
     },
     (error, info) => {
       console.log("Enviando correos");
-      console.log("Correo", info.accepted);
+      console.log("Cuenta de correo", info.accepted);
       console.log("error?.message", error?.message);
       console.log("error?.message", error);
     }

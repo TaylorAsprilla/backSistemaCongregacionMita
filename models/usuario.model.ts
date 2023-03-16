@@ -110,6 +110,39 @@ const Usuario = db.define(
       type: DataTypes.INTEGER,
       defaultValue: null,
     },
+    direccion: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    ciudadDireccion: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    departamentoDireccion: {
+      type: DataTypes.STRING,
+    },
+    codigoPostalDireccion: {
+      type: DataTypes.STRING,
+    },
+    paisDireccion: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    direccionPostal: {
+      type: DataTypes.STRING,
+    },
+    ciudadPostal: {
+      type: DataTypes.STRING,
+    },
+    departamentoPostal: {
+      type: DataTypes.STRING,
+    },
+    codigoPostal: {
+      type: DataTypes.STRING,
+    },
+    paisPostal: {
+      type: DataTypes.STRING,
+    },
   },
   {
     freezeTableName: true,

@@ -27,8 +27,6 @@ import dosisRoutes from "../routes/dosis.routes";
 import situacionVisitaRoutes from "../routes/situacionVisita.routes";
 import seccionInformeRoutes from "../routes/seccionInforme.routes";
 import nacionalidadRoutes from "../routes/nacionalidad.routes";
-import direccionRoutes from "../routes/direccion.routes";
-import tipoDireccionRoutes from "../routes/tipoDireccion.routes";
 import fuenteIngresoRoutes from "../routes/fuenteIngreso.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
 import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
@@ -168,8 +166,6 @@ class Server {
     this.app.use(this.apiPaths.situacionVisita, situacionVisitaRoutes);
     this.app.use(this.apiPaths.seccionInforme, seccionInformeRoutes);
     this.app.use(this.apiPaths.nacionalidad, nacionalidadRoutes);
-    this.app.use(this.apiPaths.direccion, direccionRoutes);
-    this.app.use(this.apiPaths.tipoDireccion, tipoDireccionRoutes);
     this.app.use(this.apiPaths.fuenteIngreso, fuenteIngresoRoutes);
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);

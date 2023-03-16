@@ -35,6 +35,24 @@ router.post(
     check("numeroCelular", "El número de celular es obligatorio")
       .not()
       .isEmpty(),
+    check("direccion", "La dirección de residencia es obligatoria")
+      .not()
+      .isEmpty(),
+    check(
+      "ciudadDireccion",
+      "La ciudad de la dirección de residencia es obligatoria"
+    )
+      .not()
+      .isEmpty(),
+    check(
+      "paisDireccion",
+      "El país de la dirección de residencia es obligatorio"
+    )
+      .not()
+      .isEmpty(),
+    check("fuentesDeIngreso", "Seleccione las fuentes de ingreso")
+      .not()
+      .isEmpty(),
     check("esJoven", "Selecciones si es o no joven").not().isEmpty(),
     check("genero_id", "El género es obligatorio").not().isEmpty(),
     check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
@@ -45,12 +63,6 @@ router.post(
     check("gradoAcademico_id", "Selecione un grado académico").not().isEmpty(),
     check("tipoEmpleo_id", "Selecciones a qué se dedica").not().isEmpty(),
     check("tipoMiembro_id", "Seleccione un tipo de miembro (MN, MA, MNA, ME)")
-      .not()
-      .isEmpty(),
-    check(
-      "direcciones",
-      "Debe diligenciar una dirección de residencia y/o postal"
-    )
       .not()
       .isEmpty(),
     check("congregacion", "Indique a que congregación pertenece")

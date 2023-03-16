@@ -1,6 +1,5 @@
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import Congregacion from "../models/congregacion.model";
-import Direccion from "../models/direccion.model";
 import Dosis from "../models/dosis.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import FuenteIngreso from "../models/fuenteIngreso.model";
@@ -18,7 +17,6 @@ import TipoEmpleo from "../models/tipoEmpleo.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
-import UsuarioDireccion from "../models/usuarioDireccion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
@@ -108,14 +106,6 @@ SolicitudMultimedia.hasOne(Nacionalidad, {
 SolicitudMultimedia.hasOne(AccesoMultimedia, {
   as: "accesoMultimedia",
   foreignKey: "solicitud_id",
-});
-
-// Muchos a Muchos
-Usuario.belongsToMany(Direccion, {
-  as: "direcciones",
-  through: UsuarioDireccion,
-  foreignKey: { name: "usuario_id", allowNull: false },
-  otherKey: "direccion_id",
 });
 
 Usuario.belongsToMany(Congregacion, {
