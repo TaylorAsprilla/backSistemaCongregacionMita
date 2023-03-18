@@ -2,8 +2,6 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import UsuarioCongregacion from "../models/usuarioCongregacion.model";
-import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
@@ -243,7 +241,7 @@ export const crearUsuario = async (req: Request, res: Response) => {
   }
 };
 
-export const actualizarUsuario = async (req: Request, res: Response) => {
+export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
   const { body } = req;
   const {
@@ -260,14 +258,11 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     ...campos
   } = body;
 
-  let usuarioActualizado;
   let getEmail: any;
-  let getNumeroCelular: string;
   let getLogin: string;
   let getNumeroDocumento: string;
   let idUsuario: number;
-  let usuarioCongregacion: any;
-  let usuarioFuenteIngreso: any;
+  let idUsuarioActualizado: number;
 
   const usuario = await Usuario.findByPk(id);
 
@@ -279,7 +274,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
   }
 
   getEmail = await usuario.get().email;
-  getNumeroCelular = await usuario.get().numeroCelular;
   getLogin = await usuario.get().login;
   getNumeroDocumento = await usuario.get().numeroDocumento;
   idUsuario = await usuario.get().id;
@@ -289,18 +283,13 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
   // =======================================================================
 
   if (!!email && getEmail !== email) {
-    const existeEmail = await Usuario.findOne({
-      where: {
-        email: email,
-        someAttribute: {
-          [Op.ne]: [
-            {
-              id: idUsuario,
-            },
-          ],
-        },
-      },
-    });
+    const existeEmail = await db.query(
+      `SELECT * FROM usuario u WHERE u.email = '${getEmail}' and u.id != ${idUsuario}`,
+      {
+        model: Usuario,
+        mapToModel: true,
+      }
+    );
 
     if (existeEmail) {
       return res.status(400).json({
@@ -324,20 +313,6 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     }
   }
 
-  if (!!numeroCelular && getNumeroCelular !== numeroCelular) {
-    const existeNumeroCelular = await Usuario.findOne({
-      where: {
-        numeroCelular: numeroCelular,
-      },
-    });
-    if (existeNumeroCelular) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con este Número de Celular ${numeroCelular}`,
-      });
-    }
-  }
-
   if (!!login && getLogin !== login) {
     const existeLogin = await Usuario.findOne({
       where: {
@@ -352,94 +327,34 @@ export const actualizarUsuario = async (req: Request, res: Response) => {
     }
   }
 
+  // Encriptar contraseña
+  if (!!password) {
+    const salt = bcrypt.genSaltSync();
+    campos.password = bcrypt.hashSync(password, salt);
+  }
+
   try {
-    // Encriptar contraseña
-    if (!!password) {
-      const salt = bcrypt.genSaltSync();
-      campos.password = await bcrypt.hashSync(password, salt);
-    }
+    const results = await db.query(
+      `CALL actualizar_usuario(:p_usuario, :idUsuario, @id)`,
+      {
+        replacements: {
+          p_usuario: JSON.stringify(body),
+          idUsuario: idUsuario,
+        },
+      }
+    );
 
-    campos.email = await email;
-    campos.numeroDocumento = await numeroDocumento;
-    campos.numeroCelular = await numeroCelular;
-    campos.login = await login;
-
-    usuarioActualizado = await usuario.update(campos, { new: true });
+    res.json({
+      ok: true,
+      msg: "Usuario Actualizado",
+      results,
+      idUsuario,
+    });
   } catch (error) {
     res.status(404).json({
       ok: false,
       msg: "Hable con el administrador, no se logró actualizar el usuario",
       error,
-    });
-  }
-
-  try {
-    usuarioCongregacion = await UsuarioCongregacion.update(
-      {
-        usuario_id: idUsuario,
-        pais_id: congregacion.pais_id,
-        congregacion_id: congregacion.congregacion_id
-          ? congregacion.congregacion_id
-          : config.sinCongregacion,
-        campo_id: congregacion.campo_id
-          ? congregacion.campo_id
-          : config.sinCampo,
-      },
-      {
-        where: {
-          usuario_id: idUsuario,
-        },
-      }
-    );
-  } catch (error) {
-    res.status(404).json({
-      ok: false,
-      msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
-      error,
-    });
-  }
-
-  if (!!fuentesDeIngreso) {
-    try {
-      await UsuarioFuenteIngreso.destroy({
-        where: {
-          usuario_id: idUsuario,
-        },
-      });
-    } catch (error) {
-      res.status(404).json({
-        ok: false,
-        msg: "Hable con el administrador, no se borró las fuentes de ingreso para la actualización",
-        error,
-      });
-
-      try {
-        usuarioFuenteIngreso = await fuentesDeIngreso.map(
-          (itemIngreso: any) => {
-            return {
-              fuenteIngreso_id: itemIngreso,
-              usuario_id: idUsuario,
-            };
-          }
-        );
-
-        await UsuarioFuenteIngreso.bulkCreate(usuarioFuenteIngreso, {
-          updateOnDuplicate: ["fuenteIngreso_id", "usuario_id"],
-        });
-      } catch (error) {
-        res.status(404).json({
-          ok: false,
-          msg: "Hable con el administrador, no se actualizó la tabla usuarioCongregacion",
-          error,
-        });
-      }
-    }
-
-    res.json({
-      ok: true,
-      msg: "Usuario Actualizado",
-      usuario: usuarioActualizado,
-      congregacion: usuarioCongregacion,
     });
   }
 };
