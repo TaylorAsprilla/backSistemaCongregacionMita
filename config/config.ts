@@ -8,8 +8,8 @@ const config: any = {
       database: process.env.DB_DATABASE || "u434635530_informesCMI",
       host: process.env.DB_HOST || "212.1.211.203",
       dialect: process.env.DB_DIALECT || "mysql",
-      sinCongregacion: process.env.SIN_CONGREGACION || 9,
-      sinCampo: process.env.SIN_CAMPO || 14,
+      sinCongregacion: process.env.SIN_CONGREGACION || 1,
+      sinCampo: process.env.SIN_CAMPO || 1,
     },
     email: {
       email: process.env.EMAIL,
