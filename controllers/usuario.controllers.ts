@@ -5,9 +5,12 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
-import { Op } from "sequelize";
 import db from "../database/connection";
-require("./../database/associations");
+import {
+  crearAsociacionesUsuario,
+  crearCongregacionUsuario,
+  eliminarAsociacionesUsuario,
+} from "../database/usuario.associations";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -84,88 +87,107 @@ export const getUsuario = async (req: Request, res: Response) => {
 };
 
 export const crearUsuario = async (req: Request, res: Response) => {
-  const { body } = req;
-  const {
-    email,
-    password,
-    numeroDocumento,
-    login,
-    primerNombre,
-    segundoNombre,
-    primerApellido,
-    segundoApellido,
-  } = req.body;
+  const transaction = await db.transaction();
 
-  let id: number = 0;
-
-  // =======================================================================
-  //                          Validaciones
-  // =======================================================================
-
-  const existeEmail = await Usuario.findOne({
-    where: {
-      email: email,
-    },
-  });
-
-  if (existeEmail) {
-    return res.status(400).json({
-      ok: false,
-      msg: `Ya existe un usuario con el email ${email}`,
-    });
-  }
-
-  if (numeroDocumento) {
-    const existeDocumento = await Usuario.findOne({
-      where: {
-        numeroDocumento: numeroDocumento,
-      },
-    });
-
-    if (existeDocumento) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
-      });
-    }
-  }
-
-  if (!!login) {
-    const existeLogin = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
-
-    if (existeLogin) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el login ${login}`,
-      });
-    }
-  }
-
-  // =======================================================================
-  //                          Guardar Usuario
-  // =======================================================================
-
-  // Encriptar contraseña
-  if (password) {
-    const salt = bcrypt.genSaltSync();
-    body.password = bcrypt.hashSync(password, salt);
-  }
   try {
-    const results = await db.query(
-      `CALL insertar_usuario(:p_usuario, @idUsuario)`,
-      {
-        replacements: {
-          p_usuario: JSON.stringify(body),
+    const { body } = req;
+    const {
+      email,
+      password,
+      numeroDocumento,
+      login,
+      primerNombre,
+      segundoNombre,
+      primerApellido,
+      segundoApellido,
+      fuentesDeIngreso,
+      ministerios,
+      voluntariados,
+      congregacion,
+    } = body;
+
+    const { pais_id, congregacion_id, campo_id } = congregacion;
+
+    // =======================================================================
+    //                          Validaciones
+    // =======================================================================
+
+    const existeEmail = await Usuario.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    if (existeEmail) {
+      return res.status(400).json({
+        ok: false,
+        msg: `Ya existe un usuario con el email ${email}`,
+      });
+    }
+
+    if (numeroDocumento) {
+      const existeDocumento = await Usuario.findOne({
+        where: {
+          numeroDocumento: numeroDocumento,
         },
+      });
+
+      if (existeDocumento) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
+        });
       }
+    }
+
+    if (login) {
+      const existeLogin = await Usuario.findOne({
+        where: {
+          login: login,
+        },
+      });
+
+      if (existeLogin) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el login ${login}`,
+        });
+      }
+    }
+
+    // =======================================================================
+    //                          Guardar Usuario
+    // =======================================================================
+
+    // Encriptar contraseña
+    if (password) {
+      const salt = bcrypt.genSaltSync();
+      body.password = bcrypt.hashSync(password, salt);
+    }
+
+    const nuevoUsuario = await Usuario.create(req.body, {
+      transaction: transaction,
+    });
+    const id = nuevoUsuario.getDataValue("id");
+
+    await eliminarAsociacionesUsuario(id, transaction);
+    await crearAsociacionesUsuario(
+      id,
+      fuentesDeIngreso,
+      ministerios,
+      voluntariados,
+      transaction
     );
 
-    const [idUsuario] = await db.query("SELECT @idUsuario");
-    id = (idUsuario as { "@idUsuario": number }[])[0]["@idUsuario"];
+    await crearCongregacionUsuario(
+      id,
+      pais_id,
+      congregacion_id,
+      campo_id,
+      transaction
+    );
+
+    await transaction.commit();
 
     const html = `
         <div
@@ -231,12 +253,15 @@ export const crearUsuario = async (req: Request, res: Response) => {
       ok: true,
       id,
       msg: `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`,
-      results,
     });
   } catch (error) {
+    await transaction.rollback();
+
+    console.error("Error al crear el usuario:", error);
+
     res.status(500).json({
       error,
-      msg: "Hable con el administrador",
+      msg: "Error al crear el usuario",
     });
   }
 };
