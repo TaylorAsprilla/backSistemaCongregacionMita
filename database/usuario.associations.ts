@@ -30,29 +30,41 @@ export async function crearAsociacionesUsuario(
   voluntariados: number[],
   transaction: any
 ) {
-  await UsuarioFuenteIngreso.bulkCreate(
-    fuentesDeIngreso.map((fuenteDeIngresoId) => ({
-      usuario_id,
-      fuenteIngreso_id: fuenteDeIngresoId,
-    })),
-    { transaction }
+  const fuenteIngresoPromises = fuentesDeIngreso.map((fuenteDeIngresoId) =>
+    UsuarioFuenteIngreso.create(
+      {
+        usuario_id,
+        fuenteIngreso_id: fuenteDeIngresoId,
+      },
+      { transaction }
+    )
   );
 
-  await UsuarioMinisterio.bulkCreate(
-    ministerios.map((ministerioId) => ({
-      usuario_id,
-      ministerio_id: ministerioId,
-    })),
-    { transaction }
+  const ministerioPromises = ministerios.map((ministerioId) =>
+    UsuarioMinisterio.create(
+      {
+        usuario_id,
+        ministerio_id: ministerioId,
+      },
+      { transaction }
+    )
   );
 
-  await UsuarioVoluntariado.bulkCreate(
-    voluntariados.map((voluntariadoId) => ({
-      usuario_id,
-      voluntariado_id: voluntariadoId,
-    })),
-    { transaction }
+  const voluntariadoPromises = voluntariados.map((voluntariadoId) =>
+    UsuarioVoluntariado.create(
+      {
+        usuario_id,
+        voluntariado_id: voluntariadoId,
+      },
+      { transaction }
+    )
   );
+
+  await Promise.all([
+    ...fuenteIngresoPromises,
+    ...ministerioPromises,
+    ...voluntariadoPromises,
+  ]);
 }
 
 export async function crearCongregacionUsuario(
@@ -71,4 +83,45 @@ export async function crearCongregacionUsuario(
     },
     { transaction }
   );
+}
+
+export async function actualizarCongregacion(
+  usuario_id: number,
+  pais_id: number,
+  congregacion_id: number,
+  campo_id: number,
+  transaction: any
+) {
+  const congregacionExistente = await UsuarioCongregacion.findOne({
+    where: {
+      usuario_id,
+    },
+    transaction,
+  });
+
+  if (congregacionExistente) {
+    await UsuarioCongregacion.update(
+      {
+        pais_id,
+        congregacion_id,
+        campo_id,
+      },
+      {
+        where: {
+          usuario_id,
+        },
+        transaction,
+      }
+    );
+  } else {
+    await UsuarioCongregacion.create(
+      {
+        usuario_id,
+        pais_id,
+        congregacion_id,
+        campo_id,
+      },
+      { transaction }
+    );
+  }
 }

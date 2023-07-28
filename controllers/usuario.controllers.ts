@@ -7,10 +7,12 @@ import config from "../config/config";
 import enviarEmail from "../helpers/email";
 import db from "../database/connection";
 import {
+  actualizarCongregacion,
   crearAsociacionesUsuario,
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
+import { Op } from "sequelize";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -267,6 +269,8 @@ export const crearUsuario = async (req: Request, res: Response) => {
 };
 
 export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
+  const transaction = await db.transaction();
+
   const { id } = req.params;
   const { body } = req;
   const {
@@ -283,100 +287,116 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ...campos
   } = body;
 
-  let getEmail: any;
-  let getLogin: string;
-  let getNumeroDocumento: string;
-  let idUsuario: number;
-  let idUsuarioActualizado: number;
-
-  const usuario = await Usuario.findByPk(id);
-
-  if (!usuario) {
-    return res.status(404).json({
-      ok: false,
-      msg: `No existe un usuario con el id ${id}`,
-    });
-  }
-
-  getEmail = await usuario.get().email;
-  getLogin = await usuario.get().login;
-  getNumeroDocumento = await usuario.get().numeroDocumento;
-  idUsuario = await usuario.get().id;
-
-  // =======================================================================
-  //                          Actualizar Usuario
-  // =======================================================================
-
-  if (!!email && getEmail !== email) {
-    const existeEmail = await db.query(
-      `SELECT * FROM usuario u WHERE u.email = '${getEmail}' and u.id != ${idUsuario}`,
-      {
-        model: Usuario,
-        mapToModel: true,
-      }
-    );
-
-    if (existeEmail) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con este email ${email}`,
-      });
-    }
-  }
-
-  if (!!numeroDocumento && getNumeroDocumento !== numeroDocumento.toString()) {
-    const existeNumeroDocumento = await Usuario.findOne({
-      where: {
-        numeroDocumento: numeroDocumento,
-      },
-    });
-    if (existeNumeroDocumento) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con este Número de Documento ${numeroDocumento}`,
-      });
-    }
-  }
-
-  if (!!login && getLogin !== login) {
-    const existeLogin = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
-    if (existeLogin) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el login ${login}`,
-      });
-    }
-  }
-
-  // Encriptar contraseña
-  if (!!password) {
-    const salt = bcrypt.genSaltSync();
-    campos.password = bcrypt.hashSync(password, salt);
-  }
-
   try {
-    const results = await db.query(
-      `CALL actualizar_usuario(:p_usuario, :idUsuario, @id)`,
-      {
-        replacements: {
-          p_usuario: JSON.stringify(body),
-          idUsuario: idUsuario,
-        },
-      }
-    );
+    const usuario = await Usuario.findByPk(id);
 
-    res.json({
-      ok: true,
-      msg: "Usuario Actualizado",
-      results,
-      idUsuario,
-    });
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un usuario con el id ${id}`,
+      });
+    }
+
+    // =======================================================================
+    //                          Actualizar Usuario
+    // =======================================================================
+
+    if (!!email && usuario.getDataValue("email") !== email) {
+      const existeEmail = await Usuario.findOne({
+        where: {
+          email: email,
+          id: { [Op.ne]: id },
+        },
+      });
+
+      if (existeEmail) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con este email ${email}`,
+        });
+      }
+    }
+
+    // Validar cambios en el número de documento
+    if (
+      !!numeroDocumento &&
+      usuario.getDataValue("numeroDocumento") !== numeroDocumento
+    ) {
+      const existeNumeroDocumento = await Usuario.findOne({
+        where: {
+          numeroDocumento: numeroDocumento,
+          id: { [Op.ne]: id },
+        },
+      });
+
+      if (existeNumeroDocumento) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con este número de documento ${numeroDocumento}`,
+        });
+      }
+    }
+
+    // Validar cambios en el login
+    if (!!login && usuario.getDataValue("login") !== login) {
+      const existeLogin = await Usuario.findOne({
+        where: {
+          login: login,
+          id: { [Op.ne]: id },
+        },
+      });
+
+      if (existeLogin) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el login ${login}`,
+        });
+      }
+    }
+
+    // Encriptar contraseña
+    if (!!password) {
+      const salt = bcrypt.genSaltSync();
+      campos.password = bcrypt.hashSync(password, salt);
+    }
+
+    // Realizar la actualización
+    const usuarioActualizado = await usuario.update(campos);
+
+    try {
+      await eliminarAsociacionesUsuario(Number(id), transaction);
+
+      await crearAsociacionesUsuario(
+        Number(id),
+        fuentesDeIngreso,
+        ministerios,
+        voluntariados,
+        transaction
+      );
+
+      await actualizarCongregacion(
+        Number(id),
+        congregacion.pais_id,
+        congregacion.congregacion_id,
+        congregacion.campo_id,
+        transaction
+      );
+
+      await transaction.commit();
+      res.json({
+        ok: true,
+        msg: "Usuario Actualizado",
+        usuario: usuarioActualizado,
+        id,
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.log("error", error);
+    }
   } catch (error) {
-    res.status(404).json({
+    console.error("Error al actualizar el usuario:", error);
+
+    res.status(500).json({
       ok: false,
       msg: "Hable con el administrador, no se logró actualizar el usuario",
       error,
