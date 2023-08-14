@@ -104,6 +104,9 @@ class Server {
 
   constructor() {
     this.app = express();
+
+    // Habilitar trust proxy para manejar direcciones IP detrás de un proxy
+    this.app.set("trust proxy", true);
     this.port = process.env.PORT || "4000";
 
     // Métodos Iniciales

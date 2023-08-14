@@ -18,6 +18,9 @@ import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
 import Congregacion from "../models/congregacion.model";
 import Campo from "../models/campo.model";
+import axios from "axios";
+import { obtenerUbicacionPorIP } from "../helpers/obtenerDireccionIp";
+import UbicacionConexion from "../models/ubicacionConexion.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -25,6 +28,9 @@ const urlCmarLive = environment.urlCmarLive;
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
+  const ipAddress = environment.ip || req.ip;
+
+  let location = {};
 
   try {
     // Verificar Usuario
@@ -60,20 +66,35 @@ export const login = async (req: Request, res: Response) => {
         });
       }
 
-      if (loginUsuario && validarPassword) {
-        // Generar Token - JWT
-        const token = await generarJWT(
-          loginUsuario.getDataValue("id"),
-          loginUsuario.getDataValue("login")
-        );
-        res.json({
-          ok: true,
-          token: token,
-          usuario: loginUsuario,
-        });
+      // Generar Token - JWT
+      const token = await generarJWT(
+        loginUsuario.getDataValue("id"),
+        loginUsuario.getDataValue("login")
+      );
+
+      try {
+        // Obtener ubicación por IP
+        const ipApiResponse = await obtenerUbicacionPorIP(ipAddress);
+        if (ipApiResponse.status === "success") {
+          location = ipApiResponse;
+          // Guardar la información de la conexión en la base de datos
+          await UbicacionConexion.create({
+            ...location,
+            idUsuario: loginUsuario.getDataValue("id"), // Asigna el ID del usuario correspondiente
+          });
+        }
+      } catch (error) {
+        console.error("Error al obtener la ubicación por IP:", error);
       }
+
+      res.json({
+        ok: true,
+        token: token,
+        usuario: loginUsuario,
+      });
     }
   } catch (error) {
+    console.error("Error al realizar el inicio de sesión:", error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
