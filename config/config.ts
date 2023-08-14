@@ -21,6 +21,8 @@ const config: any = {
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
+    ipApi: process.env.IP_API,
+    ip: "92.214.55.43",
   },
   production: {
     database: {
@@ -42,6 +44,7 @@ const config: any = {
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
+    ipApi: process.env.IP_API,
   },
 };
 
