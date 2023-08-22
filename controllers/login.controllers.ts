@@ -20,6 +20,7 @@ import Congregacion from "../models/congregacion.model";
 import Campo from "../models/campo.model";
 import { obtenerUbicacionPorIP } from "../helpers/obtenerDireccionIp";
 import UbicacionConexion from "../models/ubicacionConexion.model";
+import DeviceDetector from "device-detector-js";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -30,10 +31,13 @@ export const login = async (req: Request, res: Response) => {
   const ipAddress = environment.ip || req.ip;
 
   const userAgent = req.headers["user-agent"];
-
-  console.log("userAgent", userAgent);
-
+  let deviceResult: any = {};
   let location = {};
+
+  if (userAgent) {
+    const deviceDetector = new DeviceDetector();
+    deviceResult = deviceDetector.parse(userAgent);
+  }
 
   try {
     // Verificar Usuario
@@ -83,7 +87,17 @@ export const login = async (req: Request, res: Response) => {
           // Guardar la información de la conexión en la base de datos
           await UbicacionConexion.create({
             ...location,
-            navegador: userAgent,
+            userAgent,
+            navegador: deviceResult.client?.name || "Desconocido",
+            tipoDispositivo: deviceResult.device?.type || "Desconocido",
+            dispositivo: deviceResult.device?.model || "Desconocido",
+            marca: deviceResult.device?.brand || "Desconocido",
+            modelo: deviceResult.device?.model || "Desconocido",
+            so: deviceResult.os?.name || "Desconocido",
+            version: deviceResult.os?.version || "Desconocido",
+            plataforma: deviceResult.os?.platform || "Desconocido",
+            motorNavegador: deviceResult.client?.engine || "Desconocido",
+            movil: deviceResult.device?.type === "mobile" ? true : false,
             idUsuario: loginUsuario.getDataValue("id"), // Asigna el ID del usuario correspondiente
           });
         }
