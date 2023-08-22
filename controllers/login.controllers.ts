@@ -18,7 +18,6 @@ import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
 import Congregacion from "../models/congregacion.model";
 import Campo from "../models/campo.model";
-import axios from "axios";
 import { obtenerUbicacionPorIP } from "../helpers/obtenerDireccionIp";
 import UbicacionConexion from "../models/ubicacionConexion.model";
 
@@ -29,6 +28,10 @@ const urlCmarLive = environment.urlCmarLive;
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
   const ipAddress = environment.ip || req.ip;
+
+  const userAgent = req.headers["user-agent"];
+
+  console.log("userAgent", userAgent);
 
   let location = {};
 
@@ -80,6 +83,7 @@ export const login = async (req: Request, res: Response) => {
           // Guardar la información de la conexión en la base de datos
           await UbicacionConexion.create({
             ...location,
+            navegador: userAgent,
             idUsuario: loginUsuario.getDataValue("id"), // Asigna el ID del usuario correspondiente
           });
         }
