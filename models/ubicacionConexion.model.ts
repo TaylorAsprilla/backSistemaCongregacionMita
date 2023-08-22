@@ -52,7 +52,9 @@ const UbicacionConexion = db.define(
     currency: {
       type: DataTypes.STRING,
     },
-
+    navegador: {
+      type: DataTypes.STRING,
+    },
     idUsuario: {
       type: DataTypes.INTEGER,
       references: {

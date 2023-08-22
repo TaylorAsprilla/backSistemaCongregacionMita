@@ -11,8 +11,6 @@ export const obtenerUbicacionPorIP = async (
   try {
     const ipApiResponse = await axios.get(`${apiBaseUrl}/${ipAddress}`);
 
-    console.table(ipApiResponse.data);
-
     if (ipApiResponse.data.status !== "success") {
       throw new Error(
         "La solicitud a la API no fue exitosa: " + ipApiResponse.data.message
