@@ -52,7 +52,37 @@ const UbicacionConexion = db.define(
     currency: {
       type: DataTypes.STRING,
     },
+    userAgent: {
+      type: DataTypes.STRING,
+    },
     navegador: {
+      type: DataTypes.STRING,
+    },
+    tipoDispositivo: {
+      type: DataTypes.STRING,
+    },
+    dispositivo: {
+      type: DataTypes.STRING,
+    },
+    marca: {
+      type: DataTypes.STRING,
+    },
+    modelo: {
+      type: DataTypes.STRING,
+    },
+    so: {
+      type: DataTypes.STRING,
+    },
+    version: {
+      type: DataTypes.STRING,
+    },
+    plataforma: {
+      type: DataTypes.STRING,
+    },
+    motorNavegador: {
+      type: DataTypes.STRING,
+    },
+    movil: {
       type: DataTypes.STRING,
     },
     idUsuario: {
