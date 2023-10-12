@@ -170,6 +170,7 @@ export const crearUsuario = async (req: Request, res: Response) => {
     const nuevoUsuario = await Usuario.create(req.body, {
       transaction: transaction,
     });
+
     const id = nuevoUsuario.getDataValue("id");
 
     await eliminarAsociacionesUsuario(id, transaction);
@@ -220,9 +221,9 @@ export const crearUsuario = async (req: Request, res: Response) => {
             Hola, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}
           </p>
           <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
-        
+
           <p>Su código Mita es ${id}</p>
-        
+
           <p
             style="
               margin: 30px 0 12px 0;
@@ -243,7 +244,7 @@ export const crearUsuario = async (req: Request, res: Response) => {
               multimedia@congregacionmita.com</a
             >
           </p>
-        
+
           <br />
           Cordialmente, <br />
           <b>Congregación Mita, Inc.</b>

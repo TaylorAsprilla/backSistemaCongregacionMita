@@ -119,7 +119,7 @@ class Server {
   async dbConnection() {
     try {
       await db.authenticate();
-      console.log("Database Online");
+      console.info("Database Online");
     } catch (error) {
       console.log(error);
     }
