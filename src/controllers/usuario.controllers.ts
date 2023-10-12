@@ -170,6 +170,7 @@ export const crearUsuario = async (req: Request, res: Response) => {
     const nuevoUsuario = await Usuario.create(req.body, {
       transaction: transaction,
     });
+
     const id = nuevoUsuario.getDataValue("id");
 
     await eliminarAsociacionesUsuario(id, transaction);
@@ -191,65 +192,65 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
     await transaction.commit();
 
-    const html = `
-        <div
-          style="
-            max-width: 100%;
-            width: 600px;
-            margin: 0 auto;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, 'sans-serif';
-            font-weight: normal;
-            font-size: 16px;
-            line-height: 22px;
-            color: #252525;
-            word-wrap: break-word;
-            word-break: break-word;
-            text-align: justify;
-          "
-        >
-          <div style="text-align: center">
-            <img
-              src="${imagenEmail}"
-              alt="CMAR Multimedia"
-              style="text-align: center; width: 200px"
-            />
-          </div>
-          <h3>Bienvenido(a) a CMAR LIVE</h3>
-          <p>
-            Hola, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}
-          </p>
-          <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
-        
-          <p>Su código Mita es ${id}</p>
-        
-          <p
-            style="
-              margin: 30px 0 12px 0;
-              padding: 0;
-              color: #252525;
-              font-family: Arial, Helvetica, 'sans-serif';
-              font-weight: normal;
-              word-wrap: break-word;
-              word-break: break-word;
-              font-size: 12px;
-              line-height: 16px;
-              color: #909090;
-            "
-          >
-            Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-            en contacto con nosotros mediante nuestro correo electrónico
-            <a href="mailto:multimedia@congregacionmita.com">
-              multimedia@congregacionmita.com</a
-            >
-          </p>
-        
-          <br />
-          Cordialmente, <br />
-          <b>Congregación Mita, Inc.</b>
-        </div>`;
+    // const html = `
+    //     <div
+    //       style="
+    //         max-width: 100%;
+    //         width: 600px;
+    //         margin: 0 auto;
+    //         box-sizing: border-box;
+    //         font-family: Arial, Helvetica, 'sans-serif';
+    //         font-weight: normal;
+    //         font-size: 16px;
+    //         line-height: 22px;
+    //         color: #252525;
+    //         word-wrap: break-word;
+    //         word-break: break-word;
+    //         text-align: justify;
+    //       "
+    //     >
+    //       <div style="text-align: center">
+    //         <img
+    //           src="${imagenEmail}"
+    //           alt="CMAR Multimedia"
+    //           style="text-align: center; width: 200px"
+    //         />
+    //       </div>
+    //       <h3>Bienvenido(a) a CMAR LIVE</h3>
+    //       <p>
+    //         Hola, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}
+    //       </p>
+    //       <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
 
-    enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);
+    //       <p>Su código Mita es ${id}</p>
+
+    //       <p
+    //         style="
+    //           margin: 30px 0 12px 0;
+    //           padding: 0;
+    //           color: #252525;
+    //           font-family: Arial, Helvetica, 'sans-serif';
+    //           font-weight: normal;
+    //           word-wrap: break-word;
+    //           word-break: break-word;
+    //           font-size: 12px;
+    //           line-height: 16px;
+    //           color: #909090;
+    //         "
+    //       >
+    //         Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+    //         en contacto con nosotros mediante nuestro correo electrónico
+    //         <a href="mailto:multimedia@congregacionmita.com">
+    //           multimedia@congregacionmita.com</a
+    //         >
+    //       </p>
+
+    //       <br />
+    //       Cordialmente, <br />
+    //       <b>Congregación Mita, Inc.</b>
+    //     </div>`;
+
+    // enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);
 
     res.status(201).json({
       ok: true,

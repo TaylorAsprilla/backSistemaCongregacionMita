@@ -24,6 +24,29 @@ const config: any = {
     ipApi: process.env.IP_API,
     ip: "92.214.55.43",
   },
+  qa: {
+    database: {
+      username: process.env.DB_USERNAME_QA,
+      password: process.env.DB_PASSWORD_QA,
+      database: process.env.DB_DATABASE_QA,
+      host: process.env.DB_HOST,
+      dialect: process.env.DB_DIALECT,
+      sinCongregacion: process.env.SIN_CONGREGACION,
+      sinCampo: process.env.SIN_CAMPO,
+    },
+    email: {
+      email: process.env.EMAIL,
+      password: process.env.EMAIL_PASSWORD,
+    },
+    urlDeValidacion: "http://localhost:4200/#/validaremail",
+    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
+    imagenEmail:
+      "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
+    urlCmarLive: "https://cmar.live/",
+    jwtSecretReset: process.env.JWT_SECRET_RESET,
+    ipApi: process.env.IP_API,
+    ip: "92.214.55.43",
+  },
   production: {
     database: {
       username: process.env.DB_USERNAME,

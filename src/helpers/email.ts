@@ -10,10 +10,10 @@ const enviarEmail = (to: string, subject: string, html: string) => {
       html: html,
     },
     (error, info) => {
-      console.log("Enviando correos");
-      console.log("Cuenta de correo", info.accepted);
-      console.log("error?.message", error?.message);
-      console.log("error?.message", error);
+      console.info("Enviando correos");
+      console.info("Cuenta de correo", info.accepted);
+      console.info("error?.message", error?.message);
+      console.info("error?.message", error);
     }
   );
 };
