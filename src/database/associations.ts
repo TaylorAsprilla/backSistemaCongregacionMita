@@ -1,4 +1,5 @@
 import AccesoMultimedia from "../models/accesoMultimedia.model";
+import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import Dosis from "../models/dosis.model";
 import EstadoCivil from "../models/estadoCivil.model";
@@ -7,12 +8,11 @@ import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
+import Pais from "../models/pais.model";
 import Permiso from "../models/permiso.model";
 import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
-import TiempoAprobacion from "../models/tiempoAprobacion.model";
-import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEmpleo from "../models/tipoEmpleo.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
@@ -91,28 +91,37 @@ SolicitudMultimedia.hasOne(Usuario, {
   foreignKey: "id",
 });
 
+SolicitudMultimedia.hasOne(Usuario, {
+  as: "usuario",
+  sourceKey: "usuario_id",
+  foreignKey: "id",
+});
+
 SolicitudMultimedia.hasOne(RazonSolicitud, {
   as: "razonSolicitud",
   sourceKey: "razonSolicitud_id",
   foreignKey: "id",
 });
 
-SolicitudMultimedia.hasOne(Nacionalidad, {
-  as: "nacionalidad",
-  sourceKey: "nacionalidad_id",
-  foreignKey: "id",
-});
-
-SolicitudMultimedia.hasOne(AccesoMultimedia, {
-  as: "accesoMultimedia",
-  foreignKey: "solicitud_id",
-});
-
 Usuario.belongsToMany(Congregacion, {
-  as: "usuarioCongregacion",
+  as: "usuarioCongregacionCongregacion",
   through: UsuarioCongregacion,
   foreignKey: { name: "usuario_id", allowNull: false },
   otherKey: "congregacion_id",
+});
+
+Usuario.belongsToMany(Campo, {
+  as: "usuarioCongregacionCampo",
+  through: UsuarioCongregacion,
+  foreignKey: { name: "usuario_id", allowNull: false },
+  otherKey: "campo_id",
+});
+
+Usuario.belongsToMany(Pais, {
+  as: "usuarioCongregacionPais",
+  through: UsuarioCongregacion,
+  foreignKey: { name: "usuario_id", allowNull: false },
+  otherKey: "pais_id",
 });
 
 Usuario.belongsToMany(FuenteIngreso, {

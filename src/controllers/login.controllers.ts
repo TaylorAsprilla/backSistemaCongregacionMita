@@ -3,10 +3,6 @@ import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import {
-  cambiarPasswordAccesoMultimedia,
-  loginMultimedia,
-} from "./accesoMultimedia.controllers";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import config from "../config/config";
@@ -21,6 +17,7 @@ import Campo from "../models/campo.model";
 import { obtenerUbicacionPorIP } from "../helpers/obtenerDireccionIp";
 import UbicacionConexion from "../models/ubicacionConexion.model";
 import DeviceDetector from "device-detector-js";
+import { BrowserResult } from "device-detector-js/dist/parsers/client/browser";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -29,88 +26,42 @@ const urlCmarLive = environment.urlCmarLive;
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
   const ipAddress = environment.ip || req.ip;
-
-  const userAgent = req.headers["user-agent"];
-  let deviceResult: any = {};
-  let location = {};
-
-  if (userAgent) {
-    const deviceDetector = new DeviceDetector();
-    deviceResult = deviceDetector.parse(userAgent);
-  }
+  const userAgent = req.headers["user-agent"] || "";
 
   try {
-    // Verificar Usuario
-
-    const loginUsuario = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
+    const loginUsuario = await verificarUsuario(login);
 
     if (!loginUsuario) {
-      //TODO Login para la solicitudes de acceso Multimedia
-      const loginUsuarioMultimedia = loginMultimedia(req, res);
-      if (!loginUsuarioMultimedia) {
-        return res.status(404).json({
-          ok: false,
-          msg: "Usuario no válido",
-        });
-      }
-    }
-
-    // Verificar contraseña
-    if (loginUsuario) {
-      const validarPassword = bcrypt.compareSync(
-        password,
-        loginUsuario.getDataValue("password")
-      );
-
-      if (!validarPassword) {
-        return res.status(404).json({
-          ok: false,
-          msg: "Contraseña no válida",
-        });
-      }
-
-      // Generar Token - JWT
-      const token = await generarJWT(
-        loginUsuario.getDataValue("id"),
-        loginUsuario.getDataValue("login")
-      );
-
-      try {
-        // Obtener ubicación por IP
-        const ipApiResponse = await obtenerUbicacionPorIP(ipAddress);
-        if (ipApiResponse.status === "success") {
-          location = ipApiResponse;
-          // Guardar la información de la conexión en la base de datos
-          await UbicacionConexion.create({
-            ...location,
-            userAgent,
-            navegador: deviceResult.client?.name || "Desconocido",
-            tipoDispositivo: deviceResult.device?.type || "Desconocido",
-            dispositivo: deviceResult.device?.model || "Desconocido",
-            marca: deviceResult.device?.brand || "Desconocido",
-            modelo: deviceResult.device?.model || "Desconocido",
-            so: deviceResult.os?.name || "Desconocido",
-            version: deviceResult.os?.version || "Desconocido",
-            plataforma: deviceResult.os?.platform || "Desconocido",
-            motorNavegador: deviceResult.client?.engine || "Desconocido",
-            movil: deviceResult.device?.type === "mobile" ? true : false,
-            idUsuario: loginUsuario.getDataValue("id"), // Asigna el ID del usuario correspondiente
-          });
-        }
-      } catch (error) {
-        console.error("Error al obtener la ubicación por IP:", error);
-      }
-
-      res.json({
-        ok: true,
-        token: token,
-        usuario: loginUsuario,
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no válido",
       });
     }
+
+    const isValidPassword = await verificarPassword(
+      password,
+      loginUsuario.getDataValue("password")
+    );
+
+    if (!isValidPassword) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Contraseña no válida",
+      });
+    }
+
+    const token = await generarJWT(
+      loginUsuario.getDataValue("id"),
+      loginUsuario.getDataValue("login")
+    );
+
+    await guardarInformacionConexion(ipAddress, userAgent, loginUsuario);
+
+    res.json({
+      ok: true,
+      token: token,
+      usuario: loginUsuario,
+    });
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
     res.status(500).json({
@@ -120,6 +71,55 @@ export const login = async (req: Request, res: Response) => {
     });
   }
 };
+
+async function verificarUsuario(login: string) {
+  return await Usuario.findOne({
+    where: {
+      login: login,
+    },
+  });
+}
+
+async function verificarPassword(password: string, hashedPassword: string) {
+  return bcrypt.compareSync(password, hashedPassword);
+}
+
+async function guardarInformacionConexion(
+  ipAddress: string,
+  userAgent: string,
+  loginUsuario: any
+) {
+  try {
+    const deviceDetector = new DeviceDetector();
+    const deviceResult = deviceDetector.parse(userAgent);
+
+    const location = await obtenerUbicacionPorIP(ipAddress);
+
+    if (location.status === "success") {
+      const ubicacion = {
+        ...location,
+        userAgent,
+        navegador: deviceResult.client?.name || "Desconocido",
+        tipoDispositivo: deviceResult.device?.type || "Desconocido",
+        dispositivo: deviceResult.device?.model || "Desconocido",
+        marca: deviceResult.device?.brand || "Desconocido",
+        modelo: deviceResult.device?.model || "Desconocido",
+        so: deviceResult.os?.name || "Desconocido",
+        version: deviceResult.os?.version || "Desconocido",
+        plataforma: deviceResult.os?.platform || "Desconocido",
+        motorNavegador:
+          deviceResult.client?.type === "browser"
+            ? (deviceResult.client as BrowserResult).engine || "Desconocido"
+            : "Desconocido",
+        idUsuario: loginUsuario.getDataValue("id"),
+      };
+
+      await UbicacionConexion.create(ubicacion);
+    }
+  } catch (error) {
+    console.error("Error al obtener la ubicación por IP:", error);
+  }
+}
 
 export const renewToken = async (req: CustomRequest, res: Response) => {
   const idUsuario = req.id;
@@ -407,14 +407,10 @@ export const cambiarpassword = async (req: Request, res: Response) => {
       },
     });
     if (!usuario) {
-      //TODO Cambio de contraseña para acceso Multimedia
-      const loginUsuarioMultimedia = cambiarPasswordAccesoMultimedia(req, res);
-      if (!loginUsuarioMultimedia) {
-        return res.status(404).json({
-          ok: false,
-          msg: "Usuario no válido",
-        });
-      }
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no válido",
+      });
     }
   } catch (error) {
     return res.status(404).json({

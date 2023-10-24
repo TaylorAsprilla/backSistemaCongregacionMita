@@ -4,93 +4,61 @@ import db from "../database/connection";
 const SolicitudMultimedia = db.define(
   "solicitudMultimedia",
   {
-    nombre: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    fechaNacimiento: {
-      type: DataTypes.DATE,
-      allowNull: false,
-    },
-    direccion: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    ciudad: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    departamento: {
-      type: DataTypes.STRING,
-    },
-    codigoPostal: {
-      type: DataTypes.STRING,
-    },
-    pais: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    telefono: {
-      type: DataTypes.STRING,
-    },
-    celular: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        isEmail: true,
-      },
-    },
-    miembroCongregacion: {
-      type: DataTypes.BOOLEAN,
-    },
-    congregacionCercana: {
-      type: DataTypes.STRING,
-    },
     otraRazon: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     tiempoDistancia: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     horaTemploMasCercano: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     personaEncamada: {
       type: DataTypes.BOOLEAN,
+      defaultValue: null,
     },
     personaEncargada: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     celularPersonaEncargada: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     enfermedadCronica: {
       type: DataTypes.BOOLEAN,
+      defaultValue: null,
     },
     enfermedadQuePadece: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     paisDondeEstudia: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     ciudadDondeEstudia: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     duracionDelPeriodoDeEstudio: {
       type: DataTypes.DATE,
+      defaultValue: null,
     },
     baseMilitar: {
       type: DataTypes.STRING,
+      defaultValue: "",
     },
     observaciones: {
       type: DataTypes.TEXT,
+      defaultValue: "",
     },
     motivoDeNegacion: {
       type: DataTypes.TEXT,
+      defaultValue: "",
     },
     estado: {
       type: DataTypes.BOOLEAN,
@@ -98,13 +66,9 @@ const SolicitudMultimedia = db.define(
     },
     emailVerificado: {
       type: DataTypes.BOOLEAN,
-      defaultValue: 0,
+      defaultValue: false,
     },
     razonSolicitud_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    nacionalidad_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -121,8 +85,15 @@ const SolicitudMultimedia = db.define(
     parentesco_id: {
       type: DataTypes.INTEGER,
     },
+    usuario_id: {
+      type: DataTypes.INTEGER,
+    },
     terminos: {
       type: DataTypes.BOOLEAN,
+    },
+    tiempoAprobacion: {
+      type: DataTypes.DATE,
+      defaultValue: null,
     },
   },
   {
