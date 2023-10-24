@@ -82,9 +82,6 @@ const UbicacionConexion = db.define(
     motorNavegador: {
       type: DataTypes.STRING,
     },
-    movil: {
-      type: DataTypes.STRING,
-    },
     idUsuario: {
       type: DataTypes.INTEGER,
       references: {

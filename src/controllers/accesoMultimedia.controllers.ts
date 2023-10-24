@@ -6,102 +6,51 @@ import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
+import Usuario from "../models/usuario.model";
+import { getSolicitudesMultimedia } from "./solicitudMultimedia.controllers";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
+import { ROLES_ID } from "../enum/roles.enum";
+import db from "../database/connection";
 
 const environment = config[process.env.NODE_ENV || "development"];
-const urlDeValidacion = environment.urlDeValidacion;
 const imagenEmail = environment.imagenEmail;
 const urlCmarLive = environment.urlCmarLive;
-
-export const loginMultimedia = async (req: Request, res: Response) => {
-  const { login, password } = req.body;
-  try {
-    // Verificar Usuario
-    const loginUsuarioCmarLive = await AccesoMultimedia.findOne({
-      where: {
-        login: login,
-      },
-    });
-
-    if (!loginUsuarioCmarLive?.getDataValue("estado")) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Este usuario no esta activo, por favor contáctese con el obrero más cercano",
-      });
-    }
-    if (!loginUsuarioCmarLive) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Usuario no válido",
-      });
-    }
-
-    // Verificar contraseña
-
-    const validarPassword = bcrypt.compareSync(
-      password,
-      loginUsuarioCmarLive.getDataValue("password")
-    );
-
-    if (!validarPassword) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Contraseña no válida",
-      });
-    }
-
-    // Generar Token - JWT
-    const token = await generarJWT(
-      loginUsuarioCmarLive.getDataValue("id"),
-      loginUsuarioCmarLive.getDataValue("login")
-    );
-
-    const datosUsuario = await SolicitudMultimedia.findByPk(
-      loginUsuarioCmarLive.getDataValue("solicitud_id")
-    );
-
-    res.json({
-      ok: true,
-      token,
-      loginUsuarioCmarLive,
-      usuario: datosUsuario,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      msg: "Hable con el administrador",
-      error,
-    });
-  }
-};
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
   const { login, password, solicitud_id, tiempoAprobacion, estado } = req.body;
+
+  let nombre: string = "";
+  let email: string = "";
+
+  const transaction = await db.transaction();
 
   // =======================================================================
   //                          Validaciones
   // =======================================================================
   try {
     const existeSolicitud = await SolicitudMultimedia.findByPk(solicitud_id);
+
     if (!existeSolicitud) {
       return res.status(400).json({
         ok: false,
         msg: `No existe una solicitud diligenciada para el usuario ID: ${solicitud_id}`,
       });
-    } else {
-      if (!!login) {
-        const existeLogin = await AccesoMultimedia.findOne({
-          where: {
-            login: login,
-          },
-        });
+    }
 
-        if (existeLogin) {
-          return res.status(400).json({
-            ok: false,
-            msg: `Ya existe un usuario con el login ${login}`,
-          });
-        }
+    if (login) {
+      const existeLogin = await Usuario.findOne({
+        where: {
+          login: login,
+        },
+        transaction,
+      });
+
+      if (existeLogin) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el login ${login}`,
+        });
       }
     }
 
@@ -115,24 +64,49 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       body.password = bcrypt.hashSync(password, salt);
     }
 
-    const accesoMultimedia = AccesoMultimedia.build(body);
-    await accesoMultimedia.save();
+    const usuario_id = existeSolicitud.getDataValue("usuario_id");
 
-    const idUsuario = await accesoMultimedia.getDataValue("id");
+    await Usuario.update(
+      { login, password: body.password },
+      {
+        where: {
+          id: usuario_id,
+        },
+        transaction,
+      }
+    );
 
-    const loginAcceso = await accesoMultimedia.getDataValue("login");
+    await UsuarioPermiso.create(
+      {
+        usuario_id: usuario_id,
+        permiso_id: ROLES_ID.MULTIMEDIA,
+      },
+      { transaction }
+    );
 
-    const usuario = await SolicitudMultimedia.findByPk(solicitud_id);
+    const usuario = await Usuario.findByPk(usuario_id, { transaction });
 
-    if (!!usuario && !!loginAcceso) {
-      // Generar Token - JWT
-      const token = await generarJWT(accesoMultimedia.getDataValue("id"));
-      const nombre = await usuario.getDataValue("nombre");
+    if (!usuario) {
+      return res.status(400).json({
+        ok: false,
+        msg: `No existe un usuario con el ${usuario_id}`,
+      });
+    }
+
+    if (usuario) {
+      nombre = `
+      ${usuario.getDataValue("primerNombre")} 
+      ${usuario.getDataValue("segundoNombre")} 
+      ${usuario.getDataValue("primerApellido")} 
+      ${usuario.getDataValue("segundoApellido")}
+      `;
+
+      email = usuario.getDataValue("email");
 
       // =======================================================================
       //                          Correo Electrónico
       // =======================================================================
-
+      console.log("Enviar correo");
       const html = `
                 <div
                     style="
@@ -170,7 +144,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                         <li>
                           <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
                         </li>
-                        <li><b>Usuario:&nbsp; </b> ${loginAcceso}</li>
+                        <li><b>Usuario:&nbsp; </b> ${login}</li>
                         <li><b>Contraseña:&nbsp;</b> ${password}</li>
                         <li><b>Tiempo de aprobación:&nbsp;</b> ${tiempoAprobacion}</li>
                       </ul>
@@ -207,19 +181,18 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                     </div>
                   </div>`;
 
-      enviarEmail(
-        usuario.getDataValue("email"),
-        "Bienvenido(a) a CMAR LIVE",
-        html
-      );
+      enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
 
-      res.json({
-        ok: true,
-        msg: "Acceso Multimedia creado ",
-        accesoMultimedia,
-      });
+      await transaction.commit();
     }
+
+    res.json({
+      ok: true,
+      msg: "Acceso Multimedia creado ",
+      solicitud: existeSolicitud,
+    });
   } catch (error) {
+    await transaction.rollback();
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -325,107 +298,52 @@ export const activarAccesoMultimedia = async (
   res: Response
 ) => {
   const { id } = req.params;
-  const { body } = req;
 
   try {
-    const accesoMultimedia = await AccesoMultimedia.findByPk(id);
-    if (!!accesoMultimedia) {
-      const nombre = await accesoMultimedia.get().nombre;
+    const solicitudMultimedia = await SolicitudMultimedia.findByPk(id);
 
-      if (accesoMultimedia.get().estado === false) {
-        await accesoMultimedia.update({ estado: true });
-        res.json({
-          ok: true,
-          msg: `El acceso a CMAR Live de ${nombre}  se activó`,
-          accesoMultimedia,
-          id: req.id,
-        });
-      } else {
-        return res.status(404).json({
-          ok: false,
-          msg: `El acceso a CMAR Live de ${nombre} está activo`,
-          accesoMultimedia,
-        });
-      }
-    }
-
-    if (!accesoMultimedia) {
+    if (!solicitudMultimedia) {
       return res.status(404).json({
         ok: false,
-        msg: `No existe un usuario con el id ${id}`,
+        msg: `No existe una solicitud de acceso multimedia con el id ${id}`,
+      });
+    }
+
+    const usuario_id = solicitudMultimedia.getDataValue("usuario_id");
+    const usuario = await Usuario.findByPk(usuario_id);
+
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un usuario asociado a la solicitud de acceso multimedia con el id ${id}`,
+      });
+    }
+
+    const nombre = `${usuario.getDataValue("primerNombre") || ""} ${
+      usuario.getDataValue("segundoNombre") || ""
+    } ${usuario.getDataValue("primerApellido") || ""} ${
+      usuario.getDataValue("segundoApellido") || ""
+    }`;
+
+    if (solicitudMultimedia.get().estado === false) {
+      await solicitudMultimedia.update({ estado: true });
+      res.json({
+        ok: true,
+        msg: `El acceso a CMAR Live de ${nombre} se activó`,
+        accesoMultimedia: solicitudMultimedia,
+        id: req.id,
+      });
+    } else {
+      return res.status(404).json({
+        ok: false,
+        msg: `El acceso a CMAR Live de ${nombre} ya está activo`,
+        accesoMultimedia: solicitudMultimedia,
       });
     }
   } catch (error) {
     res.status(500).json({
       error,
       msg: "Hable con el administrador",
-    });
-  }
-};
-
-export const cambiarPasswordAccesoMultimedia = async (
-  req: Request,
-  res: Response
-) => {
-  const { body } = req;
-  const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
-
-  let usuario;
-  let usuarioActualizado;
-  let password;
-
-  try {
-    usuario = await AccesoMultimedia.findOne({
-      where: {
-        login: login,
-      },
-    });
-  } catch (error) {
-    return res.status(404).json({
-      ok: false,
-      msg: `Ha ocurrido un error, por favor comuniquese con el administrador`,
-      error,
-    });
-  }
-
-  if (!!usuario) {
-    const validarPassword = bcrypt.compareSync(
-      passwordAntiguo,
-      usuario.getDataValue("password")
-    );
-
-    if (!validarPassword) {
-      return res.status(404).json({
-        ok: false,
-        msg: "La contraseña antigua no es válida",
-      });
-    }
-
-    if (usuario && validarPassword) {
-      try {
-        const salt = bcrypt.genSaltSync();
-        password = bcrypt.hashSync(passwordNuevo, salt);
-
-        usuarioActualizado = await usuario.update({
-          password,
-        });
-      } catch (error) {
-        return res.status(404).json({
-          ok: false,
-          msg: "No se cambió la contraseña, hable con el administrador",
-          error,
-        });
-      }
-      res.json({
-        ok: true,
-        msg: "La contraseña se cambió satisfactoriamente",
-        usuarioActualizado,
-      });
-    }
-  } else {
-    return res.status(404).json({
-      ok: false,
-      msg: `No existe la cuenta de usuario ${login}`,
     });
   }
 };

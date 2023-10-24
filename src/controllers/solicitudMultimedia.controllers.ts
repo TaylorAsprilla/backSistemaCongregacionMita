@@ -5,6 +5,7 @@ import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
+import Usuario from "../models/usuario.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -49,17 +50,10 @@ export const getUnaSolicitudMultimedia = async (
     ],
   });
 
-  const accesoMultimedia = await AccesoMultimedia.findOne({
-    where: {
-      solicitud_id: solicitudDeAcceso?.get().id,
-    },
-  });
-
   if (solicitudDeAcceso) {
     res.json({
       ok: true,
       solicitudDeAcceso,
-      accesoMultimedia,
       id,
     });
   } else {
@@ -71,7 +65,7 @@ export const getUnaSolicitudMultimedia = async (
 
 export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
-  const { email, nombre } = body;
+  const { usuario_id } = body;
 
   try {
     // =======================================================================
@@ -81,6 +75,12 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
     const solicitudDeAcceso = SolicitudMultimedia.build(body);
     await solicitudDeAcceso.save();
     const idUsuario = solicitudDeAcceso.getDataValue("id");
+    const usuario = await Usuario.findByPk(usuario_id);
+    const email = usuario?.getDataValue("email");
+    const nombre = `${usuario?.getDataValue("primerNombre") || ""} 
+    ${usuario?.getDataValue("segundoNombre") || ""}
+    ${usuario?.getDataValue("primerApellido") || ""} 
+    ${usuario?.getDataValue("segundoApellido") || ""}`;
 
     // =======================================================================
     //                         Enviar Correo de Verificación
@@ -110,7 +110,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
           />
         </div>
         <h3>Verifica tu cuenta de correo electrónico</h3>
-        <p>Hola, ${nombre}</p>
+        <p>Hola, <span style="text-transform: capitalize;">${nombre}</span></p>
         <p>
           Ha registrado ${email} como cuenta de correo electrónico para CMAR LIVE. Por
           favor verifique su cuenta de correo electrónico haciendo clic en el
@@ -192,6 +192,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+      body,
     });
   }
 };
