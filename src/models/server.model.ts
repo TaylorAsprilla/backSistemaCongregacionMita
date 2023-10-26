@@ -46,7 +46,11 @@ import parentescoRoutes from "../routes/parentesco.routes";
 
 import cors from "cors";
 import db from "../database/connection";
+import config from "../config/config";
 require("../database/associations");
+
+const environment = config[process.env.NODE_ENV || "development"];
+const whiteList = environment.whiteList;
 
 class Server {
   private app: Application;
@@ -127,7 +131,7 @@ class Server {
 
   midedlewares() {
     // CORS
-    this.app.use(cors());
+    this.app.use(cors({ origin: whiteList }));
 
     // Lectura del body
     this.app.use(express.json());
