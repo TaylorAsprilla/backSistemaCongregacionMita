@@ -1,13 +1,11 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
 import Usuario from "../models/usuario.model";
-import { getSolicitudesMultimedia } from "./solicitudMultimedia.controllers";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
 import db from "../database/connection";
@@ -103,10 +101,11 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
 
       email = usuario.getDataValue("email");
 
+      await transaction.commit();
       // =======================================================================
       //                          Correo Electrónico
       // =======================================================================
-      console.log("Enviar correo");
+
       const html = `
                 <div
                     style="
@@ -182,8 +181,6 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                   </div>`;
 
       enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
-
-      await transaction.commit();
     }
 
     res.json({

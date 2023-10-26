@@ -18,7 +18,7 @@ const Congregacion = db.define(
     },
     idObreroEncargado: {
       type: DataTypes.INTEGER,
-      // allowNull: false,
+      allowNull: true,
     },
   },
   {
