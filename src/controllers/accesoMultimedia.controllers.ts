@@ -176,6 +176,8 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                       </p>
                   
                       <br />
+                      Cordialmente,
+                      <br />
                       <b>Congregación Mita, Inc.</b>
                     </div>
                   </div>`;
