@@ -70,7 +70,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
-    whiteList: ["http://localhost:4200/"],
+    whiteList: ["https://cmar.live/"],
   },
 };
 
