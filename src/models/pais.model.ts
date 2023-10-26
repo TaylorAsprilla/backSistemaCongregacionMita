@@ -14,11 +14,11 @@ const Pais = db.define(
     },
     idDivisa: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     idObreroEncargado: {
       type: DataTypes.INTEGER,
-      // allowNull: false,
+      allowNull: true,
     },
   },
   {
