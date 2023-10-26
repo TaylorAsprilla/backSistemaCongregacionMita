@@ -55,7 +55,11 @@ export const login = async (req: Request, res: Response) => {
       loginUsuario.getDataValue("login")
     );
 
-    await guardarInformacionConexion(ipAddress, userAgent, loginUsuario);
+    try {
+      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario);
+    } catch (error) {
+      console.error("Error al guardar información de conexión:", error);
+    }
 
     res.json({
       ok: true,
