@@ -144,6 +144,10 @@ const Usuario = db.define(
     paisPostal: {
       type: DataTypes.STRING,
     },
+    anoConocimiento: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,
