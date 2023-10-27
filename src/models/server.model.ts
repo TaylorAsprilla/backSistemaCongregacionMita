@@ -139,7 +139,7 @@ class Server {
     // Carpeta pública
     // this.app.use(express.static("public")); //TODO Carpeta pública
     this.app.get("/", (req, res, next) =>
-      res.status(200).json({ msg: "CMAR LIVE" })
+      res.status(200).json({ msg: "CMAR LIVE - Congregación Mita INC" })
     );
   }
 
