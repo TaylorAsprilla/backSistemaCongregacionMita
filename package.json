@@ -5,10 +5,12 @@
   "main": "build/app.js",
   "scripts": {
     "build": "tsc",
+    "build:qa": "tsc -w",
     "build:dev": "tsc -w",
     "clean": "rm -rf build",
     "dev": "nodemon build/app.js",
     "dev:dev": "nodemon build/app.js",
+    "dev:qa": "nodemon build/app.js",
     "start": "node build/app.js",
     "deploy:prod": "eb deploy Sistemacmi-env",
     "dist": "sh ./scripts/dist.sh"
