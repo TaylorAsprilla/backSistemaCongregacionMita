@@ -49,7 +49,7 @@ const config: any = {
     ip: "92.214.55.43",
     whiteList: [
       "http://localhost:4200",
-      "https://qa.cmar.live",
+      "https://api-qa.cmar.live",
       "https://cmar.live",
     ],
   },
