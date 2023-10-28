@@ -47,7 +47,7 @@ const config: any = {
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
     ip: "92.214.55.43",
-    whiteList: process.env.CORS,
+    whiteList: "",
   },
   production: {
     database: {
