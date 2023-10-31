@@ -1,4 +1,4 @@
-import AccesoMultimedia from "../models/accesoMultimedia.model";
+import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import Dosis from "../models/dosis.model";
@@ -151,3 +151,6 @@ Usuario.belongsToMany(Voluntariado, {
   foreignKey: { name: "usuario_id", allowNull: false },
   otherKey: "voluntariado_id",
 });
+
+AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuario_id" });
+AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuarioQueRegistra_id" });
