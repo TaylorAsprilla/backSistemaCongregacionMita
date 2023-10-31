@@ -3,8 +3,6 @@ import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import SolicitudMultimedia from "../models/solicitudMultimedia.model";
-import AccesoMultimedia from "../models/accesoMultimedia.model";
 import config from "../config/config";
 import * as jwt from "jsonwebtoken";
 import enviarEmail from "../helpers/email";
@@ -133,7 +131,6 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let usuarioID;
   let token;
   let buscarUsuario;
-  let accesoMultimedia: boolean = false;
 
   buscarUsuario = await Usuario.findByPk(idUsuario);
 
@@ -149,20 +146,12 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
         },
       ],
     });
-  } else {
-    usuario = await AccesoMultimedia.findByPk(idUsuario);
-    token = await generarJWT(idUsuario, usuario?.getDataValue("login"));
-    usuarioID = await SolicitudMultimedia.findOne({
-      where: { id: usuario?.getDataValue("solicitud_id") },
-    });
-    accesoMultimedia = true;
   }
 
   res.json({
     ok: true,
     token,
     usuario: usuarioID,
-    accesoMultimedia,
   });
 };
 
