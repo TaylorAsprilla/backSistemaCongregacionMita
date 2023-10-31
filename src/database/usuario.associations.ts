@@ -1,7 +1,9 @@
+import { AUDITORIAUSUARIO_ENUM } from "./../enum/auditoriaUsuario.enum";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
+import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 
 export async function eliminarAsociacionesUsuario(
   id: number,
@@ -124,4 +126,20 @@ export async function actualizarCongregacion(
       { transaction }
     );
   }
+}
+
+export async function auditoriaUsuario(
+  usuario_id: number,
+  usuarioQueRegistra_id: number,
+  accion: AUDITORIAUSUARIO_ENUM,
+  transaction: any
+) {
+  await AuditoriaUsuario.create(
+    {
+      accion,
+      usuario_id,
+      usuarioQueRegistra_id,
+    },
+    { transaction }
+  );
 }

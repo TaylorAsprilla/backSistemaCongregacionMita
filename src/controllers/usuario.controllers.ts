@@ -8,11 +8,13 @@ import enviarEmail from "../helpers/email";
 import db from "../database/connection";
 import {
   actualizarCongregacion,
+  auditoriaUsuario,
   crearAsociacionesUsuario,
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
 import { Op } from "sequelize";
+import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -88,8 +90,9 @@ export const getUsuario = async (req: Request, res: Response) => {
   }
 };
 
-export const crearUsuario = async (req: Request, res: Response) => {
+export const crearUsuario = async (req: CustomRequest, res: Response) => {
   const transaction = await db.transaction();
+  const idUsuarioActual = req.id;
 
   try {
     const { body } = req;
@@ -190,6 +193,13 @@ export const crearUsuario = async (req: Request, res: Response) => {
       transaction
     );
 
+    await auditoriaUsuario(
+      id,
+      Number(idUsuarioActual),
+      AUDITORIAUSUARIO_ENUM.CREACION,
+      transaction
+    );
+
     await transaction.commit();
 
     const html = `
@@ -271,6 +281,7 @@ export const crearUsuario = async (req: Request, res: Response) => {
 
 export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
   const transaction = await db.transaction();
+  const idUsuarioActual = req.id;
 
   const { id } = req.params;
   const { body } = req;
@@ -285,6 +296,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ministerios,
     voluntariados,
     congregacion,
+
     ...campos
   } = body;
 
@@ -383,6 +395,13 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
         transaction
       );
 
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
+        transaction
+      );
+
       await transaction.commit();
       res.json({
         ok: true,
@@ -405,15 +424,25 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
   }
 };
 
-export const eliminarUsuario = async (req: Request, res: Response) => {
+export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
-  const { body } = req;
+
+  const transaction = await db.transaction();
+  const idUsuarioActual = req.id;
 
   try {
-    const usuario = await Usuario.findByPk(id);
+    const usuario = await Usuario.findByPk(id, { transaction });
     if (usuario) {
-      await usuario.update({ estado: false });
+      await usuario.update({ estado: false }, { transaction });
 
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.DESACTIVACION,
+        transaction
+      );
+
+      await transaction.commit();
       res.json({
         ok: true,
         msg: `Se elminó el usuario ${id}`,
@@ -428,25 +457,39 @@ export const eliminarUsuario = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
+    await transaction.rollback();
     res.status(500).json({
       msg: "Hable con el administrador",
+      error,
     });
   }
 };
 
 export const activarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
-  const { body } = req;
+
+  const idUsuarioActual = req.id;
+  const transaction = await db.transaction();
 
   try {
-    const usuario = await Usuario.findByPk(id);
+    const usuario = await Usuario.findByPk(id, { transaction });
     if (!!usuario) {
       const primerNombre = await usuario.get().primerNombre;
       const segundoNombre = await usuario.get().segundoNombre;
       const primerApellido = await usuario.get().primerApellido;
 
       if (usuario.get().estado === false) {
-        await usuario.update({ estado: true });
+        await usuario.update({ estado: true }, { transaction });
+
+        await auditoriaUsuario(
+          Number(id),
+          Number(idUsuarioActual),
+          AUDITORIAUSUARIO_ENUM.ACTIVACION,
+          transaction
+        );
+
+        await transaction.commit();
+
         res.json({
           ok: true,
           msg: `El usuario ${primerNombre} ${segundoNombre} ${primerApellido} se activó`,
@@ -469,6 +512,7 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
       });
     }
   } catch (error) {
+    await transaction.rollback();
     res.status(500).json({
       error,
       msg: "Hable con el administrador",
