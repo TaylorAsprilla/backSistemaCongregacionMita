@@ -50,7 +50,9 @@ const config: any = {
     whiteList: [
       "http://localhost:4200",
       "https://qa.cmar.live",
+      "http://qa.cmar.live",
       "https://cmar.live",
+      "http://cmar.live",
     ],
   },
   production: {
@@ -74,7 +76,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
-    whiteList: ["https://cmar.live"],
+    whiteList: ["https://cmar.live", "http://cmar.live"],
   },
 };
 
