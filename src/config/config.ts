@@ -39,15 +39,21 @@ const config: any = {
       email: process.env.EMAIL,
       password: process.env.EMAIL_PASSWORD,
     },
-    urlDeValidacion: "http://localhost:4200/#/validaremail",
-    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
+    urlDeValidacion: "https://qa.cmar.live/#/validaremail",
+    verificarLink: "https://qa.cmar.live/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
     ip: "92.214.55.43",
-    whiteList: ["http://localhost:4200", "https://qa.cmar.live"],
+    whiteList: [
+      "http://localhost:4200",
+      "https://qa.cmar.live",
+      "http://qa.cmar.live",
+      "https://cmar.live",
+      "http://cmar.live",
+    ],
   },
   production: {
     database: {
@@ -70,7 +76,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
-    whiteList: ["https://cmar.live"],
+    whiteList: ["https://cmar.live", "http://cmar.live"],
   },
 };
 
