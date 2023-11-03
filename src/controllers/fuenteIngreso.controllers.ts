@@ -6,7 +6,7 @@ import FuenteIngreso from "../models/fuenteIngreso.model";
 export const getFuenteIngresos = async (req: Request, res: Response) => {
   try {
     const fuenteDeIngreso = await FuenteIngreso.findAll({
-      order: db.col("id"),
+      order: db.col("fuenteIngreso"),
     });
 
     res.json({
