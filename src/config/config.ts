@@ -39,8 +39,8 @@ const config: any = {
       email: process.env.EMAIL,
       password: process.env.EMAIL_PASSWORD,
     },
-    urlDeValidacion: "http://localhost:4200/#/validaremail",
-    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
+    urlDeValidacion: "https://qa.cmar.live/#/validaremail",
+    verificarLink: "https://qa.cmar.live/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
     urlCmarLive: "https://cmar.live/",
