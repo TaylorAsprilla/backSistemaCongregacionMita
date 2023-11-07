@@ -1,10 +1,10 @@
-import { AUDITORIAUSUARIO_ENUM } from "./../enum/auditoriaUsuario.enum";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
+import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 
 export async function eliminarAsociacionesUsuario(
   id: number,
