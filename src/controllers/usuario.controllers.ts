@@ -302,8 +302,6 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ...campos
   } = body;
 
-  console.log("body", body);
-
   try {
     const usuario = await Usuario.findByPk(id);
 
