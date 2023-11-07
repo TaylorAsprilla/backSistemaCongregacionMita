@@ -151,7 +151,6 @@ export async function agregarPermisos(
   permisos: number[],
   transaction: any
 ) {
-  console.log("permisos", permisos);
   if (typeof usuario_id !== "number" || !Array.isArray(permisos)) {
     throw new Error("Parámetros de entrada no válidos.");
   }
