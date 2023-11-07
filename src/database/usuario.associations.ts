@@ -4,6 +4,7 @@ import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
 
 export async function eliminarAsociacionesUsuario(
   id: number,
@@ -30,6 +31,7 @@ export async function crearAsociacionesUsuario(
   fuentesDeIngreso: number[],
   ministerios: number[],
   voluntariados: number[],
+
   transaction: any
 ) {
   const fuenteIngresoPromises = fuentesDeIngreso.map((fuenteDeIngresoId) =>
@@ -142,4 +144,36 @@ export async function auditoriaUsuario(
     },
     { transaction }
   );
+}
+
+export async function agregarPermisos(
+  usuario_id: number,
+  permisos: number[],
+  transaction: any
+) {
+  console.log("permisos", permisos);
+  if (typeof usuario_id !== "number" || !Array.isArray(permisos)) {
+    throw new Error("Parámetros de entrada no válidos.");
+  }
+
+  try {
+    // Eliminar los permisos existentes del usuario
+    await UsuarioPermiso.destroy({
+      where: { usuario_id },
+      transaction,
+    });
+
+    // Crear un arreglo de objetos para la inserción masiva
+    const permisosBulkInsert = permisos.map((permisoId) => ({
+      usuario_id,
+      permiso_id: permisoId,
+    }));
+
+    // Realizar una inserción masiva de permisos
+    await UsuarioPermiso.bulkCreate(permisosBulkInsert, { transaction });
+
+    return true; // Opcional: indicar que la operación se realizó con éxito
+  } catch (error) {
+    throw error; // Lanzar el error para que pueda ser manejado en niveles superiores
+  }
 }

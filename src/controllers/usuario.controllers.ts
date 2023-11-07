@@ -8,6 +8,7 @@ import enviarEmail from "../helpers/email";
 import db from "../database/connection";
 import {
   actualizarCongregacion,
+  agregarPermisos,
   auditoriaUsuario,
   crearAsociacionesUsuario,
   crearCongregacionUsuario,
@@ -109,6 +110,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       ministerios,
       voluntariados,
       congregacion,
+      permisos,
     } = body;
 
     const { pais_id, congregacion_id, campo_id } = congregacion;
@@ -300,6 +302,8 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ...campos
   } = body;
 
+  console.log("body", body);
+
   try {
     const usuario = await Usuario.findByPk(id);
 
@@ -384,6 +388,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
         fuentesDeIngreso,
         ministerios,
         voluntariados,
+
         transaction
       );
 
@@ -454,6 +459,50 @@ export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
     if (!usuario) {
       return res.status(404).json({
         msg: `No existe un usuario con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const actualizarPermisos = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+
+  const { body } = req;
+  const { usuarioPermiso } = body;
+
+  const transaction = await db.transaction();
+  const idUsuarioActual = req.id;
+
+  try {
+    const usuario = await Usuario.findByPk(id, { transaction });
+    if (!usuario) {
+      return res.status(404).json({
+        msg: `No existe un usuario con el id ${id}`,
+      });
+    }
+
+    if (usuario) {
+      await agregarPermisos(Number(id), usuarioPermiso, transaction);
+
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.ACTUALIZACION_DE_PERMISOS,
+        transaction
+      );
+
+      await transaction.commit();
+      res.json({
+        ok: true,
+        msg: `Se agregaron los permisos al usuario`,
+        id,
+        usuario,
       });
     }
   } catch (error) {

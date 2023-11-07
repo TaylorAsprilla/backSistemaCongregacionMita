@@ -1,3 +1,5 @@
+import { actualizarPermisos } from "./../controllers/usuario.controllers";
+
 import { Router } from "express";
 import { check } from "express-validator";
 import {
@@ -104,5 +106,6 @@ router.put(
 );
 router.delete("/:id", validarJWT, eliminarUsuario);
 router.put("/activar/:id", validarJWT, activarUsuario);
+router.put("/actualizarpermisos/:id", validarJWT, actualizarPermisos);
 
 export default router;
