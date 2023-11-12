@@ -75,7 +75,12 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
-    whiteList: ["https://cmar.live", "http://cmar.live"],
+    whiteList: [
+      "https://cmar.live",
+      "http://cmar.live",
+      "http://www.cmar.live",
+      "https://www.cmar.live",
+    ],
   },
 };
 
