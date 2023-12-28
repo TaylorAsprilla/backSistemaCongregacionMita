@@ -5,12 +5,13 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
-  cambiarpassword,
+  cambiarPassword,
   crearNuevoPassword,
   envioDeCredenciales,
   forgotPassword,
   login,
   renewToken,
+  resetPassword,
 } from "../controllers/login.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -59,10 +60,21 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  cambiarpassword
+  cambiarPassword
 );
 
 router.put("/enviocredenciales", envioDeCredenciales);
+
+router.put(
+  "/resetpassword",
+  [
+    check("login", "El login del usuario es obligatorio").not().isEmpty(),
+    check("passwordNuevo", "Se requiere la nueva contraseña").not().isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  resetPassword
+);
 
 router.get("/renew", validarJWT, renewToken);
 

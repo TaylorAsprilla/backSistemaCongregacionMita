@@ -385,7 +385,7 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
   });
 };
 
-export const cambiarpassword = async (req: Request, res: Response) => {
+export const cambiarPassword = async (req: Request, res: Response) => {
   const { body } = req;
   const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
 
@@ -447,6 +447,45 @@ export const cambiarpassword = async (req: Request, res: Response) => {
         usuarioActualizado,
       });
     }
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { body } = req;
+  const { passwordNuevo, login } = body;
+
+  try {
+    let usuario = await Usuario.findOne({
+      where: {
+        login: login,
+      },
+    });
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
+
+    const salt = bcrypt.genSaltSync();
+    const passwordHash = bcrypt.hashSync(passwordNuevo, salt);
+
+    const usuarioActualizado = await usuario.update({
+      password: passwordHash,
+    });
+
+    res.json({
+      ok: true,
+      msg: "La contraseña se cambió satisfactoriamente",
+      usuario: usuarioActualizado,
+    });
+  } catch (error) {
+    console.error("Error al cambiar la contraseña:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un problema al cambiar la contraseña",
+      error,
+    });
   }
 };
 
