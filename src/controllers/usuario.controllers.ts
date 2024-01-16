@@ -86,7 +86,7 @@ export const getUsuario = async (req: Request, res: Response) => {
     });
   } else {
     res.status(404).json({
-      msg: `No existe el usuario con el id ${id}`,
+      msg: `No se encuentra el número Mita <b>${id}</b>`,
     });
   }
 };
@@ -110,7 +110,6 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       ministerios,
       voluntariados,
       congregacion,
-      permisos,
     } = body;
 
     const { pais_id, congregacion_id, campo_id } = congregacion;

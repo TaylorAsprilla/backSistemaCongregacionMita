@@ -6,6 +6,7 @@ import { Router } from "express";
 import { check } from "express-validator";
 import {
   cambiarPassword,
+  crearLogin,
   crearNuevoPassword,
   envioDeCredenciales,
   forgotPassword,
@@ -19,6 +20,7 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
+// Login
 router.post(
   "/",
   [
@@ -49,6 +51,7 @@ router.put(
   crearNuevoPassword
 );
 
+//El usuario cambia su contraseña
 router.put(
   "/cambiarpasswordusuario",
   [
@@ -63,8 +66,10 @@ router.put(
   cambiarPassword
 );
 
+// Envío de credenciales
 router.put("/enviocredenciales", envioDeCredenciales);
 
+// El Administrador hace un Reset Password
 router.put(
   "/resetpassword",
   [
@@ -74,6 +79,20 @@ router.put(
     validarJWT,
   ],
   resetPassword
+);
+
+router.put(
+  "/crearlogin",
+  [
+    check("idUsuario", "Se requiere el número Mita del usuario")
+      .not()
+      .isEmpty(),
+    check("login", "El login del usuario es obligatorio").not().isEmpty(),
+    check("password", "La contraseña es obligatoria").not().isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  crearLogin
 );
 
 router.get("/renew", validarJWT, renewToken);
