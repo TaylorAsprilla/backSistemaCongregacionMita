@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import Congregacion from "../models/congregacion.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import { CONGREGACIONES_ID } from "../enum/congregaciones.enum";
+import { Op } from "sequelize";
+import Campo from "../models/campo.model";
 
 export const getCongregaciones = async (req: Request, res: Response) => {
   try {
@@ -67,28 +71,96 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
 
+  const idObreroEncargado = body.idObreroEncargado;
+  const transaction = await db.transaction();
+
   try {
-    const congregacion = await Congregacion.findByPk(id);
-    if (!congregacion) {
+    // Verificar si idObreroEncargado está definido antes de actualizar
+    if (idObreroEncargado !== undefined) {
+      // Anular idObreroEncargado para otras congregaciones
+      await Congregacion.update(
+        { idObreroEncargado: null },
+        {
+          where: {
+            idObreroEncargado: idObreroEncargado,
+            id: {
+              [Op.not]: id, // Excluir la congregación actual
+            },
+          },
+          transaction: transaction,
+        }
+      );
+
+      await Campo.update(
+        { idObreroEncargado: null },
+        {
+          where: {
+            idObreroEncargado: idObreroEncargado,
+            id: {
+              [Op.not]: id,
+            },
+          },
+          transaction: transaction,
+        }
+      );
+    }
+
+    // Actualizar la congregación específica
+    const [numUpdated] = await Congregacion.update(
+      {
+        congregacion: body.congregacion,
+        pais_id: body.pais_id,
+        idObreroEncargado:
+          idObreroEncargado !== undefined ? idObreroEncargado : null,
+      },
+      { where: { id }, transaction }
+    );
+
+    // Verificar si se hizo alguna actualización
+    if (numUpdated === 0) {
+      await transaction.rollback();
       return res.status(404).json({
         ok: false,
         msg: `No existe una congregación con el id ${id}`,
       });
     }
 
-    // =======================================================================
-    //                          Actualizar Congregación
-    // =======================================================================
-
-    const congregacionActualizada = await congregacion.update(body, {
-      new: true,
+    // Obtener la congregación actualizada
+    const congregacionActualizada = await Congregacion.findByPk(id, {
+      transaction: transaction,
     });
+
+    // Verificar si idObreroEncargado está definido antes de actualizar
+    if (idObreroEncargado !== undefined) {
+      if (congregacionActualizada) {
+        // Actualizar UsuarioCongregacion usando la transacción
+        await UsuarioCongregacion.update(
+          {
+            pais_id: congregacionActualizada.getDataValue("pais_id"),
+            congregacion_id: congregacionActualizada.getDataValue("id"),
+            campo_id: CONGREGACIONES_ID.SIN_CAMPO,
+          },
+          {
+            where: {
+              usuario_id:
+                congregacionActualizada.getDataValue("idObreroEncargado"),
+            },
+            transaction: transaction,
+          }
+        );
+      }
+    }
+
+    await transaction.commit();
+
     res.json({
       ok: true,
       msg: "Congregación Actualizada",
       congregacionActualizada,
     });
   } catch (error) {
+    await transaction.rollback();
+    console.log(error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",

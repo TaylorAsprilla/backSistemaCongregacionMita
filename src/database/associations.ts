@@ -85,6 +85,12 @@ Usuario.hasOne(TipoMiembro, {
   foreignKey: "id",
 });
 
+Usuario.hasOne(UsuarioCongregacion, {
+  as: "usuarioCongregacion",
+  sourceKey: "id",
+  foreignKey: "usuario_id",
+});
+
 SolicitudMultimedia.hasOne(Usuario, {
   as: "usuarioQueRegistra",
   sourceKey: "usuarioQueRegistra_id",
@@ -154,3 +160,4 @@ Usuario.belongsToMany(Voluntariado, {
 
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuario_id" });
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuarioQueRegistra_id" });
+UsuarioCongregacion.belongsTo(Usuario, { foreignKey: "usuario_id" });
