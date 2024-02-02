@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
@@ -6,6 +7,7 @@ import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import { CONGREGACIONES_ID } from "../enum/congregaciones.enum";
 import { Op } from "sequelize";
 import Campo from "../models/campo.model";
+import Usuario from "../models/usuario.model";
 
 export const getCongregaciones = async (req: Request, res: Response) => {
   try {
@@ -70,11 +72,39 @@ export const crearCongregacion = async (req: Request, res: Response) => {
 export const actualizarCongregacion = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
+  const { email, password } = req.body;
 
   const idObreroEncargado = body.idObreroEncargado;
   const transaction = await db.transaction();
 
   try {
+    // Verificar si el email ya está registrado en la tabla de usuarios
+    const usuarioExistente = await Usuario.findOne({ where: { email } });
+    if (usuarioExistente) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El email ya está registrado por favor utilice otro email.",
+      });
+    }
+
+    // Verificar si el email ya está registrado en la tabla de congregaciones
+    const congregacionExistente = await Congregacion.findOne({
+      where: { email },
+    });
+    if (congregacionExistente) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El email ya está registrado por favor utilice otro email.",
+      });
+    }
+
+    // Encriptar la contraseña si se proporciona
+    let passwordHashed;
+    if (!!password) {
+      const salt = bcrypt.genSaltSync();
+      passwordHashed = bcrypt.hashSync(password, salt);
+    }
+
     // Verificar si idObreroEncargado está definido antes de actualizar
     if (idObreroEncargado !== undefined) {
       // Anular idObreroEncargado para otras congregaciones
@@ -112,6 +142,8 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
         pais_id: body.pais_id,
         idObreroEncargado:
           idObreroEncargado !== undefined ? idObreroEncargado : null,
+        email: email,
+        password: passwordHashed,
       },
       { where: { id }, transaction }
     );

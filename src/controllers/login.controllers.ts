@@ -30,12 +30,53 @@ export const login = async (req: Request, res: Response) => {
     const loginUsuario = await verificarUsuario(login);
 
     if (!loginUsuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Usuario no válido",
+      const congregacion = await verificarCongregacion(login);
+
+      if (!congregacion) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Usuario no válido",
+        });
+      }
+
+      // Verifica la contraseña de la congregación
+      const isValidPassword = await verificarPassword(
+        password,
+        congregacion.getDataValue("password")
+      );
+      if (!isValidPassword) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Contraseña no válida",
+        });
+      }
+
+      // Genera el token y realiza las acciones necesarias
+      const token = await generarJWT(
+        congregacion.getDataValue("id"),
+        congregacion.getDataValue("email")
+      );
+
+      try {
+        await guardarInformacionConexion(
+          ipAddress,
+          userAgent,
+          "",
+          congregacion
+        );
+      } catch (error) {
+        console.error("Error al guardar información de conexión:", error);
+      }
+
+      return res.json({
+        ok: true,
+        token: token,
+        entidad: "congregacion",
+        congregacion,
       });
     }
 
+    // Verifica la contraseña del usuario
     const isValidPassword = await verificarPassword(
       password,
       loginUsuario.getDataValue("password")
@@ -54,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
     );
 
     try {
-      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario);
+      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario, "");
     } catch (error) {
       console.error("Error al guardar información de conexión:", error);
     }
@@ -63,6 +104,7 @@ export const login = async (req: Request, res: Response) => {
       ok: true,
       token: token,
       usuario: loginUsuario,
+      entidad: "usuario",
     });
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
@@ -76,34 +118,58 @@ export const login = async (req: Request, res: Response) => {
 
 export const renewToken = async (req: CustomRequest, res: Response) => {
   const idUsuario = req.id;
+  const login = req.login;
 
   const { body } = req;
-  let usuario;
-  let usuarioID;
+
   let token;
   let buscarUsuario;
+  let buscarCongregacion;
 
-  buscarUsuario = await Usuario.findByPk(idUsuario);
+  buscarUsuario = await Usuario.findOne({
+    include: [
+      {
+        all: true,
+        required: false,
+      },
+    ],
+    where: {
+      login: login,
+    },
+  });
 
   if (buscarUsuario) {
-    usuario = Usuario.build(body);
+    token = await generarJWT(idUsuario, buscarUsuario.getDataValue("login"));
 
-    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await Usuario.findByPk(idUsuario, {
-      include: [
-        {
-          all: true,
-          required: false,
-        },
-      ],
+    res.json({
+      ok: true,
+      token,
+      usuario: buscarUsuario,
     });
-  }
+  } else {
+    buscarCongregacion = await Congregacion.findOne({
+      where: {
+        email: login,
+      },
+    });
 
-  res.json({
-    ok: true,
-    token,
-    usuario: usuarioID,
-  });
+    if (buscarCongregacion) {
+      token = await generarJWT(
+        idUsuario,
+        buscarCongregacion.getDataValue("email")
+      );
+      res.json({
+        ok: true,
+        token,
+        congregacion: buscarCongregacion,
+      });
+    } else {
+      res.status(404).json({
+        ok: false,
+        msg: "Usuario o congregación no encontrados",
+      });
+    }
+  }
 };
 
 export const crearLogin = async (req: Request, res: Response) => {
@@ -769,6 +835,14 @@ async function verificarUsuario(login: string) {
   });
 }
 
+async function verificarCongregacion(email: string) {
+  return await Congregacion.findOne({
+    where: {
+      email: email,
+    },
+  });
+}
+
 async function verificarPassword(password: string, hashedPassword: string) {
   return bcrypt.compareSync(password, hashedPassword);
 }
@@ -776,7 +850,8 @@ async function verificarPassword(password: string, hashedPassword: string) {
 async function guardarInformacionConexion(
   ipAddress: string,
   userAgent: string,
-  loginUsuario: any
+  loginUsuario: any = null,
+  loginCongregacion: any = null
 ) {
   try {
     const deviceDetector = new DeviceDetector();
@@ -800,7 +875,14 @@ async function guardarInformacionConexion(
           deviceResult.client?.type === "browser"
             ? (deviceResult.client as BrowserResult).engine || "Desconocido"
             : "Desconocido",
-        idUsuario: loginUsuario.getDataValue("id"),
+        idUsuario:
+          loginUsuario instanceof Usuario
+            ? loginUsuario.getDataValue("id")
+            : null,
+        idCongregacion:
+          loginCongregacion instanceof Congregacion
+            ? loginCongregacion.getDataValue("id")
+            : null,
       };
 
       await UbicacionConexion.create(ubicacion);

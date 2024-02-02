@@ -88,6 +88,15 @@ const UbicacionConexion = db.define(
         model: "Usuario",
         key: "id",
       },
+      allowNull: true,
+    },
+    idCongregacion: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "Congregacion",
+        key: "id",
+      },
+      allowNull: true,
     },
   },
   {

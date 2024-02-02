@@ -135,7 +135,6 @@ export const actualizarCampo = async (req: Request, res: Response) => {
       });
 
       if (pais) {
-        console.log("pais.getDataValue(id)", pais.getDataValue("id"));
         // Actualizar UsuarioCongregacion usando la transacción
         await UsuarioCongregacion.update(
           {

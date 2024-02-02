@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import Usuario from "../models/usuario.model";
 import { CustomRequest } from "../middlewares/validar-jwt";
-
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
 import db from "../database/connection";
@@ -14,7 +13,7 @@ import {
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
@@ -23,24 +22,52 @@ const imagenEmail = environment.imagenEmail;
 export const getUsuarios = async (req: Request, res: Response) => {
   const desde = Number(req.query.desde) || 0;
 
-  const [usuarios, totalUsuarios] = await Promise.all([
-    Usuario.findAll({
-      include: [
-        {
-          all: true,
-        },
-      ],
-      offset: desde,
-      limit: 50,
-      order: ["id"],
-    }),
-    Usuario.count(),
+  const [usuariosResult, totalUsuariosResult] = await Promise.all([
+    db.query(
+      `
+      SELECT
+        distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido,
+        u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion,
+        ca.campo, u.estado
+      FROM
+        usuario u
+      INNER JOIN
+        usuarioCongregacion uc ON u.id = uc.usuario_id
+      INNER JOIN
+        pais p ON p.id = uc.pais_id
+      INNER JOIN
+        congregacion co ON co.id = uc.congregacion_id
+      INNER JOIN
+        campo ca ON ca.id = uc.campo_id
+      ORDER BY
+        u.id
+      LIMIT 50
+      OFFSET :desde;
+      `,
+      {
+        replacements: { desde },
+        type: QueryTypes.SELECT,
+      }
+    ),
+    db.query(
+      `
+        SELECT COUNT(*) OVER() as total FROM usuario u ;
+      `,
+      {
+        type: QueryTypes.SELECT,
+      }
+    ),
   ]);
+
+  const usuarios = usuariosResult || [];
+
+  const totalUsuarios =
+    (totalUsuariosResult[0] as { total?: number })?.total || 0;
 
   res.json({
     ok: true,
-    usuarios: usuarios,
-    totalUsuarios: totalUsuarios,
+    usuarios,
+    totalUsuarios,
     msg: "Usuarios Registrados con paginación",
   });
 };
@@ -106,7 +133,6 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       segundoNombre,
       primerApellido,
       segundoApellido,
-      fuentesDeIngreso,
       ministerios,
       voluntariados,
       congregacion,
@@ -178,13 +204,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     const id = nuevoUsuario.getDataValue("id");
 
     await eliminarAsociacionesUsuario(id, transaction);
-    await crearAsociacionesUsuario(
-      id,
-      fuentesDeIngreso,
-      ministerios,
-      voluntariados,
-      transaction
-    );
+    await crearAsociacionesUsuario(id, ministerios, voluntariados, transaction);
 
     await crearCongregacionUsuario(
       id,
@@ -291,13 +311,10 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     email,
     numeroDocumento,
     login,
-    numeroCelular,
     direcciones,
-    fuentesDeIngreso,
     ministerios,
     voluntariados,
     congregacion,
-
     ...campos
   } = body;
 
@@ -328,6 +345,9 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
           ok: false,
           msg: `Ya existe un usuario con este email ${email}`,
         });
+      } else {
+        campos.email = email;
+        campos.login = email;
       }
     }
 
@@ -348,6 +368,8 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
           ok: false,
           msg: `Ya existe un usuario con este número de documento ${numeroDocumento}`,
         });
+      } else {
+        campos.numeroDocumento = numeroDocumento;
       }
     }
 
@@ -382,7 +404,6 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
 
       await crearAsociacionesUsuario(
         Number(id),
-        fuentesDeIngreso,
         ministerios,
         voluntariados,
 

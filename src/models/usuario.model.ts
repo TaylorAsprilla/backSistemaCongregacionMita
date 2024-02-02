@@ -21,7 +21,6 @@ const Usuario = db.define(
     apodo: {
       type: DataTypes.STRING,
     },
-
     fechaNacimiento: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -39,11 +38,8 @@ const Usuario = db.define(
     },
     numeroCelular: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
-    },
-    ingresoMensual: {
-      type: DataTypes.STRING,
     },
     esJoven: {
       type: DataTypes.BOOLEAN,
@@ -83,12 +79,6 @@ const Usuario = db.define(
     rolCasa_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
-    },
-    vacuna_id: {
-      type: DataTypes.INTEGER,
-    },
-    dosis_id: {
-      type: DataTypes.INTEGER,
     },
     nacionalidad_id: {
       type: DataTypes.INTEGER,

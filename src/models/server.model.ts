@@ -22,12 +22,9 @@ import congregacionRoutes from "../routes/congregacion.routes";
 import campoRoutes from "../routes/campo.routes";
 import estadoCivilRoutes from "../routes/estadoCivil.routes";
 import rolCasaRoutes from "../routes/rolCasa.routes";
-import vacunaRoutes from "../routes/vacuna.routes";
-import dosisRoutes from "../routes/dosis.routes";
 import situacionVisitaRoutes from "../routes/situacionVisita.routes";
 import seccionInformeRoutes from "../routes/seccionInforme.routes";
 import nacionalidadRoutes from "../routes/nacionalidad.routes";
-import fuenteIngresoRoutes from "../routes/fuenteIngreso.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
 import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
 import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
@@ -43,6 +40,7 @@ import supervisorCongregacionRoutes from "../routes/supervisorCongregacion.route
 import tipoEstudioRoutes from "../routes/tipoEstudio.routes";
 import opcionTransporteRoutes from "../routes/opcionTransporte.routes";
 import parentescoRoutes from "../routes/parentesco.routes";
+import usuarioCongregacionRoutes from "../routes/usuarioCongregacion.routes";
 
 import cors from "cors";
 import db from "../database/connection";
@@ -80,14 +78,11 @@ class Server {
     campo: "/api/campo",
     estadoCivil: "/api/estadocivil",
     rolcasa: "/api/rolcasa",
-    vacuna: "/api/vacuna",
-    dosis: "/api/dosis",
     situacionVisita: "/api/situacionvisita",
     seccionInforme: "/api/seccioninforme",
     nacionalidad: "/api/nacionalidad",
     direccion: "/api/direccion",
     tipoDireccion: "/api/tipodireccion",
-    fuenteIngreso: "/api/fuenteIngreso",
     gradoAcademico: "/api/gradoAcademico",
     tipoEmpleo: "/api/tipoempleo",
     tipoMiembro: "/api/tipomiembro",
@@ -104,6 +99,7 @@ class Server {
     tipoEstudio: "/api/tipoestudio",
     opcionTransporte: "/api/opciontransporte",
     password: "/api/password",
+    usuarioCongregacion: "/api/usuariocongregacion",
   };
 
   constructor() {
@@ -169,12 +165,9 @@ class Server {
     this.app.use(this.apiPaths.campo, campoRoutes);
     this.app.use(this.apiPaths.estadoCivil, estadoCivilRoutes);
     this.app.use(this.apiPaths.rolcasa, rolCasaRoutes);
-    this.app.use(this.apiPaths.vacuna, vacunaRoutes);
-    this.app.use(this.apiPaths.dosis, dosisRoutes);
     this.app.use(this.apiPaths.situacionVisita, situacionVisitaRoutes);
     this.app.use(this.apiPaths.seccionInforme, seccionInformeRoutes);
     this.app.use(this.apiPaths.nacionalidad, nacionalidadRoutes);
-    this.app.use(this.apiPaths.fuenteIngreso, fuenteIngresoRoutes);
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
@@ -193,6 +186,7 @@ class Server {
     this.app.use(this.apiPaths.tipoEstudio, tipoEstudioRoutes);
     this.app.use(this.apiPaths.opcionTransporte, opcionTransporteRoutes);
     this.app.use(this.apiPaths.parentesco, parentescoRoutes);
+    this.app.use(this.apiPaths.usuarioCongregacion, usuarioCongregacionRoutes);
   }
 
   listen() {

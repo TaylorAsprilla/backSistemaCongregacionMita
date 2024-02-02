@@ -39,6 +39,7 @@ export const obtenerUbicacionPorIP = async (
       as: ipApiResponse.data.as,
       mobile: ipApiResponse.data.mobile,
     };
+
     return location;
   } catch (error) {
     console.error("Error al obtener la ubicación por IP:", error);
