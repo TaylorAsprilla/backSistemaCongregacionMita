@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import LinkEvento from "../models/linkEvento.model";
+import { TIPOEVENTO_ID } from "../enum/evento.enum";
 
 export const getLinkEventos = async (req: Request, res: Response) => {
   try {
@@ -33,6 +34,39 @@ export const getUnLinkEvento = async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const getUltimoEvento = async (req: Request, res: Response) => {
+  try {
+    const tipoEventoId = TIPOEVENTO_ID.SERVICIO;
+
+    const ultimoLink = await LinkEvento.findOne({
+      where: {
+        tipoEvento_id: tipoEventoId,
+      },
+      order: [["fecha", "DESC"]],
+      limit: 1,
+    });
+
+    if (!ultimoLink) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No se encontraron enlaces para el tipo de evento con id ${tipoEventoId}`,
+      });
+    }
+
+    res.json({
+      ok: true,
+      linkEvento: ultimoLink,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
       msg: "Hable con el administrador",
       error,
     });

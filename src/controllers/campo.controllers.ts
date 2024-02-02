@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import Campo from "../models/campo.model";
+import { Op } from "sequelize";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import Congregacion from "../models/congregacion.model";
 
 export const getCampos = async (req: Request, res: Response) => {
   try {
@@ -67,28 +70,98 @@ export const actualizarCampo = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
 
+  const idObreroEncargado = body.idObreroEncargado ?? null;
+  const congregacion_id = body.congregacion_id;
+
+  const transaction = await db.transaction();
+
   try {
-    const campo = await Campo.findByPk(id);
-    if (!campo) {
+    if (idObreroEncargado !== undefined) {
+      // Anular idObreroEncargado para otras congregaciones
+      await Congregacion.update(
+        { idObreroEncargado: null },
+        {
+          where: {
+            idObreroEncargado: idObreroEncargado,
+            id: {
+              [Op.not]: id, // Excluir la congregación actual
+            },
+          },
+          transaction: transaction,
+        }
+      );
+
+      await Campo.update(
+        { idObreroEncargado: null },
+        {
+          where: {
+            idObreroEncargado: idObreroEncargado,
+            id: {
+              [Op.not]: id,
+            },
+          },
+          transaction: transaction,
+        }
+      );
+    }
+
+    const [numUpdated] = await Campo.update(
+      {
+        campo: body.campo,
+        congregacion_id: congregacion_id,
+        idObreroEncargado: idObreroEncargado,
+      },
+      { where: { id }, transaction }
+    );
+
+    // Verificar si se hizo alguna actualización
+    if (numUpdated === 0) {
+      await transaction.rollback();
       return res.status(404).json({
         ok: false,
         msg: `No existe un campo con el id ${id}`,
       });
     }
 
-    // =======================================================================
-    //                          Actualizar Campo
-    // =======================================================================
-
-    const campoActualizado = await campo.update(body, {
-      new: true,
+    // Obtener el campo actualizado
+    const campoActualizado = await Campo.findByPk(id, {
+      transaction: transaction,
     });
+
+    // Verificar si idObreroEncargado está definido antes de actualizar
+    if (idObreroEncargado !== undefined && campoActualizado) {
+      const pais = await Congregacion.findByPk(congregacion_id, {
+        transaction: transaction,
+      });
+
+      if (pais) {
+        // Actualizar UsuarioCongregacion usando la transacción
+        await UsuarioCongregacion.update(
+          {
+            pais_id: pais.getDataValue("pais_id"),
+            congregacion_id: congregacion_id,
+            campo_id: campoActualizado.getDataValue("id"),
+          },
+          {
+            where: {
+              usuario_id: idObreroEncargado,
+            },
+            transaction: transaction,
+          }
+        );
+      }
+    }
+
+    await transaction.commit();
+
     res.json({
       ok: true,
-      msg: "Campo Actualizada",
-      campoActualizado,
+      msg: "Campo Actualizado",
+      campoActualizado: campoActualizado,
     });
   } catch (error) {
+    await transaction.rollback();
+    console.log(error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",

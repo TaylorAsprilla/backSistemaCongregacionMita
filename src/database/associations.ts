@@ -1,9 +1,7 @@
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
-import Dosis from "../models/dosis.model";
 import EstadoCivil from "../models/estadoCivil.model";
-import FuenteIngreso from "../models/fuenteIngreso.model";
 import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import Ministerio from "../models/ministerio.model";
@@ -17,11 +15,9 @@ import TipoEmpleo from "../models/tipoEmpleo.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
-import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
-import Vacuna from "../models/vacuna.model";
 import Voluntariado from "../models/voluntariado.model";
 
 // Uno a uno
@@ -49,18 +45,6 @@ Usuario.hasOne(RolCasa, {
   foreignKey: "id",
 });
 
-Usuario.hasOne(Vacuna, {
-  as: "vacuna",
-  sourceKey: "vacuna_id",
-  foreignKey: "id",
-});
-
-Usuario.hasOne(Dosis, {
-  as: "dosis",
-  sourceKey: "dosis_id",
-  foreignKey: "id",
-});
-
 Usuario.hasOne(Nacionalidad, {
   as: "nacionalidad",
   sourceKey: "nacionalidad_id",
@@ -83,6 +67,12 @@ Usuario.hasOne(TipoMiembro, {
   as: "tipoMiembro",
   sourceKey: "tipoMiembro_id",
   foreignKey: "id",
+});
+
+Usuario.hasOne(UsuarioCongregacion, {
+  as: "usuarioCongregacion",
+  sourceKey: "id",
+  foreignKey: "usuario_id",
 });
 
 SolicitudMultimedia.hasOne(Usuario, {
@@ -124,13 +114,6 @@ Usuario.belongsToMany(Pais, {
   otherKey: "pais_id",
 });
 
-Usuario.belongsToMany(FuenteIngreso, {
-  as: "usuarioFuenteIngreso",
-  through: UsuarioFuenteIngreso,
-  foreignKey: { name: "usuario_id", allowNull: false },
-  otherKey: "fuenteIngreso_id",
-});
-
 Usuario.belongsToMany(Ministerio, {
   as: "usuarioMinisterio",
   through: UsuarioMinisterio,
@@ -152,5 +135,8 @@ Usuario.belongsToMany(Voluntariado, {
   otherKey: "voluntariado_id",
 });
 
+UsuarioCongregacion.belongsTo(Pais, { foreignKey: "pais_id" });
+
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuario_id" });
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuarioQueRegistra_id" });
+UsuarioCongregacion.belongsTo(Usuario, { foreignKey: "usuario_id" });

@@ -30,12 +30,53 @@ export const login = async (req: Request, res: Response) => {
     const loginUsuario = await verificarUsuario(login);
 
     if (!loginUsuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Usuario no válido",
+      const congregacion = await verificarCongregacion(login);
+
+      if (!congregacion) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Usuario no válido",
+        });
+      }
+
+      // Verifica la contraseña de la congregación
+      const isValidPassword = await verificarPassword(
+        password,
+        congregacion.getDataValue("password")
+      );
+      if (!isValidPassword) {
+        return res.status(404).json({
+          ok: false,
+          msg: "Contraseña no válida",
+        });
+      }
+
+      // Genera el token y realiza las acciones necesarias
+      const token = await generarJWT(
+        congregacion.getDataValue("id"),
+        congregacion.getDataValue("email")
+      );
+
+      try {
+        await guardarInformacionConexion(
+          ipAddress,
+          userAgent,
+          "",
+          congregacion
+        );
+      } catch (error) {
+        console.error("Error al guardar información de conexión:", error);
+      }
+
+      return res.json({
+        ok: true,
+        token: token,
+        entidad: "congregacion",
+        congregacion,
       });
     }
 
+    // Verifica la contraseña del usuario
     const isValidPassword = await verificarPassword(
       password,
       loginUsuario.getDataValue("password")
@@ -54,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
     );
 
     try {
-      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario);
+      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario, "");
     } catch (error) {
       console.error("Error al guardar información de conexión:", error);
     }
@@ -63,6 +104,7 @@ export const login = async (req: Request, res: Response) => {
       ok: true,
       token: token,
       usuario: loginUsuario,
+      entidad: "usuario",
     });
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
@@ -74,85 +116,196 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-async function verificarUsuario(login: string) {
-  return await Usuario.findOne({
+export const renewToken = async (req: CustomRequest, res: Response) => {
+  const idUsuario = req.id;
+  const login = req.login;
+
+  const { body } = req;
+
+  let token;
+  let buscarUsuario;
+  let buscarCongregacion;
+
+  buscarUsuario = await Usuario.findOne({
+    include: [
+      {
+        all: true,
+        required: false,
+      },
+    ],
     where: {
       login: login,
     },
   });
-}
-
-async function verificarPassword(password: string, hashedPassword: string) {
-  return bcrypt.compareSync(password, hashedPassword);
-}
-
-async function guardarInformacionConexion(
-  ipAddress: string,
-  userAgent: string,
-  loginUsuario: any
-) {
-  try {
-    const deviceDetector = new DeviceDetector();
-    const deviceResult = deviceDetector.parse(userAgent);
-
-    const location = await obtenerUbicacionPorIP(ipAddress);
-
-    if (location.status === "success") {
-      const ubicacion = {
-        ...location,
-        userAgent,
-        navegador: deviceResult.client?.name || "Desconocido",
-        tipoDispositivo: deviceResult.device?.type || "Desconocido",
-        dispositivo: deviceResult.device?.model || "Desconocido",
-        marca: deviceResult.device?.brand || "Desconocido",
-        modelo: deviceResult.device?.model || "Desconocido",
-        so: deviceResult.os?.name || "Desconocido",
-        version: deviceResult.os?.version || "Desconocido",
-        plataforma: deviceResult.os?.platform || "Desconocido",
-        motorNavegador:
-          deviceResult.client?.type === "browser"
-            ? (deviceResult.client as BrowserResult).engine || "Desconocido"
-            : "Desconocido",
-        idUsuario: loginUsuario.getDataValue("id"),
-      };
-
-      await UbicacionConexion.create(ubicacion);
-    }
-  } catch (error) {
-    console.error("Error al obtener la ubicación por IP:", error);
-  }
-}
-
-export const renewToken = async (req: CustomRequest, res: Response) => {
-  const idUsuario = req.id;
-
-  const { body } = req;
-  let usuario;
-  let usuarioID;
-  let token;
-  let buscarUsuario;
-
-  buscarUsuario = await Usuario.findByPk(idUsuario);
 
   if (buscarUsuario) {
-    usuario = Usuario.build(body);
+    token = await generarJWT(idUsuario, buscarUsuario.getDataValue("login"));
 
-    token = await generarJWT(idUsuario, usuario.getDataValue("login"));
-    usuarioID = await Usuario.findByPk(idUsuario, {
-      include: [
-        {
-          all: true,
-          required: false,
-        },
-      ],
+    res.json({
+      ok: true,
+      token,
+      usuario: buscarUsuario,
+    });
+  } else {
+    buscarCongregacion = await Congregacion.findOne({
+      where: {
+        email: login,
+      },
+    });
+
+    if (buscarCongregacion) {
+      token = await generarJWT(
+        idUsuario,
+        buscarCongregacion.getDataValue("email")
+      );
+      res.json({
+        ok: true,
+        token,
+        congregacion: buscarCongregacion,
+      });
+    } else {
+      res.status(404).json({
+        ok: false,
+        msg: "Usuario o congregación no encontrados",
+      });
+    }
+  }
+};
+
+export const crearLogin = async (req: Request, res: Response) => {
+  const { idUsuario, login, password } = req.body;
+
+  let actualizacionUsuario = {};
+  let email: string = "";
+  let nombre: string = "";
+
+  try {
+    const loginExistente = await verificarUsuario(login);
+
+    if (loginExistente) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Ya existe un usuario con ese nombre de usuario. Por favor, seleccione otro nombre de usuario",
+      });
+    }
+
+    // Actualiza la contraseña si se proporcionó
+    if (login && password) {
+      const salt = bcrypt.genSaltSync();
+      const hashedPassword = bcrypt.hashSync(password, salt);
+      actualizacionUsuario = { login, password: hashedPassword };
+    } else {
+      actualizacionUsuario = { login };
+    }
+
+    // Actualiza el usuario
+    const usuarioActualizado = await Usuario.update(actualizacionUsuario, {
+      where: { id: idUsuario },
+    });
+
+    if (usuarioActualizado[0] === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No se encontró un usuario con el número Mita ${idUsuario}`,
+      });
+    }
+
+    const usuario = await Usuario.findByPk(idUsuario);
+    email = usuario?.getDataValue("email");
+    nombre = `${usuario?.getDataValue("primerNombre") || ""} 
+    ${usuario?.getDataValue("segundoNombre") || ""}
+    ${usuario?.getDataValue("primerApellido") || ""} 
+    ${usuario?.getDataValue("segundoApellido") || ""}`;
+
+    const html = `
+            <div
+                style="
+                  max-width: 100%;
+                  width: 600px;
+                  margin: 0 auto;
+                  box-sizing: border-box;
+                  font-family: Arial, Helvetica, 'sans-serif';
+                  font-weight: normal;
+                  font-size: 16px;
+                  line-height: 22px;
+                  color: #252525;
+                  word-wrap: break-word;
+                  word-break: break-word;
+                  text-align: justify;
+                "
+              >
+                <div style="text-align: center">
+                  <img
+                    src="${imagenEmail}"
+                    alt="CMAR Multimedia"
+                    style="text-align: center; width: 200px"
+                  />
+                </div>
+                <h3>Bienvenido(a) a CMAR LIVE</h3>
+                <p>Hola, ${nombre}</p>
+                <p>
+                  Le damos la bienvenida a CMAR LIVE donde podrá disfrutar de los servicios,
+                  vigilias y eventos especiales de la Congregación Mita.
+                </p>
+              
+                <div>
+                  <p><b>Credenciales de ingreso:</b></p>
+                  <ul style="list-style: none">
+                    <li>
+                      <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+                    </li>
+                    <li><b>Usuario:&nbsp; </b> ${email}</li>
+                    <li><b>Contraseña:&nbsp;</b> ${password}</li>
+                  </ul>
+              
+                  <p>
+                    Recuerde que estas credenciales son personales, para uso único y exclusivo
+                    del beneficiario solicitante; si notamos un uso inadecuado de la cuenta
+                    aprobada, nos veremos en la necesidad de cancelar su acceso a la
+                    plataforma indefinidamente.
+                  </p>
+                  <p
+                    style="
+                      margin: 30px 0 12px 0;
+                      padding: 0;
+                      color: #252525;
+                      font-family: Arial, Helvetica, 'sans-serif';
+                      font-weight: normal;
+                      word-wrap: break-word;
+                      word-break: break-word;
+                      font-size: 12px;
+                      line-height: 16px;
+                      color: #909090;
+                    "
+                  >
+                    Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+                    en contacto con nosotros mediante nuestro correo electrónico
+                    <a href="mailto:multimedia@congregacionmita.com">
+                      multimedia@congregacionmita.com</a
+                    >
+                  </p>
+              
+                  <br />
+                  Cordialmente, <br />
+                  <b>Congregación Mita, Inc.</b>
+                </div>
+              </div>`;
+
+    enviarEmail(email, "Acceso a CMAR Live", html);
+
+    return res.json({
+      ok: true,
+      msg: "Credenciales actualizadas con éxito",
+      usuario: usuarioActualizado,
+    });
+  } catch (error) {
+    console.error("Error al actualizar las credenciales:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al actualizar las credenciales, por favor contacta al administrador",
+      error,
     });
   }
-
-  res.json({
-    ok: true,
-    token,
-    usuario: usuarioID,
-  });
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
@@ -385,7 +538,7 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
   });
 };
 
-export const cambiarpassword = async (req: Request, res: Response) => {
+export const cambiarPassword = async (req: Request, res: Response) => {
   const { body } = req;
   const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
 
@@ -408,7 +561,7 @@ export const cambiarpassword = async (req: Request, res: Response) => {
   } catch (error) {
     return res.status(404).json({
       ok: false,
-      msg: `No existe el usuario con el id ${login}`,
+      msg: `No existe el usuario ${login}`,
       error,
     });
   }
@@ -447,6 +600,45 @@ export const cambiarpassword = async (req: Request, res: Response) => {
         usuarioActualizado,
       });
     }
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const { body } = req;
+  const { passwordNuevo, login } = body;
+
+  try {
+    let usuario = await Usuario.findOne({
+      where: {
+        login: login,
+      },
+    });
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
+
+    const salt = bcrypt.genSaltSync();
+    const passwordHash = bcrypt.hashSync(passwordNuevo, salt);
+
+    const usuarioActualizado = await usuario.update({
+      password: passwordHash,
+    });
+
+    res.json({
+      ok: true,
+      msg: "La contraseña se cambió satisfactoriamente",
+      usuario: usuarioActualizado,
+    });
+  } catch (error) {
+    console.error("Error al cambiar la contraseña:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un problema al cambiar la contraseña",
+      error,
+    });
   }
 };
 
@@ -634,3 +826,68 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
     usuarios,
   });
 };
+
+async function verificarUsuario(login: string) {
+  return await Usuario.findOne({
+    where: {
+      login: login,
+    },
+  });
+}
+
+async function verificarCongregacion(email: string) {
+  return await Congregacion.findOne({
+    where: {
+      email: email,
+    },
+  });
+}
+
+async function verificarPassword(password: string, hashedPassword: string) {
+  return bcrypt.compareSync(password, hashedPassword);
+}
+
+async function guardarInformacionConexion(
+  ipAddress: string,
+  userAgent: string,
+  loginUsuario: any = null,
+  loginCongregacion: any = null
+) {
+  try {
+    const deviceDetector = new DeviceDetector();
+    const deviceResult = deviceDetector.parse(userAgent);
+
+    const location = await obtenerUbicacionPorIP(ipAddress);
+
+    if (location.status === "success") {
+      const ubicacion = {
+        ...location,
+        userAgent,
+        navegador: deviceResult.client?.name || "Desconocido",
+        tipoDispositivo: deviceResult.device?.type || "Desconocido",
+        dispositivo: deviceResult.device?.model || "Desconocido",
+        marca: deviceResult.device?.brand || "Desconocido",
+        modelo: deviceResult.device?.model || "Desconocido",
+        so: deviceResult.os?.name || "Desconocido",
+        version: deviceResult.os?.version || "Desconocido",
+        plataforma: deviceResult.os?.platform || "Desconocido",
+        motorNavegador:
+          deviceResult.client?.type === "browser"
+            ? (deviceResult.client as BrowserResult).engine || "Desconocido"
+            : "Desconocido",
+        idUsuario:
+          loginUsuario instanceof Usuario
+            ? loginUsuario.getDataValue("id")
+            : null,
+        idCongregacion:
+          loginCongregacion instanceof Congregacion
+            ? loginCongregacion.getDataValue("id")
+            : null,
+      };
+
+      await UbicacionConexion.create(ubicacion);
+    }
+  } catch (error) {
+    console.error("Error al obtener la ubicación por IP:", error);
+  }
+}

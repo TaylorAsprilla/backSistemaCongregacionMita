@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 
 export interface CustomRequest extends Request {
   id?: number;
+  login?: string;
 }
 
 const validarJWT = (req: CustomRequest, res: Response, next: NextFunction) => {
@@ -17,8 +18,11 @@ const validarJWT = (req: CustomRequest, res: Response, next: NextFunction) => {
   }
 
   try {
-    const { id } = jwt.verify(token, process.env.JWT_SECRET);
+    const { id, login } = jwt.verify(token, process.env.JWT_SECRET);
+    const info = jwt.verify(token, process.env.JWT_SECRET);
+
     req.id = id;
+    req.login = login;
 
     next();
   } catch (error) {

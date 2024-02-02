@@ -1,5 +1,4 @@
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
-import UsuarioFuenteIngreso from "../models/usuarioFuenteIngreso.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
@@ -10,11 +9,6 @@ export async function eliminarAsociacionesUsuario(
   id: number,
   transaction: any
 ) {
-  await UsuarioFuenteIngreso.destroy({
-    where: { usuario_id: id },
-    transaction,
-  });
-
   await UsuarioMinisterio.destroy({
     where: { usuario_id: id },
     transaction,
@@ -28,22 +22,12 @@ export async function eliminarAsociacionesUsuario(
 
 export async function crearAsociacionesUsuario(
   usuario_id: number,
-  fuentesDeIngreso: number[],
+
   ministerios: number[],
   voluntariados: number[],
 
   transaction: any
 ) {
-  const fuenteIngresoPromises = fuentesDeIngreso.map((fuenteDeIngresoId) =>
-    UsuarioFuenteIngreso.create(
-      {
-        usuario_id,
-        fuenteIngreso_id: fuenteDeIngresoId,
-      },
-      { transaction }
-    )
-  );
-
   const ministerioPromises = ministerios.map((ministerioId) =>
     UsuarioMinisterio.create(
       {
@@ -64,11 +48,7 @@ export async function crearAsociacionesUsuario(
     )
   );
 
-  await Promise.all([
-    ...fuenteIngresoPromises,
-    ...ministerioPromises,
-    ...voluntariadoPromises,
-  ]);
+  await Promise.all([...ministerioPromises, ...voluntariadoPromises]);
 }
 
 export async function crearCongregacionUsuario(
