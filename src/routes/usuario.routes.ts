@@ -1,9 +1,8 @@
-import { actualizarPermisos } from "./../controllers/usuario.controllers";
-
 import { Router } from "express";
 import { check } from "express-validator";
 import {
   activarUsuario,
+  actualizarPermisos,
   actualizarUsuario,
   buscarCorreoElectronico,
   crearUsuario,
@@ -52,15 +51,10 @@ router.post(
     )
       .not()
       .isEmpty(),
-    check("fuentesDeIngreso", "Seleccione las fuentes de ingreso")
-      .not()
-      .isEmpty(),
     check("esJoven", "Selecciones si es o no joven").not().isEmpty(),
     check("genero_id", "El género es obligatorio").not().isEmpty(),
     check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
     check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
-    check("vacuna_id", "La vacuna es obligatoria").not().isEmpty(),
-    check("dosis_id", "La dosis es obligatoria").not().isEmpty(),
     check("nacionalidad_id", "Selecciona una nacionalidad").not().isEmpty(),
     check("gradoAcademico_id", "Selecione un grado académico").not().isEmpty(),
     check("tipoEmpleo_id", "Selecciones a qué se dedica").not().isEmpty(),
@@ -94,12 +88,10 @@ router.put(
     check("genero_id", "El género es obligatorio").not().isEmpty(),
     check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
     check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
-    check("vacuna_id", "La vacuna es obligatoria").not().isEmpty(),
-    check("dosis_id", "La dosis es obligatoria").not().isEmpty(),
-    check("nacionalidad_id", "La dosis es obligatoria").not().isEmpty(),
-    check("gradoAcademico_id", "La dosis es obligatoria").not().isEmpty(),
-    check("tipoEmpleo_id", "La dosis es obligatoria").not().isEmpty(),
-    check("tipoMiembro_id", "La dosis es obligatoria").not().isEmpty(),
+    check("gradoAcademico_id", "El grado academico es obligatorio")
+      .not()
+      .isEmpty(),
+    check("tipoMiembro_id", "La tipo de miembro es obligatori").not().isEmpty(),
     validarCampos,
   ],
   actualizarUsuario

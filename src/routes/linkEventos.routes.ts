@@ -12,6 +12,7 @@ import {
   eliminarDeLaBiblioteca,
   eliminarLinkEvento,
   getLinkEventos,
+  getUltimoEvento,
   getUnLinkEvento,
 } from "../controllers/linkEvento.controllers";
 
@@ -22,6 +23,7 @@ const router = Router();
 
 router.get("/", validarJWT, getLinkEventos);
 router.get("/:id", validarJWT, getUnLinkEvento);
+router.get("/link/servicio", validarJWT, getUltimoEvento);
 router.post(
   "/",
   [

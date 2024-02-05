@@ -5,12 +5,14 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
-  cambiarpassword,
+  cambiarPassword,
+  crearLogin,
   crearNuevoPassword,
   envioDeCredenciales,
   forgotPassword,
   login,
   renewToken,
+  resetPassword,
 } from "../controllers/login.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -18,6 +20,7 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
+// Login
 router.post(
   "/",
   [
@@ -48,6 +51,7 @@ router.put(
   crearNuevoPassword
 );
 
+//El usuario cambia su contraseña
 router.put(
   "/cambiarpasswordusuario",
   [
@@ -59,10 +63,37 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  cambiarpassword
+  cambiarPassword
 );
 
+// Envío de credenciales
 router.put("/enviocredenciales", envioDeCredenciales);
+
+// El Administrador hace un Reset Password
+router.put(
+  "/resetpassword",
+  [
+    check("login", "El login del usuario es obligatorio").not().isEmpty(),
+    check("passwordNuevo", "Se requiere la nueva contraseña").not().isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  resetPassword
+);
+
+router.put(
+  "/crearlogin",
+  [
+    check("idUsuario", "Se requiere el número Mita del usuario")
+      .not()
+      .isEmpty(),
+    check("login", "El login del usuario es obligatorio").not().isEmpty(),
+    check("password", "La contraseña es obligatoria").not().isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  crearLogin
+);
 
 router.get("/renew", validarJWT, renewToken);
 
