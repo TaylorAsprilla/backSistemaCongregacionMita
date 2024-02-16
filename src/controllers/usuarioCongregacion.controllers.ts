@@ -4,7 +4,6 @@ import { QueryTypes } from "sequelize";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
   try {
-    const desde = Number(req.query.desde) || 0;
     const idPais = Number(req.query.idPais);
 
     if (!idPais || isNaN(idPais)) {
@@ -34,12 +33,10 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         WHERE 
           uc.pais_id = :idPais
         ORDER BY 
-          u.id
-        LIMIT 50
-        OFFSET :desde;
+          u.id       
       `,
         {
-          replacements: { idPais, desde },
+          replacements: { idPais },
           type: QueryTypes.SELECT,
         }
       ),
@@ -114,12 +111,10 @@ export const getUsuariosPorCongregacion = async (
         WHERE 
           uc.congregacion_id = :idCongregacion
         ORDER BY 
-          u.id
-        LIMIT 50
-        OFFSET :desde;
+          u.id       
       `,
         {
-          replacements: { idCongregacion, desde },
+          replacements: { idCongregacion },
           type: QueryTypes.SELECT,
         }
       ),
@@ -189,12 +184,10 @@ export const getUsuariosPorCampo = async (req: Request, res: Response) => {
         WHERE 
           uc.campo_id = :idCampo
         ORDER BY 
-          u.id
-        LIMIT 50
-        OFFSET :desde;
+          u.id       
       `,
         {
-          replacements: { idCampo, desde },
+          replacements: { idCampo },
           type: QueryTypes.SELECT,
         }
       ),
