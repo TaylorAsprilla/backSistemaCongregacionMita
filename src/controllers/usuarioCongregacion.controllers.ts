@@ -33,8 +33,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         WHERE 
           uc.pais_id = :idPais
         ORDER BY 
-          u.id
-       
+          u.id       
       `,
         {
           replacements: { idPais },
@@ -112,12 +111,10 @@ export const getUsuariosPorCongregacion = async (
         WHERE 
           uc.congregacion_id = :idCongregacion
         ORDER BY 
-          u.id
-        LIMIT 50
-        OFFSET :desde;
+          u.id       
       `,
         {
-          replacements: { idCongregacion, desde },
+          replacements: { idCongregacion },
           type: QueryTypes.SELECT,
         }
       ),
@@ -187,8 +184,7 @@ export const getUsuariosPorCampo = async (req: Request, res: Response) => {
         WHERE 
           uc.campo_id = :idCampo
         ORDER BY 
-          u.id
-       
+          u.id       
       `,
         {
           replacements: { idCampo },
