@@ -40,9 +40,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
       INNER JOIN
         campo ca ON ca.id = uc.campo_id
       ORDER BY
-        u.id
-      LIMIT 50
-      OFFSET :desde;
+        u.id;   
       `,
       {
         replacements: { desde },
