@@ -20,56 +20,58 @@ const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 
 export const getUsuarios = async (req: Request, res: Response) => {
-  const desde = Number(req.query.desde) || 0;
+  try {
+    // Ejecutar las consultas en paralelo
+    const [usuariosResult, totalUsuariosResult] = await Promise.all([
+      db.query(
+        `
+          SELECT
+            distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido,
+            u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion,
+            ca.campo, u.estado
+          FROM
+            usuario u
+          INNER JOIN
+            usuarioCongregacion uc ON u.id = uc.usuario_id
+          INNER JOIN
+            pais p ON p.id = uc.pais_id
+          INNER JOIN
+            congregacion co ON co.id = uc.congregacion_id
+          INNER JOIN
+            campo ca ON ca.id = uc.campo_id
+          ORDER BY
+            u.id;           
+        `
+      ),
+      db.query(
+        `
+          SELECT COUNT(*) as total FROM usuario;
+        `,
+        { type: QueryTypes.SELECT }
+      ),
+    ]);
 
-  const [usuariosResult, totalUsuariosResult] = await Promise.all([
-    db.query(
-      `
-      SELECT
-        distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido,
-        u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion,
-        ca.campo, u.estado
-      FROM
-        usuario u
-      INNER JOIN
-        usuarioCongregacion uc ON u.id = uc.usuario_id
-      INNER JOIN
-        pais p ON p.id = uc.pais_id
-      INNER JOIN
-        congregacion co ON co.id = uc.congregacion_id
-      INNER JOIN
-        campo ca ON ca.id = uc.campo_id
-      ORDER BY
-        u.id
-      LIMIT 50
-      OFFSET :desde;
-      `,
-      {
-        replacements: { desde },
-        type: QueryTypes.SELECT,
-      }
-    ),
-    db.query(
-      `
-        SELECT COUNT(*) OVER() as total FROM usuario u ;
-      `,
-      {
-        type: QueryTypes.SELECT,
-      }
-    ),
-  ]);
+    const [usuarios, totalUsuarios] = usuariosResult || [];
 
-  const usuarios = usuariosResult || [];
+    const total: number = Array.isArray(totalUsuarios)
+      ? totalUsuarios[0]?.total || 0
+      : 0;
 
-  const totalUsuarios =
-    (totalUsuariosResult[0] as { total?: number })?.total || 0;
-
-  res.json({
-    ok: true,
-    usuarios,
-    totalUsuarios,
-    msg: "Usuarios Registrados con paginación",
-  });
+    // Enviar respuesta al cliente
+    res.json({
+      ok: true,
+      usuarios: usuarios,
+      totalUsuarios: total,
+      msg: "Usuarios registrados con paginación",
+    });
+  } catch (error) {
+    console.error("Error al obtener usuarios:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al obtener usuarios, por favor contacta al administrador",
+      error,
+    });
+  }
 };
 
 export const getTodosLosUsuarios = async (req: Request, res: Response) => {
