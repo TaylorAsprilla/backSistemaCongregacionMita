@@ -146,17 +146,19 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     //                          Validaciones
     // =======================================================================
 
-    const existeEmail = await Usuario.findOne({
-      where: {
-        email: email,
-      },
-    });
-
-    if (existeEmail) {
-      return res.status(400).json({
-        ok: false,
-        msg: `Ya existe un usuario con el email ${email}`,
+    if (email) {
+      const existeEmail = await Usuario.findOne({
+        where: {
+          email: email,
+        },
       });
+
+      if (existeEmail) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el email ${email}`,
+        });
+      }
     }
 
     if (numeroDocumento) {
