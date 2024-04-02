@@ -53,15 +53,11 @@ export const getUsuarios = async (req: Request, res: Response) => {
 
     const [usuarios, totalUsuarios] = usuariosResult || [];
 
-    const total: number = Array.isArray(totalUsuarios)
-      ? totalUsuarios[0]?.total || 0
-      : 0;
-
     // Enviar respuesta al cliente
     res.json({
       ok: true,
       usuarios: usuarios,
-      totalUsuarios: total,
+      totalUsuarios: usuarios.length,
       msg: "Usuarios registrados con paginación",
     });
   } catch (error) {
