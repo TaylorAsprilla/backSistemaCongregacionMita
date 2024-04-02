@@ -32,7 +32,6 @@ router.post(
       .not()
       .isEmpty(),
     check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
-    check("email", "El correo electrónico es obligatorio").isEmail(),
     check("numeroCelular", "El número de celular es obligatorio")
       .not()
       .isEmpty(),
@@ -80,7 +79,6 @@ router.put(
       .not()
       .isEmpty(),
     check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
-    check("email", "El correo electrónico es obligatorio").isEmail(),
     check("numeroCelular", "El número de celular es obligatorio")
       .not()
       .isEmpty(),
