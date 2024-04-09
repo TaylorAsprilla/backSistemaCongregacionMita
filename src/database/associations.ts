@@ -11,6 +11,7 @@ import Permiso from "../models/permiso.model";
 import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
+import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEmpleo from "../models/tipoEmpleo.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
@@ -54,6 +55,12 @@ Usuario.hasOne(Nacionalidad, {
 Usuario.hasOne(GradoAcademico, {
   as: "gradoAcademico",
   sourceKey: "gradoAcademico_id",
+  foreignKey: "id",
+});
+
+Usuario.hasOne(TipoDocumento, {
+  as: "tipoDocumento",
+  sourceKey: "tipoDocumento_id",
   foreignKey: "id",
 });
 
