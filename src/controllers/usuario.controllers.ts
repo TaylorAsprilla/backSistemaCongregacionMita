@@ -318,6 +318,8 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ...campos
   } = body;
 
+  campos.email = email;
+
   try {
     const usuario = await Usuario.findByPk(id);
 
@@ -332,13 +334,14 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     //                          Actualizar Usuario
     // =======================================================================
 
-    if (!!email && usuario.getDataValue("email") !== email) {
+    if (email && usuario.getDataValue("email") !== email) {
       const existeEmail = await Usuario.findOne({
         where: {
           email: email,
           id: { [Op.ne]: id },
         },
       });
+      campos.email = email;
 
       if (existeEmail) {
         return res.status(400).json({
