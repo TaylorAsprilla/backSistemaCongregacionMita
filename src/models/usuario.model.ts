@@ -27,8 +27,6 @@ const Usuario = db.define(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: true,
-      unique: true,
       validate: {
         isEmail: {
           msg: "Debe ser una dirección de correo electrónico válida.",
