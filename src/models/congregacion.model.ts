@@ -22,7 +22,6 @@ const Congregacion = db.define(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: true,
     },
     password: {
       type: DataTypes.INTEGER,

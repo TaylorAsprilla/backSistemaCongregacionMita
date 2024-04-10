@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
 import { QueryTypes } from "sequelize";
+import Congregacion from "../models/congregacion.model";
+import Usuario from "../models/usuario.model";
+import Pais from "../models/pais.model";
+import Campo from "../models/campo.model";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
   try {
@@ -79,67 +83,65 @@ export const getUsuariosPorCongregacion = async (
   res: Response
 ) => {
   try {
-    const desde = Number(req.query.desde) || 0;
-    const idCongregacion = Number(req.query.idCongregacion);
+    const idUsuario = Number(req.query.idUsuario);
 
-    // Validar si idCongregacion es un número válido
-    if (!idCongregacion || isNaN(idCongregacion)) {
+    // Validar si idusuario es un número válido
+    if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
         msg: "El ID de la congregación no es válido.",
       });
     }
 
-    /// Consultar usuarios con paginación y asociación a UsuarioCongregacion
-    const [usuariosResult, totalUsuariosResult] = await Promise.all([
-      db.query(
-        `
-        SELECT     
-         distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido, 
-          u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion, 
-          ca.campo, u.estado 
-        FROM  
-          usuario u 
-        INNER JOIN 
-          usuarioCongregacion uc ON u.id = uc.usuario_id
-        RIGHT JOIN 
-          pais p ON p.id = uc.pais_id 
-        RIGHT JOIN 
-          congregacion co ON co.id = uc.congregacion_id 
-        RIGHT JOIN 
-          campo ca ON ca.id = uc.campo_id  
-        WHERE 
-          uc.congregacion_id = :idCongregacion
-        ORDER BY 
-          u.id       
-      `,
-        {
-          replacements: { idCongregacion },
-          type: QueryTypes.SELECT,
-        }
-      ),
-      db.query(
-        `
-        SELECT COUNT(*) OVER() as total FROM usuario u 
-        INNER JOIN usuarioCongregacion uc ON u.id = uc.usuario_id
-        WHERE uc.congregacion_id = :idCongregacion;
-      `,
-        {
-          replacements: { idCongregacion },
-          type: QueryTypes.SELECT,
-        }
-      ),
-    ]);
+    // Buscar la congregación del obrero encargado con el ID proporcionado
+    const congregacion = await Congregacion.findOne({
+      where: { idObreroEncargado: idUsuario },
+    });
 
-    const usuarios = usuariosResult || [];
+    if (!congregacion) {
+      return res.status(404).json({
+        message: "El obrero no tiene congregación a cargo",
+      });
+    }
 
-    const totalUsuarios =
-      (totalUsuariosResult[0] as { total?: number })?.total || 0;
+    // Obtener todos los usuarios asociados a esta congregación
+    const { count, rows } = await Usuario.findAndCountAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "apodo",
+        "fechaNacimiento",
+        "email",
+        "numeroCelular",
+        "estado",
+      ],
+      include: [
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["pais"],
+        },
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          where: { id: congregacion.getDataValue("id") },
+          attributes: ["congregacion"],
+        },
+        {
+          model: Campo,
+          as: "usuarioCongregacionCampo",
+          attributes: ["campo"],
+        },
+      ],
+    });
 
     return res.json({
       ok: true,
-      usuarios,
-      totalUsuarios,
+      usuarios: rows,
+      totalUsuarios: count,
       msg: `Usuarios de la congregación`,
     });
   } catch (error) {

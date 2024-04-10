@@ -13,51 +13,55 @@ import {
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
-import { Op, QueryTypes } from "sequelize";
+import { Op } from "sequelize";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
+import Congregacion from "../models/congregacion.model";
+import Pais from "../models/pais.model";
+import Campo from "../models/campo.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 
 export const getUsuarios = async (req: Request, res: Response) => {
   try {
-    // Ejecutar las consultas en paralelo
-    const [usuariosResult, totalUsuariosResult] = await Promise.all([
-      db.query(
-        `
-          SELECT
-            distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido,
-            u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion,
-            ca.campo, u.estado
-          FROM
-            usuario u
-          INNER JOIN
-            usuarioCongregacion uc ON u.id = uc.usuario_id
-          INNER JOIN
-            pais p ON p.id = uc.pais_id
-          INNER JOIN
-            congregacion co ON co.id = uc.congregacion_id
-          INNER JOIN
-            campo ca ON ca.id = uc.campo_id
-          ORDER BY
-            u.id;           
-        `
-      ),
-      db.query(
-        `
-          SELECT COUNT(*) as total FROM usuario;
-        `,
-        { type: QueryTypes.SELECT }
-      ),
-    ]);
-
-    const [usuarios, totalUsuarios] = usuariosResult || [];
+    // Obtener todos los usuarios asociados a esta congregación
+    const { count, rows } = await Usuario.findAndCountAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "apodo",
+        "fechaNacimiento",
+        "email",
+        "numeroCelular",
+        "estado",
+      ],
+      include: [
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["pais"],
+        },
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          attributes: ["congregacion"],
+        },
+        {
+          model: Campo,
+          as: "usuarioCongregacionCampo",
+          attributes: ["campo"],
+        },
+      ],
+    });
 
     // Enviar respuesta al cliente
     res.json({
       ok: true,
-      usuarios: usuarios,
-      totalUsuarios: usuarios.length,
+      usuarios: rows,
+      totalUsuarios: count,
       msg: "Usuarios registrados con paginación",
     });
   } catch (error) {
