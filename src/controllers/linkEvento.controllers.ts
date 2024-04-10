@@ -47,6 +47,7 @@ export const getUltimoEvento = async (req: Request, res: Response) => {
     const ultimoLink = await LinkEvento.findOne({
       where: {
         tipoEvento_id: tipoEventoId,
+        estado: true,
       },
       order: [["fecha", "DESC"]],
       limit: 1,
