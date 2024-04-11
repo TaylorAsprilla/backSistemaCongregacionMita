@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
-import { QueryTypes } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import Congregacion from "../models/congregacion.model";
 import Usuario from "../models/usuario.model";
 import Pais from "../models/pais.model";
@@ -83,26 +83,39 @@ export const getUsuariosPorCongregacion = async (
   res: Response
 ) => {
   try {
+    let whereConditions: any = {};
     const idUsuario = Number(req.query.idUsuario);
 
     // Validar si idusuario es un número válido
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "El ID de la congregación no es válido.",
+        msg: "El ID de usuario no es válido.",
       });
     }
 
     // Buscar la congregación del obrero encargado con el ID proporcionado
-    const congregacion = await Congregacion.findOne({
-      where: { idObreroEncargado: idUsuario },
-    });
+    const [pais, congregacion, campo] = await Promise.all([
+      Pais.findOne({ where: { idObreroEncargado: idUsuario } }),
+      Congregacion.findOne({ where: { idObreroEncargado: idUsuario } }),
+      Campo.findOne({ where: { idObreroEncargado: idUsuario } }),
+    ]);
 
-    if (!congregacion) {
+    // Verificar si el obrero encargado tiene asignada una congregación o campo
+    if (!pais && !congregacion && !campo) {
       return res.status(404).json({
-        message: "El obrero no tiene congregación a cargo",
+        message: "El obrero no tiene asignada una congregación o campo.",
       });
     }
+
+    // Obtener el ID del país de la congregación y el ID del campo
+    const paisId = pais ? pais.getDataValue("id") : null;
+    const congregacionId = congregacion
+      ? congregacion.getDataValue("id")
+      : null;
+    const campoId = campo ? campo.getDataValue("id") : null;
+
+    console.log("congregacion", congregacion?.getDataValue("id"));
 
     // Obtener todos los usuarios asociados a esta congregación
     const { count, rows } = await Usuario.findAndCountAll({
@@ -123,19 +136,28 @@ export const getUsuariosPorCongregacion = async (
           model: Pais,
           as: "usuarioCongregacionPais",
           attributes: ["pais"],
+          through: { attributes: [] },
         },
         {
           model: Congregacion,
           as: "usuarioCongregacionCongregacion",
-          where: { id: congregacion.getDataValue("id") },
           attributes: ["congregacion"],
+          through: { attributes: [] },
         },
         {
           model: Campo,
           as: "usuarioCongregacionCampo",
           attributes: ["campo"],
+          through: { attributes: [] },
         },
       ],
+      where: {
+        [Op.or]: [
+          { "$usuarioCongregacionPais.id$": paisId },
+          { "$usuarioCongregacionCongregacion.id$": congregacionId },
+          { "$usuarioCongregacionCampo.id$": campoId },
+        ],
+      },
     });
 
     return res.json({
