@@ -83,7 +83,6 @@ export const getUsuariosPorCongregacion = async (
   res: Response
 ) => {
   try {
-    let whereConditions: any = {};
     const idUsuario = Number(req.query.idUsuario);
 
     // Validar si idusuario es un número válido
