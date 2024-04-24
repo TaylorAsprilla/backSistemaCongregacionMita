@@ -5,8 +5,10 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarRolCasa,
   actualizarRolCasa,
   crearRolCasa,
+  eliminarRolCasa,
   getRolCasa,
 } from "../controllers/rolCasa.controllers";
 
@@ -34,5 +36,8 @@ router.put(
   ],
   actualizarRolCasa
 );
+
+router.put("/activar/:id", validarJWT, activarRolCasa);
+router.delete("/:id", validarJWT, eliminarRolCasa);
 
 export default router;

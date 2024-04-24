@@ -8,6 +8,10 @@ const RolCasa = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: 1,
+    },
   },
   {
     freezeTableName: true,
