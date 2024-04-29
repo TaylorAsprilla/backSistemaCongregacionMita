@@ -354,7 +354,11 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
         });
       } else {
         campos.email = email;
-        campos.login = email;
+        if (
+          usuario.getDataValue("login") &&
+          usuario.getDataValue("login") === usuario.getDataValue("email")
+        )
+          campos.login = email;
       }
     }
 

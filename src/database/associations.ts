@@ -64,12 +64,6 @@ Usuario.hasOne(TipoDocumento, {
   foreignKey: "id",
 });
 
-Usuario.hasOne(TipoEmpleo, {
-  as: "tipoEmpleo",
-  sourceKey: "tipoEmpleo_id",
-  foreignKey: "id",
-});
-
 Usuario.hasOne(TipoMiembro, {
   as: "tipoMiembro",
   sourceKey: "tipoMiembro_id",
