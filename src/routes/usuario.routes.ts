@@ -56,7 +56,7 @@ router.post(
     check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
     check("nacionalidad_id", "Selecciona una nacionalidad").not().isEmpty(),
     check("gradoAcademico_id", "Selecione un grado académico").not().isEmpty(),
-    check("tipoEmpleo_id", "Selecciones a qué se dedica").not().isEmpty(),
+    check("ocupacion", "El campo Ocupación es obligatorio").not().isEmpty(),
     check("tipoMiembro_id", "Seleccione un tipo de miembro (MN, MA, MNA, ME)")
       .not()
       .isEmpty(),

@@ -74,6 +74,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
 
     const solicitudDeAcceso = SolicitudMultimedia.build(body);
     await solicitudDeAcceso.save();
+
     const idUsuario = solicitudDeAcceso.getDataValue("id");
     const usuario = await Usuario.findByPk(usuario_id);
     const email = usuario?.getDataValue("email");

@@ -88,10 +88,6 @@ const Usuario = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    tipoEmpleo_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
     tipoMiembro_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -137,6 +133,10 @@ const Usuario = db.define(
     anoConocimiento: {
       type: DataTypes.STRING,
       allowNull: true,
+    },
+    ocupacion: {
+      type: DataTypes.STRING,
+      allowNull: false,
     },
   },
   {
