@@ -176,7 +176,7 @@ export const activarVoluntariado = async (
         return res.status(404).json({
           ok: false,
           msg: `El tipo de empleo ${nombre} está activo`,
-          tipoEmpleo: voluntariado,
+          voluntariado,
         });
       }
     }

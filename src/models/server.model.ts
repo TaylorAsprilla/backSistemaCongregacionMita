@@ -26,7 +26,6 @@ import situacionVisitaRoutes from "../routes/situacionVisita.routes";
 import seccionInformeRoutes from "../routes/seccionInforme.routes";
 import nacionalidadRoutes from "../routes/nacionalidad.routes";
 import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
-import tipoEmpleoRoutes from "../routes/tipoEmpleo.routes";
 import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
 import solicitudMultimediaRoutes from "../routes/solicitudMultimedia.routes";
 import voluntariadoRoutes from "../routes/voluntariado.routes";
@@ -84,7 +83,6 @@ class Server {
     direccion: "/api/direccion",
     tipoDireccion: "/api/tipodireccion",
     gradoAcademico: "/api/gradoAcademico",
-    tipoEmpleo: "/api/tipoempleo",
     tipoMiembro: "/api/tipomiembro",
     solicitudmultimedia: "/api/solicitudmultimedia",
     voluntariado: "/api/voluntariado",
@@ -169,7 +167,6 @@ class Server {
     this.app.use(this.apiPaths.seccionInforme, seccionInformeRoutes);
     this.app.use(this.apiPaths.nacionalidad, nacionalidadRoutes);
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
-    this.app.use(this.apiPaths.tipoEmpleo, tipoEmpleoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
     this.app.use(this.apiPaths.solicitudmultimedia, solicitudMultimediaRoutes);
     this.app.use(this.apiPaths.voluntariado, voluntariadoRoutes);
