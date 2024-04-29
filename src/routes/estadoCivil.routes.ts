@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
+  activarEstadoCivil,
   actualizarEstadoCivil,
   crearEstadoCivil,
+  eliminarEstadoCivil,
   getEstadoCivil,
 } from "../controllers/estadoCivil.controllers";
 import validarCampos from "../middlewares/validar-campos";
@@ -29,5 +31,7 @@ router.put(
   ],
   actualizarEstadoCivil
 );
+router.put("/activar/:id", validarJWT, activarEstadoCivil);
+router.delete("/:id", validarJWT, eliminarEstadoCivil);
 
 export default router;

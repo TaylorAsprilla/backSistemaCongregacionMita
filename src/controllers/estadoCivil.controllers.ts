@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
 import EstadoCivil from "../models/estadoCivil.model";
+import { CustomRequest } from "../middlewares/validar-jwt";
 
 export const getEstadoCivil = async (req: Request, res: Response) => {
   try {
@@ -95,6 +96,77 @@ export const actualizarEstadoCivil = async (req: Request, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const eliminarEstadoCivil = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const { id } = req.params;
+
+  try {
+    const estadoCivil = await EstadoCivil.findByPk(id);
+    if (estadoCivil) {
+      const nombre = await estadoCivil.get().estadoCivil;
+
+      await estadoCivil.update({ estado: false });
+
+      res.json({
+        ok: true,
+        msg: "El estado civil " + nombre + " se eliminó ",
+        id: req.id,
+      });
+    }
+
+    if (!estadoCivil) {
+      return res.status(404).json({
+        msg: "No existe un estado civil con el id " + id,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const activarEstadoCivil = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const estadoCivil = await EstadoCivil.findByPk(id);
+    if (!!estadoCivil) {
+      const nombre = await estadoCivil.get().estadoCivil;
+
+      if (estadoCivil.get().estado === false) {
+        await estadoCivil.update({ estado: true });
+        res.json({
+          ok: true,
+          msg: `El estado civil ${nombre} se activó`,
+          estadoCivil: estadoCivil,
+        });
+      } else {
+        return res.status(404).json({
+          ok: false,
+          msg: `El estado civil ${nombre} está activo`,
+          estadoCivil,
+        });
+      }
+    }
+
+    if (!estadoCivil) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un estado civil identificado con el id ${id}`,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error,
+      msg: "Hable con el administrador",
     });
   }
 };
