@@ -637,7 +637,6 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
 export const buscarCelular = async (req: Request, res: Response) => {
   const numeroCelular = req.query.numeroCelular as string;
 
-  console.log("numeroCelular", numeroCelular);
   if (!numeroCelular) {
     res.status(500).json({
       ok: false,

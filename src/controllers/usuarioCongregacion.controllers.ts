@@ -114,8 +114,6 @@ export const getUsuariosPorCongregacion = async (
       : null;
     const campoId = campo ? campo.getDataValue("id") : null;
 
-    console.log("congregacion", congregacion?.getDataValue("id"));
-
     // Obtener todos los usuarios asociados a esta congregación
     const { count, rows } = await Usuario.findAndCountAll({
       attributes: [
