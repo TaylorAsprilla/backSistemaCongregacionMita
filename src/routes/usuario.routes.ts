@@ -4,6 +4,7 @@ import {
   activarUsuario,
   actualizarPermisos,
   actualizarUsuario,
+  buscarCelular,
   buscarCorreoElectronico,
   crearUsuario,
   eliminarUsuario,
@@ -20,6 +21,7 @@ router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
 router.get("/:id", validarJWT, getUsuario);
 router.get("/buscarcorreo/:email", validarJWT, buscarCorreoElectronico);
+router.get("/buscarCelular/:celular", validarJWT, buscarCelular);
 router.post(
   "/",
   validarJWT,
@@ -32,9 +34,6 @@ router.post(
       .not()
       .isEmpty(),
     check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
-    check("numeroCelular", "El número de celular es obligatorio")
-      .not()
-      .isEmpty(),
     check("direccion", "La dirección de residencia es obligatoria")
       .not()
       .isEmpty(),
@@ -79,9 +78,6 @@ router.put(
       .not()
       .isEmpty(),
     check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
-    check("numeroCelular", "El número de celular es obligatorio")
-      .not()
-      .isEmpty(),
     check("esJoven", "Selecciones si es o no joven").not().isEmpty(),
     check("genero_id", "El género es obligatorio").not().isEmpty(),
     check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
