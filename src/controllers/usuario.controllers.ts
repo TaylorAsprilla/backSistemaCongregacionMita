@@ -635,24 +635,26 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
 };
 
 export const buscarCelular = async (req: Request, res: Response) => {
-  const numeroCelular = req.query.numeroCelular;
+  const numeroCelular = req.query.numeroCelular as string;
+
   if (!numeroCelular) {
     res.status(500).json({
       ok: false,
       msg: `No existe parametro en la petición`,
     });
   } else {
+    const numeroCelularFormateado = `+${numeroCelular.replace(/\s/, "")}`;
     try {
       const numeroCelularEncontrado = await Usuario.findOne({
         attributes: ["numeroCelular"],
         where: {
-          numeroCelular: `+${numeroCelular}`,
+          numeroCelular: numeroCelularFormateado,
         },
       });
       if (!!numeroCelularEncontrado) {
         res.json({
           ok: false,
-          msg: `Ya se encuentra registrado el número de celular ${numeroCelular}`,
+          msg: `Ya se encuentra registrado el número de celular ${numeroCelularFormateado}`,
         });
       } else {
         res.json({
