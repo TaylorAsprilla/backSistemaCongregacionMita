@@ -135,6 +135,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       segundoNombre,
       primerApellido,
       segundoApellido,
+      numeroCelular,
       ministerios,
       voluntariados,
       congregacion,
@@ -172,6 +173,21 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
         return res.status(400).json({
           ok: false,
           msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
+        });
+      }
+    }
+
+    if (numeroCelular) {
+      const existeNumeroCelular = await Usuario.findOne({
+        where: {
+          numeroCelular: numeroCelular,
+        },
+      });
+
+      if (existeNumeroCelular) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe un usuario con el número de celular ${numeroCelular}`,
         });
       }
     }
