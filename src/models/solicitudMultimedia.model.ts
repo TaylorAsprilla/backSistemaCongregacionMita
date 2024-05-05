@@ -95,6 +95,9 @@ const SolicitudMultimedia = db.define(
       type: DataTypes.DATE,
       defaultValue: null,
     },
+    tiempoSugerido: {
+      type: DataTypes.STRING,
+    },
   },
   {
     freezeTableName: true,
