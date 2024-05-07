@@ -16,10 +16,11 @@ const urlCmarLive = environment.urlCmarLive;
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
-  const { login, password, solicitud_id, tiempoAprobacion, estado } = req.body;
+  const { login, password, solicitud_id, tiempoAprobacion } = req.body;
 
   let nombre: string = "";
   let email: string = "";
+  let tiempoAprobacionDate = new Date(tiempoAprobacion);
 
   const transaction = await db.transaction();
 
@@ -70,6 +71,17 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
         where: {
           id: usuario_id,
         },
+        transaction,
+      }
+    );
+
+    const actualizado = await SolicitudMultimedia.update(
+      { tiempoAprobacion: tiempoAprobacionDate },
+      {
+        where: {
+          usuario_id,
+        },
+
         transaction,
       }
     );
@@ -189,6 +201,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       ok: true,
       msg: "Acceso Multimedia creado ",
       solicitud: existeSolicitud,
+      actualizado,
     });
   } catch (error) {
     await transaction.rollback();
