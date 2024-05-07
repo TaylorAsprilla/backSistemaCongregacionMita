@@ -3,7 +3,6 @@ import config from "../config/config";
 import db from "../database/connection";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
 

@@ -138,6 +138,10 @@ const Usuario = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    idUsuarioQueRegistra: {
+      type: DataTypes.NUMBER,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,

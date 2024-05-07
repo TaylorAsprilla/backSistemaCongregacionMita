@@ -1,50 +1,52 @@
 import express, { Application } from "express";
-import usuarioRoutes from "../routes/usuario.routes";
-import loginRoutes from "../routes/login.routes";
-import generoRoutes from "../routes/genero.routes";
-import busquedasRoutes from "../routes/busqueda.routes";
-import tipoDocumentoRoutes from "../routes/tipoDocumento.routes";
-import tipoUsuarioRoutes from "../routes/tipoUsuario.routes";
-import ministerioRoutes from "../routes/ministerio.routes";
-import permisoRoutes from "../routes/permiso.routes";
-import tipoActividadRoutes from "../routes/tipoActividad.routes";
-import actividadRoutes from "../routes/actividad.routes";
-import informeRoutes from "../routes/informe.routes";
-import contabilidadRoutes from "../routes/contabilidad.routes";
-import logroRoutes from "../routes/logro.routes";
-import asuntoPendienteRoutes from "../routes/asuntoPendiente.routes";
-import tipoStatusRoutes from "../routes/tipoStatus.routes";
-import metaRoutes from "../routes/meta.routes";
-import visitaRoutes from "../routes/visita.routes";
-import paisRoutes from "../routes/pais.routes";
-import divisaRoutes from "../routes/divisa.routes";
-import congregacionRoutes from "../routes/congregacion.routes";
-import campoRoutes from "../routes/campo.routes";
-import estadoCivilRoutes from "../routes/estadoCivil.routes";
-import rolCasaRoutes from "../routes/rolCasa.routes";
-import situacionVisitaRoutes from "../routes/situacionVisita.routes";
-import seccionInformeRoutes from "../routes/seccionInforme.routes";
-import nacionalidadRoutes from "../routes/nacionalidad.routes";
-import gradoAcademicoRoutes from "../routes/gradoAcademico.routes";
-import tipoMiembroRoutes from "../routes/tipoMiembro.routes";
-import solicitudMultimediaRoutes from "../routes/solicitudMultimedia.routes";
-import voluntariadoRoutes from "../routes/voluntariado.routes";
-import buscarCorreoRoutes from "../routes/buscarCorreo.routes";
-import buscarCelularRoutes from "../routes/buscarCelular.routes";
-import razonSolicitudRoutes from "../routes/razonSolicitud.routes";
-import linkEventosRoutes from "../routes/linkEventos.routes";
-import obreroRoutes from "../routes/obrero.routes";
-import accesoMultimediaRoutes from "../routes/accesoMultimedia.routes";
-import supervisorCongregacionRoutes from "../routes/supervisorCongregacion.routes";
-import tipoEstudioRoutes from "../routes/tipoEstudio.routes";
-import opcionTransporteRoutes from "../routes/opcionTransporte.routes";
-import parentescoRoutes from "../routes/parentesco.routes";
-import usuarioCongregacionRoutes from "../routes/usuarioCongregacion.routes";
+import usuarioRoutes from "./routes/usuario.routes";
+import loginRoutes from "./routes/login.routes";
+import generoRoutes from "./routes/genero.routes";
+import busquedasRoutes from "./routes/busqueda.routes";
+import tipoDocumentoRoutes from "./routes/tipoDocumento.routes";
+import tipoUsuarioRoutes from "./routes/tipoUsuario.routes";
+import ministerioRoutes from "./routes/ministerio.routes";
+import permisoRoutes from "./routes/permiso.routes";
+import tipoActividadRoutes from "./routes/tipoActividad.routes";
+import actividadRoutes from "./routes/actividad.routes";
+import informeRoutes from "./routes/informe.routes";
+import contabilidadRoutes from "./routes/contabilidad.routes";
+import logroRoutes from "./routes/logro.routes";
+import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
+import tipoStatusRoutes from "./routes/tipoStatus.routes";
+import metaRoutes from "./routes/meta.routes";
+import visitaRoutes from "./routes/visita.routes";
+import paisRoutes from "./routes/pais.routes";
+import divisaRoutes from "./routes/divisa.routes";
+import congregacionRoutes from "./routes/congregacion.routes";
+import campoRoutes from "./routes/campo.routes";
+import estadoCivilRoutes from "./routes/estadoCivil.routes";
+import rolCasaRoutes from "./routes/rolCasa.routes";
+import situacionVisitaRoutes from "./routes/situacionVisita.routes";
+import seccionInformeRoutes from "./routes/seccionInforme.routes";
+import nacionalidadRoutes from "./routes/nacionalidad.routes";
+import gradoAcademicoRoutes from "./routes/gradoAcademico.routes";
+import tipoMiembroRoutes from "./routes/tipoMiembro.routes";
+import solicitudMultimediaRoutes from "./routes/solicitudMultimedia.routes";
+import voluntariadoRoutes from "./routes/voluntariado.routes";
+import buscarCorreoRoutes from "./routes/buscarCorreo.routes";
+import buscarCelularRoutes from "./routes/buscarCelular.routes";
+import razonSolicitudRoutes from "./routes/razonSolicitud.routes";
+import linkEventosRoutes from "./routes/linkEventos.routes";
+import obreroRoutes from "./routes/obrero.routes";
+import accesoMultimediaRoutes from "./routes/accesoMultimedia.routes";
+import supervisorCongregacionRoutes from "./routes/supervisorCongregacion.routes";
+import tipoEstudioRoutes from "./routes/tipoEstudio.routes";
+import opcionTransporteRoutes from "./routes/opcionTransporte.routes";
+import parentescoRoutes from "./routes/parentesco.routes";
+import usuarioCongregacionRoutes from "./routes/usuarioCongregacion.routes";
+import ayudanteRoutes from "./routes/ayudante.routes";
 
 import cors from "cors";
-import db from "../database/connection";
-import config from "../config/config";
-require("../database/associations");
+import db from "./database/connection";
+import config from "./config/config";
+
+require("./database/associations");
 
 const environment = config[process.env.NODE_ENV || "development"];
 const whiteList = environment.whiteList;
@@ -98,6 +100,7 @@ class Server {
     opcionTransporte: "/api/opciontransporte",
     password: "/api/password",
     usuarioCongregacion: "/api/usuariocongregacion",
+    ayudante: "/api/ayudante",
   };
 
   constructor() {
@@ -119,7 +122,7 @@ class Server {
       await db.authenticate();
       console.info("Database Online");
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   }
 
@@ -184,11 +187,12 @@ class Server {
     this.app.use(this.apiPaths.opcionTransporte, opcionTransporteRoutes);
     this.app.use(this.apiPaths.parentesco, parentescoRoutes);
     this.app.use(this.apiPaths.usuarioCongregacion, usuarioCongregacionRoutes);
+    this.app.use(this.apiPaths.ayudante, ayudanteRoutes);
   }
 
   listen() {
     this.app.listen(this.port, () => {
-      console.log(`Servidor corriendo en puerto ${this.port}`);
+      console.info(`Servidor corriendo en puerto ${this.port}`);
     });
   }
 }

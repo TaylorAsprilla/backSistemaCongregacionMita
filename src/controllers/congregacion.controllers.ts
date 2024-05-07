@@ -201,7 +201,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.log(error);
+    console.error(error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
