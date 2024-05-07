@@ -119,7 +119,7 @@ class Server {
       await db.authenticate();
       console.info("Database Online");
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   }
 
@@ -188,7 +188,7 @@ class Server {
 
   listen() {
     this.app.listen(this.port, () => {
-      console.log(`Servidor corriendo en puerto ${this.port}`);
+      console.info(`Servidor corriendo en puerto ${this.port}`);
     });
   }
 }

@@ -461,7 +461,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
       });
     } catch (error) {
       await transaction.rollback();
-      console.log("error", error);
+      console.error("error", error);
     }
   } catch (error) {
     console.error("Error al actualizar el usuario:", error);
