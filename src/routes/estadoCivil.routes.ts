@@ -5,14 +5,16 @@ import {
   actualizarEstadoCivil,
   crearEstadoCivil,
   eliminarEstadoCivil,
-  getEstadoCivil,
+  getAllEstadoCivil,
+  getUnEstadoCivil,
 } from "../controllers/estadoCivil.controllers";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
-router.get("/", validarJWT, getEstadoCivil);
+router.get("/", validarJWT, getAllEstadoCivil);
+router.get("/:id", validarJWT, getUnEstadoCivil);
 router.post(
   "/",
   [
