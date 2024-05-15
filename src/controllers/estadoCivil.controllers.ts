@@ -3,11 +3,28 @@ import db from "../database/connection";
 import EstadoCivil from "../models/estadoCivil.model";
 import { CustomRequest } from "../middlewares/validar-jwt";
 
-export const getEstadoCivil = async (req: Request, res: Response) => {
+export const getAllEstadoCivil = async (req: Request, res: Response) => {
   try {
     const estadoCivil = await EstadoCivil.findAll({
       order: db.col("estadoCivil"),
     });
+
+    res.json({
+      ok: true,
+      estadoCivil,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const getUnEstadoCivil = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const estadoCivil = await EstadoCivil.findByPk(id);
 
     res.json({
       ok: true,
