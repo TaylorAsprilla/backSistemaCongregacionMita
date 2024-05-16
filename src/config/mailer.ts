@@ -2,18 +2,19 @@ import config from "./config";
 import nodemailer from "nodemailer";
 
 const environment = config[process.env.NODE_ENV || "development"];
+const { service, host, port, email, password } = environment.email;
 
 export const transporter = nodemailer.createTransport({
-  service: "Outlook365",
-  host: "smtp.office365.com",
-  port: 587,
+  service,
+  host,
+  port,
   pool: true,
   maxConnections: 3,
   maxMessages: 30,
   secure: false,
   auth: {
-    user: environment.email.email,
-    pass: environment.email.password,
+    user: email,
+    pass: password,
   },
   tls: {
     ciphers: "SSLv3",
