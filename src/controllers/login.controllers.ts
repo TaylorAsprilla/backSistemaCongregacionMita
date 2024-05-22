@@ -331,7 +331,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     if (!usuario) {
       return res.status(404).json({
         ok: false,
-        msg: "Hay un error, verifique su cuenta de usuario",
+        msg: "No se encuentra registrada la cuenta de usuario",
       });
     }
 
@@ -341,6 +341,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       "10m",
       environment.jwtSecretReset
     );
+
     verificarLink = verificarLink + token;
     usuario.getDataValue("resetToken");
     email = await usuario.getDataValue("email");
@@ -364,6 +365,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       ${usuario.getDataValue("segundoApellido")}
       `;
   }
+
   try {
     // Envío de Email
     const html = `

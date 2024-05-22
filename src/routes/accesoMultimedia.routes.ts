@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   activarAccesoMultimedia,
   actualizarAccesoMultimedia,
+  crearAccesoCongregacionMultimedia,
   crearAccesoMultimedia,
   eliminarAccesoMultimedia,
 } from "../controllers/accesoMultimedia.controllers";
@@ -31,6 +32,23 @@ router.post(
     validarJWT,
   ],
   crearAccesoMultimedia
+);
+
+router.post(
+  "/congregacion",
+  [
+    check("email", "El email de la congregación es obligatorio")
+      .not()
+      .isEmpty()
+      .isEmail(),
+    check("password", "La contraseña es obligatoria").not().isEmpty(),
+    check("idCongregacion", "El ID de la congregación es obligatorio")
+      .not()
+      .isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  crearAccesoCongregacionMultimedia
 );
 
 router.put("/:id", validarJWT, actualizarAccesoMultimedia);
