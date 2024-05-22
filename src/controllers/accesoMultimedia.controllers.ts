@@ -9,6 +9,7 @@ import Usuario from "../models/usuario.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
 import db from "../database/connection";
+import Congregacion from "../models/congregacion.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -356,6 +357,179 @@ export const activarAccesoMultimedia = async (
     res.status(500).json({
       error,
       msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const crearAccesoCongregacionMultimedia = async (
+  req: Request,
+  res: Response
+) => {
+  const { body } = req;
+  const { email, password, idCongregacion } = req.body;
+
+  let nombre: string = "";
+  let correo: string = "";
+
+  const transaction = await db.transaction();
+
+  // =======================================================================
+  //                          Validaciones
+  // =======================================================================
+  try {
+    if (email) {
+      const existeLogin = await Usuario.findOne({
+        where: {
+          login: email,
+        },
+        transaction,
+      });
+
+      if (existeLogin) {
+        return res.status(400).json({
+          ok: false,
+          msg: `Ya existe la cuenta de usuario ${email}`,
+        });
+      }
+    }
+
+    const congregacion = await Congregacion.findByPk(idCongregacion, {
+      transaction,
+    });
+
+    if (!congregacion) {
+      return res.status(400).json({
+        ok: false,
+        msg: `No se encuentra la congregación ${idCongregacion}`,
+      });
+    }
+
+    // =======================================================================
+    //               Actualizar Información de congregación
+    // =======================================================================
+
+    // Encriptar contraseña
+    let hashedPassword = password;
+
+    if (password) {
+      const salt = bcrypt.genSaltSync();
+      hashedPassword = bcrypt.hashSync(password, salt);
+    }
+
+    const [updatedRows] = await Congregacion.update(
+      { email, password: hashedPassword },
+      {
+        where: { id: idCongregacion },
+        transaction,
+      }
+    );
+
+    if (updatedRows === 0) {
+      throw new Error("La actualización de la congregación falló");
+    }
+
+    const congregacionActualizada = await Congregacion.findByPk(
+      idCongregacion,
+      { transaction }
+    );
+    if (congregacionActualizada) {
+      await transaction.commit();
+
+      const nombre = congregacionActualizada.getDataValue("congregacion");
+      const correo = congregacionActualizada.getDataValue("email");
+
+      // =======================================================================
+      //                          Correo Electrónico
+      // =======================================================================
+
+      const html = `
+                <div
+                    style="
+                      max-width: 100%;
+                      width: 600px;
+                      margin: 0 auto;
+                      box-sizing: border-box;
+                      font-family: Arial, Helvetica, 'sans-serif';
+                      font-weight: normal;
+                      font-size: 16px;
+                      line-height: 22px;
+                      color: #252525;
+                      word-wrap: break-word;
+                      word-break: break-word;
+                      text-align: justify;
+                    "
+                  >
+                    <div style="text-align: center">
+                      <img
+                        src="${imagenEmail}"
+                        alt="CMAR Multimedia"
+                        style="text-align: center; width: 200px"
+                      />
+                    </div>
+                    <h3>Bienvenido(a) a CMAR LIVE</h3>
+                    <p>Congregación de ${nombre}</p>
+                    <p>
+                      Le damos la bienvenida a CMAR LIVE donde podrá disfrutar de los servicios,
+                      vigilias y eventos especiales de la Congregación Mita.
+                    </p>
+                  
+                    <div>
+                      <p><b>Credenciales de ingreso:</b></p>
+                      <ul style="list-style: none">
+                        <li>
+                          <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+                        </li>
+                        <li><b>Usuario:&nbsp; </b> ${correo}</li>
+                        <li><b>Contraseña:&nbsp;</b> ${password}</li>                       
+                      </ul>
+                  
+                      <p>
+                        Recuerde que estas credenciales son personales, para uso único y exclusivo
+                        del beneficiario solicitante; si notamos un uso inadecuado de la cuenta
+                        aprobada, nos veremos en la necesidad de cancelar su acceso a la
+                        plataforma indefinidamente.
+                      </p>
+                      <p
+                        style="
+                          margin: 30px 0 12px 0;
+                          padding: 0;
+                          color: #252525;
+                          font-family: Arial, Helvetica, 'sans-serif';
+                          font-weight: normal;
+                          word-wrap: break-word;
+                          word-break: break-word;
+                          font-size: 12px;
+                          line-height: 16px;
+                          color: #909090;
+                        "
+                      >
+                        Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
+                        en contacto con nosotros mediante nuestro correo electrónico
+                        <a href="mailto:multimedia@congregacionmita.com">
+                          multimedia@congregacionmita.com</a
+                        >
+                      </p>
+                  
+                      <br />
+                      Cordialmente,
+                      <br />
+                      <b>Congregación Mita, Inc.</b>
+                    </div>
+                  </div>`;
+
+      enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
+    }
+
+    res.json({
+      ok: true,
+      msg: "Acceso Multimedia creado ",
+      congregacion: congregacionActualizada,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
     });
   }
 };
