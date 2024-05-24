@@ -27,6 +27,10 @@ const Congregacion = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    resetToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,

@@ -17,13 +17,12 @@ import UbicacionConexion from "../models/ubicacionConexion.model";
 import DeviceDetector from "device-detector-js";
 import { BrowserResult } from "device-detector-js/dist/parsers/client/browser";
 
-const environment = config[process.env.NODE_ENV || "development"];
-const imagenEmail = environment.imagenEmail;
-const urlCmarLive = environment.urlCmarLive;
+const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
+  config[process.env.NODE_ENV || "development"];
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
-  const ipAddress = environment.ip || req.ip;
+  const ipAddress = ip || req.ip;
   const userAgent = req.headers["user-agent"] || "";
 
   try {
@@ -314,56 +313,71 @@ export const forgotPassword = async (req: Request, res: Response) => {
   const mensaje =
     "Verifique su correo electrónico para obtener el enlace para restablecer su contraseña";
 
-  let verificarLink = environment.verificarLink;
   let emailStatus = "OK";
-  let usuario;
+  let usuario: any;
   let token: any;
   let email: string = "";
   let nombre: string = "";
+  let isUsuario: boolean = true;
+  let linkVerificarToken: string = "";
 
   try {
-    usuario = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
+    usuario = await verificarUsuario(login);
 
+    // Si no se encuentra el usuario, verificar si pertenece a una congregación
     if (!usuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: "No se encuentra registrada la cuenta de usuario",
-      });
+      usuario = await verificarCongregacion(login);
+      isUsuario = false;
+
+      // Si tampoco se encuentra la congregación, devolver error
+
+      if (!usuario) {
+        return res.status(404).json({
+          ok: false,
+          msg: "No se encuentra registrada la cuenta de usuario",
+        });
+      }
     }
 
     token = await generarJWT(
       usuario.getDataValue("id"),
       login,
       "10m",
-      environment.jwtSecretReset
+      jwtSecretReset
     );
 
-    verificarLink = verificarLink + token;
+    // Actualizar el token de restablecimiento en la base de datos
+    if (isUsuario) {
+      await Usuario.update(
+        { resetToken: token },
+        { where: { id: usuario.id } }
+      );
+    } else {
+      await Congregacion.update(
+        { resetToken: token },
+        { where: { id: usuario.id } }
+      );
+    }
+
     usuario.getDataValue("resetToken");
     email = await usuario.getDataValue("email");
 
-    const usuarioActualizado = await usuario.update({
-      resetToken: token,
-    });
+    linkVerificarToken = verificarLink + token;
+
+    nombre = isUsuario
+      ? `
+      ${usuario.getDataValue("primerNombre")} 
+      ${usuario.getDataValue("segundoNombre")} 
+      ${usuario.getDataValue("primerApellido")} 
+      ${usuario.getDataValue("segundoApellido")}
+      `
+      : usuario.getDataValue("congregacion");
   } catch (error) {
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
       error,
     });
-  }
-
-  if (usuario) {
-    nombre = `
-      ${usuario.getDataValue("primerNombre")} 
-      ${usuario.getDataValue("segundoNombre")} 
-      ${usuario.getDataValue("primerApellido")} 
-      ${usuario.getDataValue("segundoApellido")}
-      `;
   }
 
   try {
@@ -405,7 +419,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
                 style="text-align: center; margin: 24px 0 40px 0; padding: 0"
               >
                 <a
-                  href="${verificarLink}"
+                  href="${linkVerificarToken}"
                   style="
                     display: inline-block;
                     margin: 0 auto;
@@ -434,7 +448,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
                 Si el enlace anterior no funciona, introduzca la dirección su navegador.
               </p>
             
-              <a href="${verificarLink}">${verificarLink}</a>
+              <a href="${linkVerificarToken}">${linkVerificarToken}</a>
             
               <p>
                 Este vínculo de restablecimiento de contraseña solo es válido durante 10
@@ -486,12 +500,14 @@ export const forgotPassword = async (req: Request, res: Response) => {
 };
 
 export const crearNuevoPassword = async (req: Request, res: Response) => {
-  const { body } = req;
-  const { nuevoPassword } = body;
+  const { nuevoPassword } = req.body;
   const resetToken = req.header("x-reset") as string;
+
   let usuario;
-  let usuarioActualizado;
-  let jwtPayload;
+  let entidad;
+  let salt;
+  let hashedPassword;
+  let tokenPayload;
 
   if (!resetToken && !nuevoPassword) {
     return res.status(404).json({
@@ -501,12 +517,29 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
   }
 
   try {
-    jwtPayload = jwt.verify(resetToken, environment.jwtSecretReset);
+    tokenPayload = jwt.verify(resetToken, jwtSecretReset);
     usuario = await Usuario.findOne({
       where: {
         resetToken,
       },
     });
+
+    if (!usuario) {
+      entidad = await Congregacion.findOne({
+        where: {
+          resetToken,
+        },
+      });
+    } else {
+      entidad = usuario;
+    }
+
+    if (!entidad) {
+      return res.status(404).json({
+        ok: false,
+        msg: "El vínculo de restablecimiento de contraseña ha expirado o es inválido. Por favor, vuelva a solicitar el restablecimiento de la contraseña.",
+      });
+    }
   } catch (error) {
     return res.status(404).json({
       ok: false,
@@ -518,14 +551,14 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
   }
 
   try {
-    if (usuario) {
-      const salt = bcrypt.genSaltSync();
-      body.password = bcrypt.hashSync(nuevoPassword, salt);
+    salt = bcrypt.genSaltSync();
+    hashedPassword = bcrypt.hashSync(nuevoPassword, salt);
 
-      usuarioActualizado = await usuario.update({
-        password: body.password,
-      });
-    }
+    // Actualizar la contraseña en la entidad correspondiente
+    await entidad.update({ password: hashedPassword, resetToken: null });
+
+    // Limpiar el resetToken después de usarlo
+    // await entidad.update({ resetToken: null });
   } catch (error) {
     return res.status(404).json({
       ok: false,
@@ -536,7 +569,7 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
   res.json({
     ok: true,
     msg: "La contraseña se cambió satisfactoriamente",
-    usuarioActualizado,
+    usuarioActualizado: entidad,
   });
 };
 
