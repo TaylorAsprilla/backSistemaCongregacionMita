@@ -26,59 +26,30 @@ export const login = async (req: Request, res: Response) => {
   const userAgent = req.headers["user-agent"] || "";
 
   try {
-    const loginUsuario = await verificarUsuario(login);
+    let entidad;
+    let entidadTipo = "usuario"; // Por defecto, asumimos que es un usuario
+    let token;
 
-    if (!loginUsuario) {
-      const congregacion = await verificarCongregacion(login);
+    entidad = await verificarUsuario(login);
 
-      if (!congregacion) {
-        return res.status(404).json({
-          ok: false,
-          msg: "Usuario no válido",
-        });
-      }
+    // Si no es un usuario, verificamos si es una congregación
+    if (!entidad) {
+      entidad = await verificarCongregacion(login);
+      entidadTipo = "congregacion";
+    }
 
-      // Verifica la contraseña de la congregación
-      const isValidPassword = await verificarPassword(
-        password,
-        congregacion.getDataValue("password")
-      );
-      if (!isValidPassword) {
-        return res.status(404).json({
-          ok: false,
-          msg: "Contraseña no válida",
-        });
-      }
-
-      // Genera el token y realiza las acciones necesarias
-      const token = await generarJWT(
-        congregacion.getDataValue("id"),
-        congregacion.getDataValue("email")
-      );
-
-      try {
-        await guardarInformacionConexion(
-          ipAddress,
-          userAgent,
-          "",
-          congregacion
-        );
-      } catch (error) {
-        console.error("Error al guardar información de conexión:", error);
-      }
-
-      return res.json({
-        ok: true,
-        token: token,
-        entidad: "congregacion",
-        congregacion,
+    // Si no se encontró ni usuario ni congregación
+    if (!entidad) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no válido",
       });
     }
 
-    // Verifica la contraseña del usuario
+    // Verificamos la contraseña
     const isValidPassword = await verificarPassword(
       password,
-      loginUsuario.getDataValue("password")
+      entidad.getDataValue("password")
     );
 
     if (!isValidPassword) {
@@ -88,22 +59,26 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    const token = await generarJWT(
-      loginUsuario.getDataValue("id"),
-      loginUsuario.getDataValue("login")
-    );
+    // Generamos el token
+    token = await generarJWT(entidad.getDataValue("id"), login);
 
     try {
-      await guardarInformacionConexion(ipAddress, userAgent, loginUsuario, "");
+      await guardarInformacionConexion(
+        ipAddress,
+        userAgent,
+        entidadTipo === "usuario" ? entidad : null,
+        entidadTipo === "congregacion" ? entidad : null
+      );
     } catch (error) {
       console.error("Error al guardar información de conexión:", error);
     }
 
+    // Devolvemos la respuesta
     res.json({
       ok: true,
       token: token,
-      usuario: loginUsuario,
-      entidad: "usuario",
+      entidadTipo,
+      usuario: entidad,
     });
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
@@ -928,6 +903,6 @@ async function guardarInformacionConexion(
       await UbicacionConexion.create(ubicacion);
     }
   } catch (error) {
-    console.error("Error al obtener la ubicación por IP:", error);
+    console.error("Error al obtener la ubicación por IP: 1111", error);
   }
 }
