@@ -574,67 +574,72 @@ export const crearNuevoPassword = async (req: Request, res: Response) => {
 };
 
 export const cambiarPassword = async (req: Request, res: Response) => {
-  const { body } = req;
-  const { passwordAntiguo, passwordNuevo, idUsuario, login } = body;
+  const { passwordAntiguo, passwordNuevo, login } = req.body;
 
-  let usuario;
-  let usuarioActualizado;
-  let password;
+  let entidad;
+  let entidadActualizada;
+  let isUsuario;
 
-  try {
-    usuario = await Usuario.findOne({
-      where: {
-        login: login,
-      },
-    });
-    if (!usuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: "Usuario no válido",
-      });
-    }
-  } catch (error) {
-    return res.status(404).json({
+  if (!passwordAntiguo || !passwordNuevo || !login) {
+    return res.status(400).json({
       ok: false,
-      msg: `No existe el usuario ${login}`,
-      error,
+      msg: "Todos los campos son requeridos",
     });
   }
 
-  if (!!usuario) {
+  try {
+    entidad = await verificarUsuario(login);
+
+    // Si no se encuentra el usuario, verificar si pertenece a una congregación
+    if (!entidad) {
+      entidad = await verificarCongregacion(login);
+      isUsuario = false;
+
+      if (!entidad) {
+        return res.status(404).json({
+          ok: false,
+          msg: "No se encuentra registrada la cuenta de usuario",
+        });
+      }
+    }
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      msg: `No existe el usuario ${login}`,
+      error: error,
+    });
+  }
+
+  try {
     const validarPassword = bcrypt.compareSync(
       passwordAntiguo,
-      usuario.getDataValue("password")
+      entidad.getDataValue("password")
     );
 
     if (!validarPassword) {
-      return res.status(404).json({
+      return res.status(400).json({
         ok: false,
         msg: "La contraseña antigua no es válida",
       });
     }
 
-    if (usuario && validarPassword) {
-      try {
-        const salt = bcrypt.genSaltSync();
-        password = bcrypt.hashSync(passwordNuevo, salt);
+    const salt = bcrypt.genSaltSync();
+    const passwordHashed = bcrypt.hashSync(passwordNuevo, salt);
 
-        usuarioActualizado = await usuario.update({
-          password,
-        });
-      } catch (error) {
-        return res.status(404).json({
-          ok: false,
-          msg: "No se cambió la contraseña, hable con el administrador",
-          error,
-        });
-      }
-      res.json({
-        ok: true,
-        msg: "La contraseña se cambió satisfactoriamente",
-        usuarioActualizado,
-      });
-    }
+    // Actualizar la contraseña en la base de datos
+    entidadActualizada = await entidad.update({ password: passwordHashed });
+
+    res.json({
+      ok: true,
+      msg: "La contraseña se cambió satisfactoriamente",
+      entidadActualizada,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      msg: "No se cambió la contraseña, hable con el administrador",
+      error: error,
+    });
   }
 };
 
