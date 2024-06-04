@@ -273,7 +273,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
           </p>
           <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
 
-          <p>Su código Mita es ${id}</p>
+          <p><b>Número Mita:</b> ${id}</p>
 
           <p
             style="
