@@ -42,7 +42,10 @@ export const obtenerUbicacionPorIP = async (
 
     return location;
   } catch (error) {
-    console.error("Error al obtener la ubicación por IP: 222", error);
+    console.error(
+      "Error al obtener la ubicación por IP: obtenerUbicacionPorIP",
+      error
+    );
     throw error;
   }
 };

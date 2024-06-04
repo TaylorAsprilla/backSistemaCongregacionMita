@@ -903,6 +903,9 @@ async function guardarInformacionConexion(
       await UbicacionConexion.create(ubicacion);
     }
   } catch (error) {
-    console.error("Error al obtener la ubicación por IP: 1111", error);
+    console.error(
+      "Error al obtener la ubicación por IP: guardarInformacionConexion",
+      error
+    );
   }
 }
