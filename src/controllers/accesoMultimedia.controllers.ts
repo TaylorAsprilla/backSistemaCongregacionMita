@@ -140,13 +140,13 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                       <img
                         src="${imagenEmail}"
                         alt="CMAR Multimedia"
-                        style="text-align: center; width: 200px"
+                        style="text-align: center; width: 100px"
                       />
                     </div>
                     <h3>Bienvenido(a) a CMAR LIVE</h3>
                     <p>Hola, ${nombre}</p>
                     <p>
-                      Le damos la bienvenida a CMAR LIVE donde podrá disfrutar de los servicios,
+                      Le damos la bienvenida a <b>CMAR LIVE</b> donde podrá disfrutar de los servicios,
                       vigilias y eventos especiales de la Congregación Mita.
                     </p>
                   
@@ -463,13 +463,13 @@ export const crearAccesoCongregacionMultimedia = async (
                       <img
                         src="${imagenEmail}"
                         alt="CMAR Multimedia"
-                        style="text-align: center; width: 200px"
+                        style="text-align: center; width: 100px"
                       />
                     </div>
                     <h3>Bienvenido(a) a CMAR LIVE</h3>
                     <p>Congregación de ${nombre}</p>
                     <p>
-                      Le damos la bienvenida a CMAR LIVE donde podrá disfrutar de los servicios,
+                      Le damos la bienvenida a <b>CMAR LIVE</b> donde podrá disfrutar de los servicios,
                       vigilias y eventos especiales de la Congregación Mita.
                     </p>
                   
