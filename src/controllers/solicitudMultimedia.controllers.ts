@@ -106,13 +106,13 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
           <img
             src="${imagenEmail}"
             alt="CMAR Multimedia"
-            style="text-align: center; width: 200px"
+            style="text-align: center; width: 100px"
           />
         </div>
         <h3>Verifica tu cuenta de correo electrónico</h3>
         <p>Hola, <span style="text-transform: capitalize;">${nombre}</span></p>
         <p>
-          Ha registrado ${email} como cuenta de correo electrónico para CMAR LIVE. Por
+          Ha registrado ${email} como cuenta de correo electrónico para <b>CMAR LIVE.</b> Por
           favor verifique su cuenta de correo electrónico haciendo clic en el
           sifuiente enlace:
         </p>
@@ -278,13 +278,13 @@ export const eliminarSolicitudMultimedia = async (
             <img
               src="${imagenEmail}"
               alt="CMAR Multimedia"
-              style="text-align: center; width: 200px"
+              style="text-align: center; width: 100px"
             />
           </div>
           <h3>Solicitud de Acceso</h3>
           <p>Hola, ${nombre}</p>
           <p>
-            Hemos recibido su solicitud para poder acceder a CMAR LIVE para disfrutar de
+            Hemos recibido su solicitud para poder acceder a <b>CMAR LIVE</b> para disfrutar de
             los servicios, vigilias y eventos especiales de la Congregación Mita,
             lamentablemente hemos revisado su solicitud y esta ha sido denegada.
           </p>

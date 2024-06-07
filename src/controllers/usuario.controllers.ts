@@ -264,7 +264,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
             <img
               src="${imagenEmail}"
               alt="CMAR Multimedia"
-              style="text-align: center; width: 200px"
+              style="text-align: center; width: 100px"
             />
           </div>
           <h3>Bienvenido(a) a CMAR LIVE</h3>

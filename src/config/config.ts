@@ -22,7 +22,7 @@ const config: any = {
     urlDeValidacion: "http://localhost:4200/#/validaremail",
     verificarLink: "http://localhost:4200/#/nueva-contrasena/",
     imagenEmail:
-      "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
@@ -50,7 +50,7 @@ const config: any = {
     urlDeValidacion: "http://localhost:4200/#/validaremail",
     verificarLink: "http://localhost:4200/#/nueva-contrasena/",
     imagenEmail:
-      "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
@@ -78,7 +78,7 @@ const config: any = {
     urlDeValidacion: "https://qa.cmar.live/#/validaremail",
     verificarLink: "https://qa.cmar.live/#/nueva-contrasena/",
     imagenEmail:
-      "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
@@ -111,7 +111,7 @@ const config: any = {
     urlDeValidacion: "https://cmar.live/sistemacmi/#/validaremail",
     verificarLink: "https://cmar.live/sistemacmi/#/nueva-contrasena/",
     imagenEmail:
-      "https://cmar.live/sistemacmi/assets/images/cmar-multimedia.png",
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
