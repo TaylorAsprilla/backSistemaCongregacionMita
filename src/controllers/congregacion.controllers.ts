@@ -79,7 +79,17 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
 
   try {
     // Verificar si el email ya está registrado en la tabla de usuarios
-    const usuarioExistente = await Usuario.findOne({ where: { email } });
+    const usuarioExistente = await Usuario.findOne({
+      where: {
+        email: {
+          [Op.and]: [
+            { [Op.ne]: null }, // El email no debe ser null
+            { [Op.not]: "" }, // El email no debe estar vacío
+            { [Op.eq]: email }, // El email debe ser igual al proporcionado
+          ],
+        },
+      },
+    });
     if (usuarioExistente) {
       return res.status(400).json({
         ok: false,
