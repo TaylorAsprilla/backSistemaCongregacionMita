@@ -615,43 +615,49 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
 };
 
 export const buscarCorreoElectronico = async (req: Request, res: Response) => {
-  const email = req.params.email;
+  const email = req.query.email as string;
+  const idUsuario = req.query.idUsuario as string;
+
   if (!email) {
-    res.status(500).json({
+    return res.status(400).json({
       ok: false,
       msg: `No existe parametro en la petición`,
     });
-  } else {
-    try {
-      const correoElectronico = await Usuario.findOne({
-        attributes: ["email"],
-        where: {
-          email: email,
-        },
-      });
+  }
 
-      if (!!correoElectronico) {
-        res.json({
-          ok: false,
-          msg: `Ya se encuentra registrado el correo electrónico ${email}`,
-        });
-      } else {
-        res.json({
-          ok: true,
-          msg: `Correo electrónico válido`,
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        error,
-        msg: "Hable con el administrador",
+  try {
+    const correoElectronico = await Usuario.findOne({
+      attributes: ["email"],
+      where: {
+        email: email,
+        id: { [Op.ne]: idUsuario },
+      },
+    });
+
+    if (correoElectronico) {
+      return res.json({
+        ok: false,
+        msg: `Ya se encuentra registrado el correo electrónico ${email}`,
       });
     }
+
+    return res.json({
+      ok: true,
+      msg: `Correo electrónico válido`,
+    });
+  } catch (error) {
+    console.error("Error al buscar el correo electrónico:", error);
+    return res.status(500).json({
+      ok: false,
+      error,
+      msg: "Hable con el administrador",
+    });
   }
 };
 
 export const buscarCelular = async (req: Request, res: Response) => {
   const numeroCelular = req.query.numeroCelular as string;
+  const idUsuario = req.query.idUsuario as string;
 
   if (!numeroCelular) {
     res.status(500).json({
@@ -665,6 +671,7 @@ export const buscarCelular = async (req: Request, res: Response) => {
         attributes: ["numeroCelular"],
         where: {
           numeroCelular: numeroCelularFormateado,
+          id: { [Op.ne]: idUsuario },
         },
       });
       if (!!numeroCelularEncontrado) {

@@ -1,5 +1,5 @@
 /* 
-  Path: '/api/buscarcelular/?numeroCelular'
+  Path: '/api/buscarcelular/?numeroCelular&idUsuario'
 */
 
 import { Router } from "express";
