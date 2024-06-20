@@ -20,7 +20,6 @@ const router = Router();
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
 router.get("/:id", validarJWT, getUsuario);
-router.get("/buscarcorreo/:email", validarJWT, buscarCorreoElectronico);
 router.get("/buscarCelular/:celular", validarJWT, buscarCelular);
 router.post(
   "/",

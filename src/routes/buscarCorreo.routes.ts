@@ -1,5 +1,5 @@
 /* 
-  Path: '/api/buscarcorreo/?email'
+  Path: '/api/buscarcorreo/?email&idUsuario'
 */
 
 import { Router } from "express";
