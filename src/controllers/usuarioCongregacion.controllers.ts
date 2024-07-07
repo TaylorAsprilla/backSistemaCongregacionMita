@@ -8,64 +8,64 @@ import Campo from "../models/campo.model";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
   try {
-    const idPais = Number(req.query.idPais);
+    const idUsuario = Number(req.query.idUsuario);
 
-    if (!idPais || isNaN(idPais)) {
+    if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "El ID de la congregación no es válido.",
+        msg: "El ID del usuario no es válido.",
       });
     }
 
-    const [usuariosResult, totalUsuariosResult] = await Promise.all([
-      db.query(
-        `
-        SELECT     
-         distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido, 
-          u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion, 
-          ca.campo, u.estado 
-        FROM  
-          usuario u 
-        INNER JOIN 
-          usuarioCongregacion uc ON u.id = uc.usuario_id
-        RIGHT JOIN 
-          pais p ON p.id = uc.pais_id 
-        RIGHT JOIN 
-          congregacion co ON co.id = uc.congregacion_id 
-        RIGHT JOIN 
-          campo ca ON ca.id = uc.campo_id  
-        WHERE 
-          uc.pais_id = :idPais
-        ORDER BY 
-          u.id       
-      `,
-        {
-          replacements: { idPais },
-          type: QueryTypes.SELECT,
-        }
-      ),
-      db.query(
-        `
-        SELECT COUNT(*) OVER() as total FROM usuario u 
-        INNER JOIN usuarioCongregacion uc ON u.id = uc.usuario_id
-        WHERE uc.pais_id = :idPais;
-      `,
-        {
-          replacements: { idPais },
-          type: QueryTypes.SELECT,
-        }
-      ),
-    ]);
+    const pais = await Pais.findOne({
+      where: { idObreroEncargado: idUsuario },
+    });
 
-    const usuarios = usuariosResult || [];
+    const paisId = pais ? pais.getDataValue("id") : null;
 
-    const totalUsuarios =
-      (totalUsuariosResult[0] as { total?: number })?.total || 0;
+    // Obtener todos los usuarios asociados a esta congregación
+    const { count, rows } = await Usuario.findAndCountAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "apodo",
+        "fechaNacimiento",
+        "email",
+        "numeroCelular",
+        "estado",
+      ],
+      include: [
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["pais"],
+          through: { attributes: [] },
+        },
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          attributes: ["congregacion"],
+          through: { attributes: [] },
+        },
+        {
+          model: Campo,
+          as: "usuarioCongregacionCampo",
+          attributes: ["campo"],
+          through: { attributes: [] },
+        },
+      ],
+      where: {
+        [Op.or]: [{ "$usuarioCongregacionPais.id$": paisId }],
+      },
+    });
 
     return res.json({
       ok: true,
-      usuarios,
-      totalUsuarios,
+      usuarios: rows,
+      totalUsuarios: count,
       msg: `Feligreses del pais`,
     });
   } catch (error) {
