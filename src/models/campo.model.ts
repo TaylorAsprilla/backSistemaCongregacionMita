@@ -20,6 +20,10 @@ const Campo = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    idObreroEncargadoDos: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,
