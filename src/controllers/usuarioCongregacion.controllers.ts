@@ -93,11 +93,29 @@ export const getUsuariosPorCongregacion = async (
       });
     }
 
-    // Buscar la congregación del obrero encargado con el ID proporcionado
+    // Buscar la congregación del obrero encargado y/o obrero auxiliar con el ID proporcionado
     const [pais, congregacion, campo] = await Promise.all([
-      Pais.findOne({ where: { idObreroEncargado: idUsuario } }),
-      Congregacion.findOne({ where: { idObreroEncargado: idUsuario } }),
-      Campo.findOne({ where: { idObreroEncargado: idUsuario } }),
+      Pais.findOne({
+        where: {
+          idObreroEncargado: idUsuario,
+        },
+      }),
+      Congregacion.findOne({
+        where: {
+          [Op.or]: [
+            { idObreroEncargado: idUsuario },
+            { idObreroEncargadoDos: idUsuario },
+          ],
+        },
+      }),
+      Campo.findOne({
+        where: {
+          [Op.or]: [
+            { idObreroEncargado: idUsuario },
+            { idObreroEncargadoDos: idUsuario },
+          ],
+        },
+      }),
     ]);
 
     // Verificar si el obrero encargado tiene asignada una congregación o campo
