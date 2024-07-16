@@ -98,6 +98,9 @@ const SolicitudMultimedia = db.define(
     tiempoSugerido: {
       type: DataTypes.STRING,
     },
+    congregacionCercana: {
+      type: DataTypes.STRING,
+    },
   },
   {
     freezeTableName: true,
