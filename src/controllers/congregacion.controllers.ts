@@ -72,9 +72,8 @@ export const crearCongregacion = async (req: Request, res: Response) => {
 export const actualizarCongregacion = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
-  const { email, password } = req.body;
+  const { email, password, idObreroEncargado, idObreroEncargadoDos } = req.body;
 
-  const idObreroEncargado = body.idObreroEncargado;
   const transaction = await db.transaction();
 
   try {
@@ -106,6 +105,9 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
             { [Op.not]: "" }, // El email no debe estar vacío
             { [Op.eq]: email }, // El email debe ser igual al proporcionado
           ],
+        },
+        id: {
+          [Op.ne]: id, // Excluir la congregación actual
         },
       },
     });
@@ -161,6 +163,8 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
         pais_id: body.pais_id,
         idObreroEncargado:
           idObreroEncargado !== undefined ? idObreroEncargado : null,
+        idObreroEncargadoDos:
+          idObreroEncargadoDos !== undefined ? idObreroEncargadoDos : null,
         email: email,
         password: passwordHashed,
       },

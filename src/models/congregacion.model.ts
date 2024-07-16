@@ -20,6 +20,10 @@ const Congregacion = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    idObreroEncargadoDos: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     email: {
       type: DataTypes.STRING,
     },

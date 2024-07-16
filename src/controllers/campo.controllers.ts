@@ -70,8 +70,7 @@ export const actualizarCampo = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
 
-  const idObreroEncargado = body.idObreroEncargado ?? null;
-  const congregacion_id = body.congregacion_id;
+  const { idObreroEncargado, idObreroEncargadoDos, congregacion_id } = req.body;
 
   const transaction = await db.transaction();
 
@@ -110,6 +109,8 @@ export const actualizarCampo = async (req: Request, res: Response) => {
         campo: body.campo,
         congregacion_id: congregacion_id,
         idObreroEncargado: idObreroEncargado,
+        idObreroEncargadoDos:
+          idObreroEncargadoDos !== undefined ? idObreroEncargadoDos : null,
       },
       { where: { id }, transaction }
     );
