@@ -2,7 +2,7 @@ import { Sequelize } from "sequelize";
 import config from "../config/config";
 require("dotenv").config();
 
-const environment = config[process.env.NODE_ENV || "development"];
+const environment = config[process.env.NODE_ENV || "sit"];
 
 const db = new Sequelize(
   environment.database.database,
@@ -11,7 +11,7 @@ const db = new Sequelize(
   {
     host: environment.database.host,
     dialect: "mysql",
-    // logging: false,
+    logging: process.env.NODE_ENV === "sit" ? console.log : false,
   }
 );
 
