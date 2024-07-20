@@ -5,7 +5,7 @@ import { CustomRequest } from "../middlewares/validar-jwt";
 import Congregacion from "../models/congregacion.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import { CONGREGACIONES_ID } from "../enum/congregaciones.enum";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import Campo from "../models/campo.model";
 import Usuario from "../models/usuario.model";
 
@@ -74,26 +74,29 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
   const { body } = req;
   const { email, password, idObreroEncargado, idObreroEncargadoDos } = req.body;
 
-  const transaction = await db.transaction();
+  const transaction: Transaction = await db.transaction();
 
   try {
     // Verificar si el email ya está registrado en la tabla de usuarios
-    const usuarioExistente = await Usuario.findOne({
-      where: {
-        email: {
-          [Op.and]: [
-            { [Op.ne]: null }, // El email no debe ser null
-            { [Op.not]: "" }, // El email no debe estar vacío
-            { [Op.eq]: email }, // El email debe ser igual al proporcionado
-          ],
+    if (email) {
+      const usuarioExistente = await Usuario.findOne({
+        where: {
+          email: {
+            [Op.and]: [
+              { [Op.ne]: null }, // El email no debe ser null
+              { [Op.not]: "" }, // El email no debe estar vacío
+              { [Op.eq]: email }, // El email debe ser igual al proporcionado
+            ],
+          },
         },
-      },
-    });
-    if (usuarioExistente) {
-      return res.status(400).json({
-        ok: false,
-        msg: "El email ya está registrado por favor utilice otro email.",
       });
+
+      if (usuarioExistente) {
+        return res.status(400).json({
+          ok: false,
+          msg: "El email ya está registrado por favor utilice otro email.",
+        });
+      }
     }
 
     // Verificar si el email ya está registrado en la tabla de congregaciones
@@ -120,7 +123,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
     }
 
     // Encriptar la contraseña si se proporciona
-    let passwordHashed;
+    let passwordHashed: string | null = null;
     if (!!password) {
       const salt = bcrypt.genSaltSync();
       passwordHashed = bcrypt.hashSync(password, salt);

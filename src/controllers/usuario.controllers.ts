@@ -13,11 +13,13 @@ import {
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import Congregacion from "../models/congregacion.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
+import path from "path";
+import fs from "fs";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -121,7 +123,7 @@ export const getUsuario = async (req: Request, res: Response) => {
 };
 
 export const crearUsuario = async (req: CustomRequest, res: Response) => {
-  const transaction = await db.transaction();
+  const transaction: Transaction = await db.transaction();
   const idUsuarioActual = req.id;
 
   try {
@@ -147,64 +149,33 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     //                          Validaciones
     // =======================================================================
 
-    if (email) {
-      const existeEmail = await Usuario.findOne({
-        where: {
-          email: email,
-        },
-      });
-
-      if (existeEmail) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el email ${email}`,
+    const validarExistencia = async (
+      campo: string,
+      valor: string,
+      modelo: any
+    ) => {
+      if (valor) {
+        const existe = await modelo.findOne({
+          where: { [campo]: valor },
         });
+        if (existe) {
+          return `Ya existe un usuario con el ${campo} ${valor}`;
+        }
       }
-    }
+      return null;
+    };
 
-    if (numeroDocumento) {
-      const existeDocumento = await Usuario.findOne({
-        where: {
-          numeroDocumento: numeroDocumento,
-        },
-      });
+    // Validaciones para email, numeroDocumento, numeroCelular y login
+    const errores = await Promise.all([
+      validarExistencia("email", email, Usuario),
+      validarExistencia("numeroDocumento", numeroDocumento, Usuario),
+      validarExistencia("numeroCelular", numeroCelular, Usuario),
+      validarExistencia("login", login, Usuario),
+    ]);
 
-      if (existeDocumento) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el número de documento ${numeroDocumento}`,
-        });
-      }
-    }
-
-    if (numeroCelular) {
-      const existeNumeroCelular = await Usuario.findOne({
-        where: {
-          numeroCelular: numeroCelular,
-        },
-      });
-
-      if (existeNumeroCelular) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el número de celular ${numeroCelular}`,
-        });
-      }
-    }
-
-    if (login) {
-      const existeLogin = await Usuario.findOne({
-        where: {
-          login: login,
-        },
-      });
-
-      if (existeLogin) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
-        });
-      }
+    const mensajeError = errores.find((error) => error !== null);
+    if (mensajeError) {
+      return res.status(400).json({ ok: false, msg: mensajeError });
     }
 
     // =======================================================================
@@ -217,8 +188,8 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       body.password = bcrypt.hashSync(password, salt);
     }
 
-    const nuevoUsuario = await Usuario.create(req.body, {
-      transaction: transaction,
+    const nuevoUsuario = await Usuario.create(body, {
+      transaction,
     });
 
     const id = nuevoUsuario.getDataValue("id");
@@ -243,65 +214,29 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
 
     await transaction.commit();
 
-    const html = `
-        <div
-          style="
-            max-width: 100%;
-            width: 600px;
-            margin: 0 auto;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, 'sans-serif';
-            font-weight: normal;
-            font-size: 16px;
-            line-height: 22px;
-            color: #252525;
-            word-wrap: break-word;
-            word-break: break-word;
-            text-align: justify;
-          "
-        >
-          <div style="text-align: center">
-            <img
-              src="${imagenEmail}"
-              alt="CMAR Multimedia"
-              style="text-align: center; width: 100px"
-            />
-          </div>
-          <h3>Bienvenido(a) a CMAR LIVE</h3>
-          <p>
-            Hola, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}
-          </p>
-          <p>Le damos la bienvenida al censo de la Congregación Mita.</p>
+    // =======================================================================
+    //                          Enviar Correo Electrónico
+    // =======================================================================
 
-          <p><b>Número Mita:</b> ${id}</p>
+    const templatePath = path.join(
+      __dirname,
+      "../templates/bienvenidoCmarLive.html"
+    );
 
-          <p
-            style="
-              margin: 30px 0 12px 0;
-              padding: 0;
-              color: #252525;
-              font-family: Arial, Helvetica, 'sans-serif';
-              font-weight: normal;
-              word-wrap: break-word;
-              word-break: break-word;
-              font-size: 12px;
-              line-height: 16px;
-              color: #909090;
-            "
-          >
-            Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-            en contacto con nosotros mediante nuestro correo electrónico
-            <a href="mailto:multimedia@congregacionmita.com">
-              multimedia@congregacionmita.com</a
-            >
-          </p>
+    const emailTemplate = fs.readFileSync(templatePath, "utf8");
 
-          <br />
-          Cordialmente, <br />
-          <b>Congregación Mita, Inc.</b>
-        </div>`;
+    const nombre: string = `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`;
 
-    enviarEmail(email, "Bienvenido al censo de la Congregación Mita", html);
+    const personalizarEmail = emailTemplate
+      .replace("{{imagenEmail}}", imagenEmail)
+      .replace("{{nombre}}", nombre)
+      .replace("{{id}}", id);
+
+    enviarEmail(
+      email,
+      "Bienvenido al censo de la Congregación Mita",
+      personalizarEmail
+    );
 
     res.status(201).json({
       ok: true,
@@ -314,8 +249,9 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     console.error("Error al crear el usuario:", error);
 
     res.status(500).json({
-      error,
+      ok: false,
       msg: "Error al crear el usuario",
+      error,
     });
   }
 };
