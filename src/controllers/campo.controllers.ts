@@ -9,6 +9,9 @@ import Congregacion from "../models/congregacion.model";
 export const getCampos = async (req: Request, res: Response) => {
   try {
     const campo = await Campo.findAll({
+      where: {
+        estado: true,
+      },
       order: db.col("campo"),
     });
 

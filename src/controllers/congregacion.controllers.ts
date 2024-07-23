@@ -12,6 +12,9 @@ import Usuario from "../models/usuario.model";
 export const getCongregaciones = async (req: Request, res: Response) => {
   try {
     const congregacion = await Congregacion.findAll({
+      where: {
+        estado: true,
+      },
       order: db.col("congregacion"),
     });
 
