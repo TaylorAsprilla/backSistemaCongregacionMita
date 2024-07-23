@@ -19,13 +19,17 @@ const Congregacion = db.define(
     idObreroEncargado: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: null,
     },
     idObreroEncargadoDos: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: null,
     },
     email: {
       type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: null,
     },
     password: {
       type: DataTypes.INTEGER,

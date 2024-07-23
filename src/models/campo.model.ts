@@ -19,10 +19,12 @@ const Campo = db.define(
     idObreroEncargado: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: null,
     },
     idObreroEncargadoDos: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      defaultValue: null,
     },
   },
   {
