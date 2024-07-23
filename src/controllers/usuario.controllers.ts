@@ -57,6 +57,9 @@ export const getUsuarios = async (req: Request, res: Response) => {
           attributes: ["campo"],
         },
       ],
+      where: {
+        estado: true,
+      },
     });
 
     // Enviar respuesta al cliente
@@ -84,6 +87,9 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
           all: true,
         },
       ],
+      where: {
+        estado: true,
+      },
     }),
     Usuario.count(),
   ]);
