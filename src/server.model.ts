@@ -1,3 +1,5 @@
+import "./crons/notifyExpiration";
+
 import express, { Application } from "express";
 import usuarioRoutes from "./routes/usuario.routes";
 import loginRoutes from "./routes/login.routes";

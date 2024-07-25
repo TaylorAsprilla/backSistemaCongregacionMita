@@ -3,34 +3,6 @@ require("dotenv").config();
 const config: any = {
   development: {
     database: {
-      username: process.env.DB_USERNAME_DEV,
-      password: process.env.DB_PASSWORD_DEV,
-      database: process.env.DB_DATABASE_DEV,
-      host: process.env.DB_HOST_DEV,
-      dialect: process.env.DB_DIALECT,
-      sinCongregacion: process.env.SIN_CONGREGACION || 1,
-      sinCampo: process.env.SIN_CAMPO || 1,
-    },
-    email: {
-      host: process.env.HOST_EMAIL_DEVELOPMENT,
-      port: process.env.PORT_EMAIL_DEVELOPMENT,
-      email: process.env.USER_EMAIL_DEVELOPMENT,
-      password: process.env.PASS_EMAIL_DEVELOPMENT,
-      from: process.env.FROM_EMAIL_DEVELOPMENT,
-      service: process.env.SERVICE_EMAIL_DEVELOPMENT,
-    },
-    urlDeValidacion: "http://localhost:4200/#/validaremail",
-    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
-    imagenEmail:
-      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
-    urlCmarLive: "https://cmar.live/",
-    jwtSecretReset: process.env.JWT_SECRET_RESET,
-    ipApi: process.env.IP_API,
-    ip: "92.214.55.43",
-    whiteList: ["http://localhost:4200"],
-  },
-  sit: {
-    database: {
       username: process.env.DB_USERNAME || "u434635530_tasprilla",
       password: process.env.DB_PASSWORD || "0GgQuZy^F9v",
       database: process.env.DB_DATABASE || "u434635530_informesCMI",

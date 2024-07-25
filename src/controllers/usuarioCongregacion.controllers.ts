@@ -58,6 +58,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         },
       ],
       where: {
+        estado: true,
         [Op.or]: [{ "$usuarioCongregacionPais.id$": paisId }],
       },
     });
@@ -167,6 +168,7 @@ export const getUsuariosPorCongregacion = async (
         },
       ],
       where: {
+        estado: true,
         [Op.or]: [
           { "$usuarioCongregacionPais.id$": paisId },
           { "$usuarioCongregacionCongregacion.id$": congregacionId },

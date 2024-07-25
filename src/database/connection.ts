@@ -11,7 +11,7 @@ const db = new Sequelize(
   {
     host: environment.database.host,
     dialect: "mysql",
-    // logging: false,
+    logging: process.env.NODE_ENV === "development" ? console.log : false,
   }
 );
 
