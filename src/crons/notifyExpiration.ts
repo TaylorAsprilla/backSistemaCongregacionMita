@@ -160,7 +160,7 @@ const eliminarCredenciales = async () => {
 
 loadEmailTemplates();
 
-cron.schedule("0 3 * * *", async () => {
+cron.schedule("0 15 * * *", async () => {
   console.log("Ejecutando tarea cron...");
   await verificarFechasYEnviarCorreos();
   await eliminarCredenciales();
