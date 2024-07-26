@@ -16,7 +16,7 @@ let emailAccesoCaducado: string;
 
 // Cargar plantillas de correo una vez al inicio
 const loadEmailTemplates = () => {
-  const templatePathBienvenida = path.join(
+  const templatePathAccesoCaducado = path.join(
     __dirname,
     "../templates/accesoCaducado.html"
   );
@@ -25,7 +25,7 @@ const loadEmailTemplates = () => {
     "../templates/notificacionCaducidad.html"
   );
 
-  emailAccesoCaducado = fs.readFileSync(templatePathBienvenida, "utf8");
+  emailAccesoCaducado = fs.readFileSync(templatePathAccesoCaducado, "utf8");
   emailTemplateNotificacion = fs.readFileSync(templatePathNotificacion, "utf8");
 };
 
@@ -129,7 +129,7 @@ const eliminarCredenciales = async () => {
             solicitud.getDataValue("tiempoAprobacion")
           ).toLocaleDateString();
 
-          const personalizarEmail = emailTemplateNotificacion
+          const personalizarEmail = emailAccesoCaducado
             .replace("{{imagenEmail}}", imagenEmail)
             .replace("{{nombre}}", nombre)
             .replace("{{fechaCaducidad}}", fechaCaducidad);
@@ -160,10 +160,17 @@ const eliminarCredenciales = async () => {
 
 loadEmailTemplates();
 
+// Desglose de la expresión cron:
+// 0: El primer campo indica el minuto (minuto 0).
+// 15: El segundo campo indica la hora (15:00 horas, que es 3:00 PM).
+// *: El tercer campo indica el día del mes (todos los días).
+// *: El cuarto campo indica el mes (todos los meses).
+// *: El quinto campo indica el día de la semana (todos los días de la semana).
+
 cron.schedule("0 15 * * *", async () => {
   console.log("Ejecutando tarea cron...");
   await verificarFechasYEnviarCorreos();
   await eliminarCredenciales();
 });
 
-console.log("Cron job configurado para ejecutarse.");
+console.info("Cron job configurado para ejecutarse.");
