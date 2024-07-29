@@ -249,6 +249,10 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       id,
       msg: `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`,
     });
+
+    console.info(
+      `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`
+    );
   } catch (error) {
     await transaction.rollback();
 

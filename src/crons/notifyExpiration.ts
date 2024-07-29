@@ -7,6 +7,7 @@ import Usuario from "../models/usuario.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
 import db from "../database/connection";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -120,6 +121,15 @@ const eliminarCredenciales = async () => {
           transaction,
         }
       );
+
+      await UsuarioPermiso.destroy({
+        where: {
+          usuario_id: {
+            [Op.in]: usuarioIds,
+          },
+        },
+        transaction,
+      });
 
       for (const solicitud of solicitudes) {
         const usuario = solicitud.getDataValue("usuario");
