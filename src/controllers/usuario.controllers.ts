@@ -238,7 +238,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       .replace("{{nombre}}", nombre)
       .replace("{{id}}", id);
 
-    enviarEmail(
+    await enviarEmail(
       email,
       "Bienvenido al censo de la Congregación Mita",
       personalizarEmail

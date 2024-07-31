@@ -170,8 +170,8 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
           >
             Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
             en contacto con nosotros mediante nuestro correo electrónico
-            <a href="mailto:multimedia@congregacionmita.com">
-              multimedia@congregacionmita.com</a
+            <a href="mailto:cmar.live@congregacionmita.com">
+              cmar.live@congregacionmita.com</a
             >
           </p>
       
@@ -181,7 +181,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
         </div>
       </div>`;
 
-    enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
+    await enviarEmail(email, "Verificar Correo - CMAR Multimedia", html);
 
     res.json({
       ok: true,
@@ -317,8 +317,8 @@ export const eliminarSolicitudMultimedia = async (
             >
               Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
               en contacto con nosotros mediante nuestro correo electrónico
-              <a href="mailto:multimedia@congregacionmita.com">
-                multimedia@congregacionmita.com</a
+              <a href="mailto:cmar.live@congregacionmita.com">
+                cmar.live@congregacionmita.com</a
               >
             </p>
         
@@ -328,7 +328,7 @@ export const eliminarSolicitudMultimedia = async (
           </div>
         </div>`;
 
-      enviarEmail(email, "Solicitud de Acceso - CMAR Multimedia", html);
+      await enviarEmail(email, "Solicitud de Acceso - CMAR Multimedia", html);
 
       res.json({
         ok: true,

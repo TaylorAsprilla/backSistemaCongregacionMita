@@ -254,8 +254,8 @@ export const crearLogin = async (req: Request, res: Response) => {
                   >
                     Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
                     en contacto con nosotros mediante nuestro correo electrónico
-                    <a href="mailto:multimedia@congregacionmita.com">
-                      multimedia@congregacionmita.com</a
+                    <a href="mailto:cmar.live@congregacionmita.com">
+                      cmar.live@congregacionmita.com</a
                     >
                   </p>
               
@@ -265,7 +265,7 @@ export const crearLogin = async (req: Request, res: Response) => {
                 </div>
               </div>`;
 
-    enviarEmail(email, "Acceso a CMAR Live", html);
+    await enviarEmail(email, "Acceso a CMAR Live", html);
 
     return res.json({
       ok: true,
@@ -447,8 +447,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
                 "
               >
                 Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-                en contacto con nosotros mediante nuestro correo electrónico <a href="mailto:multimedia@congregacionmita.com">
-                  multimedia@congregacionmita.com</a
+                en contacto con nosotros mediante nuestro correo electrónico <a href="mailto:cmar.live@congregacionmita.com">
+                  cmar.live@congregacionmita.com</a
                 >
               </p>
             
@@ -812,8 +812,8 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
                   >
                     Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
                     en contacto con nosotros mediante nuestro correo electrónico
-                    <a href="mailto:multimedia@congregacionmita.com">
-                      multimedia@congregacionmita.com</a
+                    <a href="mailto:cmar.live@congregacionmita.com">
+                      cmar.live@congregacionmita.com</a
                     >
                   </p>
               
@@ -823,7 +823,7 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
                 </div>
               </div>`;
 
-          enviarEmail(email, "Registro Exitoso", html);
+          await enviarEmail(email, "Registro Exitoso", html);
         } catch (error) {
           return res.status(404).json({
             ok: false,

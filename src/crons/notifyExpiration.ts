@@ -69,7 +69,7 @@ const verificarFechasYEnviarCorreos = async () => {
           `Enviando correo a: ${usuario.email} por caducidad en ${diferenciaDias} día(s)`
         );
 
-        enviarEmail(
+        await enviarEmail(
           usuario.email,
           "Aviso de caducidad de Acceso a CMAR LIVE",
           personalizarEmail
@@ -146,7 +146,7 @@ const eliminarCredenciales = async () => {
 
           console.log(`Enviando notificación a: ${usuario.email}`);
 
-          enviarEmail(
+          await enviarEmail(
             usuario.email,
             "Notificación de Caducidad de Acceso a CMAR LIVE",
             personalizarEmail
