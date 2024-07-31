@@ -139,6 +139,10 @@ const eliminarCredenciales = async () => {
             solicitud.getDataValue("tiempoAprobacion")
           ).toLocaleDateString();
 
+          console.info(
+            `Credenciales eliminadas a, ${usuario.id}, ${nombre}, ${usuario.email}`
+          );
+
           const personalizarEmail = emailAccesoCaducado
             .replace("{{imagenEmail}}", imagenEmail)
             .replace("{{nombre}}", nombre)
