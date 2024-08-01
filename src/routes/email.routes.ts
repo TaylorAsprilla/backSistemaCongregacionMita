@@ -1,9 +1,17 @@
 import { Router } from "express";
 import validarJWT from "../middlewares/validar-jwt";
-import { enviarEmailBienvenida } from "../controllers/email.controllers";
+import {
+  emailBienvenidaObreroACongregacion,
+  enviarEmailBienvenida,
+} from "../controllers/email.controllers";
 
 const router = Router();
 
-router.get("/:id", validarJWT, enviarEmailBienvenida);
+router.post("/:id", validarJWT, enviarEmailBienvenida);
+
+router.post(
+  "/asignarCongregacion/:id/:idCongreacion",
+  emailBienvenidaObreroACongregacion
+);
 
 export default router;
