@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
+import Usuario from "./usuario.model";
 
 const Congregacion = db.define(
   "Congregacion",
