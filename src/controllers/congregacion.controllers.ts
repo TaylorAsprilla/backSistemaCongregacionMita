@@ -229,11 +229,26 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       }
     }
 
+    // Crear un objeto con los campos a actualizar
+    const updateFields: any = {
+      congregacion: body.congregacion,
+      pais_id: body.pais_id,
+      idObreroEncargado:
+        idObreroEncargado !== undefined
+          ? idObreroEncargado
+          : previousIdObreroEncargado,
+      idObreroEncargadoDos:
+        idObreroEncargadoDos !== undefined
+          ? idObreroEncargadoDos
+          : previousIdObreroEncargadoDos,
+      email: email,
+    };
+
     // Encriptar la contraseña si se proporciona
-    let passwordHashed: string | null = null;
-    if (!!password) {
+    if (password) {
       const salt = bcrypt.genSaltSync();
-      passwordHashed = bcrypt.hashSync(password, salt);
+      const passwordHashed = bcrypt.hashSync(password, salt);
+      updateFields.password = passwordHashed;
     }
 
     // Verificar si idObreroEncargado está definido antes de actualizar
@@ -257,23 +272,10 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
     }
 
     // Actualizar la congregación específica
-    const [numUpdated] = await Congregacion.update(
-      {
-        congregacion: body.congregacion,
-        pais_id: body.pais_id,
-        idObreroEncargado:
-          idObreroEncargado !== undefined
-            ? idObreroEncargado
-            : previousIdObreroEncargado,
-        idObreroEncargadoDos:
-          idObreroEncargadoDos !== undefined
-            ? idObreroEncargadoDos
-            : previousIdObreroEncargadoDos,
-        email: email,
-        password: passwordHashed,
-      },
-      { where: { id }, transaction }
-    );
+    const [numUpdated] = await Congregacion.update(updateFields, {
+      where: { id },
+      transaction,
+    });
 
     // Verificar si se hizo alguna actualización
     if (numUpdated === 0) {
