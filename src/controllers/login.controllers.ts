@@ -22,12 +22,13 @@ const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
 
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
-  const ipAddress = ip || req.ip;
+
+  const ipAddress = ip || req.headers["x-forwarded-for"] || req.ip;
   const userAgent = req.headers["user-agent"] || "";
 
   try {
     let entidad;
-    let entidadTipo = "usuario"; // Por defecto, asumimos que es un usuario
+    let entidadTipo = "usuario";
     let token;
 
     entidad = await verificarUsuario(login);
@@ -80,6 +81,12 @@ export const login = async (req: Request, res: Response) => {
       entidadTipo,
       usuario: entidad,
     });
+
+    console.info(
+      `Login exitoso: Tipo de entidad: ${entidadTipo}, ID: ${entidad.getDataValue(
+        "id"
+      )}, Login: ${login}`
+    );
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
     res.status(500).json({
