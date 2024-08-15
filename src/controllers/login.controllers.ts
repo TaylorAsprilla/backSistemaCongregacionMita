@@ -23,7 +23,7 @@ const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
 export const login = async (req: Request, res: Response) => {
   const { login, password } = req.body;
 
-  const ipAddress = ip || req.headers["x-forwarded-for"] || req.ip;
+  const ipAddress = ip || req.ip;
   const userAgent = req.headers["user-agent"] || "";
 
   try {
