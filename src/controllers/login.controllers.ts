@@ -63,16 +63,16 @@ export const login = async (req: Request, res: Response) => {
     // Generamos el token
     token = await generarJWT(entidad.getDataValue("id"), login);
 
-    // try {
-    //   await guardarInformacionConexion(
-    //     ipAddress,
-    //     userAgent,
-    //     entidadTipo === "usuario" ? entidad : null,
-    //     entidadTipo === "congregacion" ? entidad : null
-    //   );
-    // } catch (error) {
-    //   console.error("Error al guardar información de conexión:", error);
-    // }
+    try {
+      await guardarInformacionConexion(
+        ipAddress,
+        userAgent,
+        entidadTipo === "usuario" ? entidad : null,
+        entidadTipo === "congregacion" ? entidad : null
+      );
+    } catch (error) {
+      console.error("Error al guardar información de conexión:", error);
+    }
 
     // Devolvemos la respuesta
     res.json({
