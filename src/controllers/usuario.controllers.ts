@@ -220,29 +220,31 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
 
     await transaction.commit();
 
-    // =======================================================================
-    //                          Enviar Correo Electrónico
-    // =======================================================================
+    if (email) {
+      // =======================================================================
+      //                          Enviar Correo Electrónico
+      // =======================================================================
 
-    const templatePath = path.join(
-      __dirname,
-      "../templates/bienvenidoCmarLive.html"
-    );
+      const templatePath = path.join(
+        __dirname,
+        "../templates/bienvenidoCmarLive.html"
+      );
 
-    const emailTemplate = fs.readFileSync(templatePath, "utf8");
+      const emailTemplate = fs.readFileSync(templatePath, "utf8");
 
-    const nombre: string = `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`;
+      const nombre: string = `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`;
 
-    const personalizarEmail = emailTemplate
-      .replace("{{imagenEmail}}", imagenEmail)
-      .replace("{{nombre}}", nombre)
-      .replace("{{id}}", id);
+      const personalizarEmail = emailTemplate
+        .replace("{{imagenEmail}}", imagenEmail)
+        .replace("{{nombre}}", nombre)
+        .replace("{{id}}", id);
 
-    await enviarEmail(
-      email,
-      "Bienvenido al censo de la Congregación Mita",
-      personalizarEmail
-    );
+      await enviarEmail(
+        email,
+        "Bienvenido al censo de la Congregación Mita",
+        personalizarEmail
+      );
+    }
 
     res.status(201).json({
       ok: true,
