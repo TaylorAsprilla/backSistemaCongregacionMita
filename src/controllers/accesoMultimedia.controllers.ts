@@ -12,6 +12,7 @@ import db from "../database/connection";
 import Congregacion from "../models/congregacion.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
+
 const imagenEmail = environment.imagenEmail;
 const urlCmarLive = environment.urlCmarLive;
 

@@ -362,6 +362,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
   }
 
+  
+
   try {
     // Envío de Email
     const html = `
