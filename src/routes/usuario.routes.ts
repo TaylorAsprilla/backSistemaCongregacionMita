@@ -4,8 +4,6 @@ import {
   activarUsuario,
   actualizarPermisos,
   actualizarUsuario,
-  buscarCelular,
-  buscarCorreoElectronico,
   crearUsuario,
   eliminarUsuario,
   getTodosLosUsuarios,
@@ -20,7 +18,6 @@ const router = Router();
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
 router.get("/:id", validarJWT, getUsuario);
-router.get("/buscarCelular/:celular", validarJWT, buscarCelular);
 router.post(
   "/",
   validarJWT,

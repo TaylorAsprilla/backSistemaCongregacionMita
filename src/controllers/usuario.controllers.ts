@@ -171,11 +171,10 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       return null;
     };
 
-    // Validaciones para email, numeroDocumento, numeroCelular y login
+    // Validaciones para email, numeroDocumento, y login
     const errores = await Promise.all([
       validarExistencia("email", email, Usuario),
       validarExistencia("numeroDocumento", numeroDocumento, Usuario),
-      validarExistencia("numeroCelular", numeroCelular, Usuario),
       validarExistencia("login", login, Usuario),
     ]);
 
@@ -600,44 +599,5 @@ export const buscarCorreoElectronico = async (req: Request, res: Response) => {
       error,
       msg: "Hable con el administrador",
     });
-  }
-};
-
-export const buscarCelular = async (req: Request, res: Response) => {
-  const numeroCelular = req.query.numeroCelular as string;
-  const idUsuario = req.query.idUsuario as string;
-
-  if (!numeroCelular) {
-    res.status(500).json({
-      ok: false,
-      msg: `No existe parametro en la petición`,
-    });
-  } else {
-    const numeroCelularFormateado = `+${numeroCelular.replace(/\s/, "")}`;
-    try {
-      const numeroCelularEncontrado = await Usuario.findOne({
-        attributes: ["numeroCelular"],
-        where: {
-          numeroCelular: numeroCelularFormateado,
-          id: { [Op.ne]: idUsuario },
-        },
-      });
-      if (!!numeroCelularEncontrado) {
-        res.json({
-          ok: false,
-          msg: `Ya se encuentra registrado el número de celular ${numeroCelularFormateado}`,
-        });
-      } else {
-        res.json({
-          ok: true,
-          msg: `Número de celular válido`,
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        error,
-        msg: "Hable con el administrador",
-      });
-    }
   }
 };

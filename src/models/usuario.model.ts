@@ -39,7 +39,6 @@ const Usuario = db.define(
     numeroCelular: {
       type: DataTypes.STRING,
       allowNull: true,
-      unique: true,
     },
     esJoven: {
       type: DataTypes.BOOLEAN,
