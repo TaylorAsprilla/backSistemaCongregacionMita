@@ -93,9 +93,6 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
       },
     });
 
-    console.log("Congregación Pais", congregacionPais);
-    console.log("Congregación Ciudad", congregacionCiudad);
-
     const pais_id = congregacionPais?.getDataValue("id");
     const congregacion_id = congregacionCiudad?.getDataValue("id");
 
