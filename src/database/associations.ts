@@ -6,12 +6,15 @@ import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
+import OpcionTransporte from "../models/opcionTransporte.model";
 import Pais from "../models/pais.model";
+import Parentesco from "../models/parentesco.model";
 import Permiso from "../models/permiso.model";
 import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import TipoDocumento from "../models/tipoDocumento.model";
+import TipoEstudio from "../models/tipoEstudio.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
@@ -20,13 +23,7 @@ import UsuarioPermiso from "../models/usuarioPermiso.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import Voluntariado from "../models/voluntariado.model";
 
-// Uno a uno
-// Usuario.hasOne(TipoDocumento, {
-//   as: "tipoDocumento",
-//   sourceKey: "tipoDocumento_id",
-//   foreignKey: "id",
-// });
-
+// Asociaciones uno a uno
 Usuario.hasOne(Genero, {
   as: "genero",
   sourceKey: "genero_id",
@@ -75,6 +72,12 @@ Usuario.hasOne(UsuarioCongregacion, {
   foreignKey: "usuario_id",
 });
 
+// Asociaciones muchos a uno y muchos a muchos
+Usuario.hasMany(SolicitudMultimedia, {
+  foreignKey: "usuario_id",
+  as: "solicitudes",
+});
+
 SolicitudMultimedia.hasOne(Usuario, {
   as: "usuarioQueRegistra",
   sourceKey: "usuarioQueRegistra_id",
@@ -90,6 +93,24 @@ SolicitudMultimedia.hasOne(Usuario, {
 SolicitudMultimedia.hasOne(RazonSolicitud, {
   as: "razonSolicitud",
   sourceKey: "razonSolicitud_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(TipoEstudio, {
+  as: "tipoEstudio",
+  sourceKey: "tipoDeEstudio_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(Parentesco, {
+  as: "parentesco",
+  sourceKey: "parentesco_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(OpcionTransporte, {
+  as: "opcionTransporte",
+  sourceKey: "opcionTransporte_id",
   foreignKey: "id",
 });
 
@@ -135,8 +156,20 @@ Usuario.belongsToMany(Voluntariado, {
   otherKey: "voluntariado_id",
 });
 
+// Relaciones adicionales
 UsuarioCongregacion.belongsTo(Pais, { foreignKey: "pais_id" });
 
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuario_id" });
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuarioQueRegistra_id" });
 UsuarioCongregacion.belongsTo(Usuario, { foreignKey: "usuario_id" });
+
+// Relación de UsuarioCongregacion con Congregación y Campo
+UsuarioCongregacion.belongsTo(Congregacion, {
+  foreignKey: "congregacion_id",
+  as: "congregacion",
+});
+
+UsuarioCongregacion.belongsTo(Campo, {
+  foreignKey: "campo_id",
+  as: "campo",
+});
