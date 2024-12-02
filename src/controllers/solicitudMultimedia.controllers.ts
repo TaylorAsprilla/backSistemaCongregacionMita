@@ -79,6 +79,7 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
   const { usuario_id } = req.query;
 
   try {
+    // Obtener el país y la congregación a cargo del usuario
     const congregacionPais = await Pais.findOne({
       where: { idObreroEncargado: usuario_id },
     });
@@ -103,49 +104,21 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
     }
 
     // Construir la condición de búsqueda
+    let whereCondition = {};
 
-    let includeCondition = [];
-
-    if (pais_id) {
-      includeCondition.push({
-        model: UsuarioCongregacion,
-        as: "usuarioCongregacion",
-        attributes: ["id"],
-        where: { pais_id: pais_id },
-        include: [
-          {
-            model: Congregacion,
-            as: "congregacion",
-            attributes: ["id", "congregacion"],
-          },
-          {
-            model: Campo,
-            as: "campo",
-            attributes: ["id", "campo"],
-          },
+    if (pais_id && congregacion_id) {
+      whereCondition = {
+        [Op.or]: [
+          { "$usuarioCongregacion.pais_id$": pais_id },
+          { "$usuarioCongregacion.congregacion_id$": congregacion_id },
         ],
-      });
-    }
-
-    if (congregacion_id) {
-      includeCondition.push({
-        model: UsuarioCongregacion,
-        as: "usuarioCongregacion",
-        attributes: ["id"],
-        where: { congregacion_id: congregacion_id },
-        include: [
-          {
-            model: Congregacion,
-            as: "congregacion",
-            attributes: ["id", "congregacion"],
-          },
-          {
-            model: Campo,
-            as: "campo",
-            attributes: ["id", "campo"],
-          },
-        ],
-      });
+      };
+    } else if (pais_id) {
+      whereCondition = { "$usuarioCongregacion.pais_id$": pais_id };
+    } else if (congregacion_id) {
+      whereCondition = {
+        "$usuarioCongregacion.congregacion_id$": congregacion_id,
+      };
     }
 
     // Consulta a la base de datos con filtros dinámicos
@@ -234,13 +207,31 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
           as: "tipoMiembro",
           attributes: ["miembro"],
         },
-        ...includeCondition,
+        {
+          model: UsuarioCongregacion,
+          as: "usuarioCongregacion",
+          attributes: ["id"],
+          include: [
+            {
+              model: Congregacion,
+              as: "congregacion",
+              attributes: ["id", "congregacion"],
+            },
+            {
+              model: Campo,
+              as: "campo",
+              attributes: ["id", "campo"],
+            },
+          ],
+        },
       ],
+      where: whereCondition,
     });
 
     // Responder con los resultados
     return res.status(200).json({
       ok: true,
+      total: usuarios.length,
       usuarios: usuarios || [],
     });
   } catch (error) {
