@@ -359,7 +359,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
       if (existeLogin) {
         return res.status(400).json({
           ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
+          msg: `Ya existe un usuario con el login <b>${login}</b>`,
         });
       }
     }

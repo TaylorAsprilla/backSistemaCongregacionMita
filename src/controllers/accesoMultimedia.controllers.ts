@@ -10,6 +10,8 @@ import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { ROLES_ID } from "../enum/roles.enum";
 import db from "../database/connection";
 import Congregacion from "../models/congregacion.model";
+import path from "path";
+import fs from "fs";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -50,7 +52,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       if (existeLogin) {
         return res.status(400).json({
           ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
+          msg: `Ya existe un usuario con el login <b>${login}</b>`,
         });
       }
     }
@@ -246,7 +248,7 @@ export const actualizarAccesoMultimedia = async (
       if (existeLogin) {
         return res.status(400).json({
           ok: false,
-          msg: `Ya existe un usuario con el login ${login}`,
+          msg: `Ya existe un usuario con el login <b>${login}</b>`,
         });
       }
     }
@@ -531,6 +533,106 @@ export const crearAccesoCongregacionMultimedia = async (
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const denegarSolicitudMultimedia = async (
+  req: Request,
+  res: Response
+) => {
+  const { solicitud_id, motivoDeNegacion } = req.body;
+
+  console.log("solicitud_id", solicitud_id, motivoDeNegacion);
+
+  const transaction = await db.transaction();
+
+  try {
+    // Buscar la solicitud
+    const solicitud = await SolicitudMultimedia.findByPk(solicitud_id);
+
+    if (!solicitud) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe la solicitud con el id ${solicitud_id}`,
+      });
+    }
+
+    // Buscar al usuario relacionado directamente
+    const usuario = await Usuario.findByPk(
+      solicitud.getDataValue("usuario_id"),
+      {
+        attributes: [
+          "email",
+          "primerNombre",
+          "segundoNombre",
+          "primerApellido",
+          "segundoApellido",
+        ],
+      }
+    );
+
+    if (!usuario) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No se encontró el usuario asociado a la solicitud con ID ${solicitud_id}`,
+      });
+    }
+
+    const email = usuario.getDataValue("email");
+    if (!email) {
+      await transaction.rollback();
+      return res.status(400).json({
+        ok: false,
+        msg: "El usuario asociado a la solicitud no tiene un correo electrónico válido.",
+      });
+    }
+
+    // Actualizar la solicitud como denegada
+    solicitud.set({
+      motivoDeNegacion,
+      tiempoAprobacion: null,
+      estado: false,
+    });
+
+    await solicitud.save({ transaction });
+
+    // Enviar correo electrónico
+    const templatePath = path.join(
+      __dirname,
+      "../templates/solicitudDenegada.html"
+    );
+    const emailTemplate = fs.readFileSync(templatePath, "utf8");
+
+    const nombre = `${usuario.get("primerNombre") || ""} ${
+      usuario.get("segundoNombre") || ""
+    } ${usuario.get("primerApellido") || ""} ${
+      usuario.get("segundoApellido") || ""
+    }`.trim();
+
+    const personalizarEmail = emailTemplate
+      .replace("{{imagenEmail}}", imagenEmail)
+      .replace("{{nombre}}", nombre)
+      .replace("{{solicitudId}}", solicitud_id)
+      .replace("{{motivoDeNegacion}}", motivoDeNegacion);
+
+    await enviarEmail(email, "Solicitud Denegada", personalizarEmail);
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Solicitud denegada correctamente y correo enviado",
+      solicitud,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al denegar la solicitud:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al denegar la solicitud.",
     });
   }
 };

@@ -5,6 +5,15 @@ import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import Congregacion from "../models/congregacion.model";
+import Campo from "../models/campo.model";
+import RazonSolicitud from "../models/razonSolicitud.model";
+import TipoMiembro from "../models/tipoMiembro.model";
+import OpcionTransporte from "../models/opcionTransporte.model";
+import Parentesco from "../models/parentesco.model";
+import TipoEstudio from "../models/tipoEstudio.model";
+import Pais from "../models/pais.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -58,6 +67,178 @@ export const getUnaSolicitudMultimedia = async (
   } else {
     res.status(404).json({
       msg: `No existe la solicitud con el id ${id}`,
+    });
+  }
+};
+
+export const obtenerUsuariosConSolicitudesPendientes = async (
+  req: Request,
+  res: Response
+) => {
+  const { usuario_id } = req.query;
+
+  try {
+    const congregacionPais = await Pais.findOne({
+      where: { idObreroEncargado: usuario_id },
+    });
+
+    const congregacionCiudad = await Congregacion.findOne({
+      where: { idObreroEncargado: usuario_id },
+    });
+
+    const pais_id = congregacionPais?.getDataValue("id");
+    const congregacion_id = congregacionCiudad?.getDataValue("id");
+
+    // Construir la condición de búsqueda
+    let whereCondition = {};
+    let includeCondition = [];
+
+    if (pais_id) {
+      includeCondition.push({
+        model: UsuarioCongregacion,
+        as: "usuarioCongregacion",
+        attributes: ["id"],
+        where: { pais_id: pais_id },
+        include: [
+          {
+            model: Congregacion,
+            as: "congregacion",
+            attributes: ["id", "congregacion"],
+          },
+          {
+            model: Campo,
+            as: "campo",
+            attributes: ["id", "campo"],
+          },
+        ],
+      });
+    }
+
+    if (congregacion_id) {
+      includeCondition.push({
+        model: UsuarioCongregacion,
+        as: "usuarioCongregacion",
+        attributes: ["id"],
+        where: { congregacion_id: congregacion_id },
+        include: [
+          {
+            model: Congregacion,
+            as: "congregacion",
+            attributes: ["id", "congregacion"],
+          },
+          {
+            model: Campo,
+            as: "campo",
+            attributes: ["id", "campo"],
+          },
+        ],
+      });
+    }
+
+    // Consulta a la base de datos con filtros dinámicos
+    const usuarios = await Usuario.findAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "numeroCelular",
+        "email",
+        "fechaNacimiento",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "paisDireccion",
+        "login",
+      ],
+      include: [
+        {
+          model: SolicitudMultimedia,
+          as: "solicitudes",
+          attributes: [
+            "id",
+            "emailVerificado",
+            "otraRazon",
+            "tiempoDistancia",
+            "personaEncamada",
+            "personaEncargada",
+            "celularPersonaEncargada",
+            "enfermedadCronica",
+            "enfermedadQuePadece",
+            "paisDondeEstudia",
+            "ciudadDondeEstudia",
+            "duracionDelPeriodoDeEstudio",
+            "baseMilitar",
+            "horaTemploMasCercano",
+            "tiempoSugerido",
+            "tiempoAprobacion",
+            "congregacionCercana",
+            "observaciones",
+            "createdAt",
+          ],
+          where: {
+            emailVerificado: true,
+            tiempoAprobacion: null,
+            estado: true,
+          },
+          include: [
+            {
+              model: RazonSolicitud,
+              as: "razonSolicitud",
+              attributes: ["solicitud"],
+            },
+            {
+              model: OpcionTransporte,
+              as: "opcionTransporte",
+              attributes: ["tipoTransporte"],
+            },
+            {
+              model: Usuario,
+              as: "usuarioQueRegistra",
+              attributes: [
+                "id",
+                "primerNombre",
+                "segundoNombre",
+                "primerApellido",
+                "segundoApellido",
+              ],
+            },
+            {
+              model: Parentesco,
+              as: "parentesco",
+              attributes: ["nombre"],
+            },
+            {
+              model: TipoEstudio,
+              as: "tipoEstudio",
+              attributes: ["estudio"],
+            },
+          ],
+        },
+        {
+          model: TipoMiembro,
+          as: "tipoMiembro",
+          attributes: ["miembro"],
+        },
+        ...includeCondition,
+      ],
+      where: whereCondition, // Aplicar la condición de búsqueda
+    });
+
+    // Responder con los resultados
+    return res.status(200).json({
+      ok: true,
+      usuarios: usuarios || [],
+    });
+  } catch (error) {
+    console.error(
+      "Error al obtener usuarios con solicitudes pendientes:",
+      error
+    );
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al obtener los usuarios con solicitudes pendientes.",
     });
   }
 };
