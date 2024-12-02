@@ -14,6 +14,7 @@ import OpcionTransporte from "../models/opcionTransporte.model";
 import Parentesco from "../models/parentesco.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
+import { Op } from "sequelize";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -83,14 +84,26 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
     });
 
     const congregacionCiudad = await Congregacion.findOne({
-      where: { idObreroEncargado: usuario_id },
+      where: {
+        [Op.or]: [
+          { idObreroEncargado: usuario_id },
+          { idObreroEncargadoDos: usuario_id },
+        ],
+      },
     });
 
     const pais_id = congregacionPais?.getDataValue("id");
     const congregacion_id = congregacionCiudad?.getDataValue("id");
 
+    if (!pais_id && !congregacion_id) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El usuario no tiene un país o congregación a cargo",
+      });
+    }
+
     // Construir la condición de búsqueda
-    let whereCondition = {};
+
     let includeCondition = [];
 
     if (pais_id) {
@@ -223,7 +236,6 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
         },
         ...includeCondition,
       ],
-      where: whereCondition, // Aplicar la condición de búsqueda
     });
 
     // Responder con los resultados
