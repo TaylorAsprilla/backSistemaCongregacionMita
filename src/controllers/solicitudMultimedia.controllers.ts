@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import config from "../config/config";
-import db from "../database/connection";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
@@ -22,14 +21,108 @@ const urlDeValidacion = environment.urlDeValidacion;
 
 export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
   try {
-    const solicitudDeAccesos = await SolicitudMultimedia.findAll({
+    const solicitudDeAccesos = await Usuario.findAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "numeroCelular",
+        "email",
+        "fechaNacimiento",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "paisDireccion",
+        "login",
+      ],
       include: [
         {
-          all: true,
+          model: SolicitudMultimedia,
+          as: "solicitudes",
+          attributes: [
+            "id",
+            "emailVerificado",
+            "otraRazon",
+            "tiempoDistancia",
+            "personaEncamada",
+            "personaEncargada",
+            "celularPersonaEncargada",
+            "enfermedadCronica",
+            "enfermedadQuePadece",
+            "paisDondeEstudia",
+            "ciudadDondeEstudia",
+            "duracionDelPeriodoDeEstudio",
+            "baseMilitar",
+            "horaTemploMasCercano",
+            "tiempoSugerido",
+            "tiempoAprobacion",
+            "estado",
+            "congregacionCercana",
+            "observaciones",
+            "createdAt",
+          ],
+          where: {
+            emailVerificado: true,
+          },
+          include: [
+            {
+              model: RazonSolicitud,
+              as: "razonSolicitud",
+              attributes: ["solicitud"],
+            },
+            {
+              model: OpcionTransporte,
+              as: "opcionTransporte",
+              attributes: ["tipoTransporte"],
+            },
+            {
+              model: Usuario,
+              as: "usuarioQueRegistra",
+              attributes: [
+                "id",
+                "primerNombre",
+                "segundoNombre",
+                "primerApellido",
+                "segundoApellido",
+              ],
+            },
+            {
+              model: Parentesco,
+              as: "parentesco",
+              attributes: ["nombre"],
+            },
+            {
+              model: TipoEstudio,
+              as: "tipoEstudio",
+              attributes: ["estudio"],
+            },
+          ],
+        },
+        {
+          model: TipoMiembro,
+          as: "tipoMiembro",
+          attributes: ["miembro"],
+        },
+        {
+          model: UsuarioCongregacion,
+          as: "usuarioCongregacion",
+          attributes: ["id"],
+          include: [
+            {
+              model: Congregacion,
+              as: "congregacion",
+              attributes: ["id", "congregacion"],
+            },
+            {
+              model: Campo,
+              as: "campo",
+              attributes: ["id", "campo"],
+            },
+          ],
         },
       ],
-
-      order: db.col("id"),
     });
 
     res.json({

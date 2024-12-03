@@ -12,6 +12,8 @@ import db from "../database/connection";
 import Congregacion from "../models/congregacion.model";
 import path from "path";
 import fs from "fs";
+import { auditoriaUsuario } from "../database/usuario.associations";
+import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -20,7 +22,13 @@ const urlCmarLive = environment.urlCmarLive;
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
-  const { login, password, solicitud_id, tiempoAprobacion } = req.body;
+  const {
+    login,
+    password,
+    solicitud_id,
+    tiempoAprobacion,
+    usuarioQueAprobo_id,
+  } = req.body;
 
   let nombre: string = "";
   let email: string = "";
@@ -80,7 +88,11 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     );
 
     const actualizado = await SolicitudMultimedia.update(
-      { tiempoAprobacion: tiempoAprobacionDate },
+      {
+        tiempoAprobacion: tiempoAprobacionDate,
+        usuarioQueAprobo_id,
+        estado: true,
+      },
       {
         where: {
           usuario_id,
@@ -96,6 +108,13 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
         permiso_id: ROLES_ID.MULTIMEDIA,
       },
       { transaction }
+    );
+
+    await auditoriaUsuario(
+      usuario_id,
+      Number(usuarioQueAprobo_id),
+      AUDITORIAUSUARIO_ENUM.APROBAR_SOLICITUD,
+      transaction
     );
 
     const usuario = await Usuario.findByPk(usuario_id, { transaction });
