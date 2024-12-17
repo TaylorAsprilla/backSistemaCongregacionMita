@@ -1,3 +1,4 @@
+import { SOLICITUD_MULTIMEDIA_ENUM } from "./../enum/solicitudMultimendia.enum";
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
@@ -75,9 +76,15 @@ const SolicitudMultimedia = db.define(
       allowNull: true,
     },
     estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: 1,
-      allowNull: true,
+      type: DataTypes.ENUM(
+        SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+        SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
+        SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
+        SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
+        SOLICITUD_MULTIMEDIA_ENUM.CADUCADA
+      ),
+      defaultValue: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+      allowNull: false,
     },
     emailVerificado: {
       type: DataTypes.BOOLEAN,
@@ -105,6 +112,10 @@ const SolicitudMultimedia = db.define(
       allowNull: true,
     },
     usuario_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    usuarioQueAprobo_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },

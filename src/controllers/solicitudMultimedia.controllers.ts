@@ -14,6 +14,7 @@ import Parentesco from "../models/parentesco.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
 import { Op } from "sequelize";
+import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -111,6 +112,11 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
           attributes: ["id"],
           include: [
             {
+              model: Pais,
+              as: "pais",
+              attributes: ["id", "pais"],
+            },
+            {
               model: Congregacion,
               as: "congregacion",
               attributes: ["id", "congregacion"],
@@ -165,7 +171,7 @@ export const getUnaSolicitudMultimedia = async (
   }
 };
 
-export const obtenerUsuariosConSolicitudesPendientes = async (
+export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   req: Request,
   res: Response
 ) => {
@@ -253,13 +259,12 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
             "tiempoSugerido",
             "tiempoAprobacion",
             "congregacionCercana",
+            "estado",
             "observaciones",
             "createdAt",
           ],
           where: {
             emailVerificado: true,
-            tiempoAprobacion: null,
-            estado: true,
           },
           include: [
             {
@@ -305,6 +310,11 @@ export const obtenerUsuariosConSolicitudesPendientes = async (
           as: "usuarioCongregacion",
           attributes: ["id"],
           include: [
+            {
+              model: Pais,
+              as: "pais",
+              attributes: ["id", "pais"],
+            },
             {
               model: Congregacion,
               as: "congregacion",
@@ -526,7 +536,7 @@ export const eliminarSolicitudMultimedia = async (
       const motivoDeNegacion = await body.motivoDeNegacion;
 
       solicitudDeAcceso.set({
-        estado: false,
+        estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
         motivoDeNegacion,
       });
       await solicitudDeAcceso.save();

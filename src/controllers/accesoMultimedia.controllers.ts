@@ -1,7 +1,5 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { CustomRequest } from "../middlewares/validar-jwt";
-import AccesoMultimedia from "../models/accesoMultimedia.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
@@ -14,6 +12,7 @@ import path from "path";
 import fs from "fs";
 import { auditoriaUsuario } from "../database/usuario.associations";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
+import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -91,7 +90,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       {
         tiempoAprobacion: tiempoAprobacionDate,
         usuarioQueAprobo_id,
-        estado: true,
+        estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       },
       {
         where: {
@@ -231,154 +230,6 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
-    });
-  }
-};
-
-export const actualizarAccesoMultimedia = async (
-  req: Request,
-  res: Response
-) => {
-  const { id } = req.params;
-  const { body } = req;
-  const { password, login, ...campos } = body;
-
-  try {
-    const accesoMultimedia = await AccesoMultimedia.findByPk(id);
-    if (!accesoMultimedia) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe un usuario con el id ${id}`,
-      });
-    }
-
-    const getLogin = await accesoMultimedia.get().login;
-
-    // =======================================================================
-    //                          Actualizar Usuario
-    // =======================================================================
-
-    if (getLogin !== login) {
-      const existeLogin = await AccesoMultimedia.findOne({
-        where: {
-          login: login,
-        },
-      });
-      if (existeLogin) {
-        return res.status(400).json({
-          ok: false,
-          msg: `Ya existe un usuario con el login <b>${login}</b>`,
-        });
-      }
-    }
-
-    // Encriptar contraseña
-    if (password) {
-      const salt = bcrypt.genSaltSync();
-      campos.password = await bcrypt.hashSync(password, salt);
-    }
-
-    campos.login = await login;
-
-    const accesoActualizado = await accesoMultimedia.update(campos, {
-      new: true,
-    });
-    res.json({
-      ok: true,
-      msg: "Acceso a CMAR Live Actualizado",
-      accesoActualizado,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      msg: "Hable con el administrador",
-      error,
-    });
-  }
-};
-
-export const eliminarAccesoMultimedia = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { body } = req;
-
-  try {
-    const accesoMultimedia = await AccesoMultimedia.findByPk(id);
-    if (accesoMultimedia) {
-      await accesoMultimedia.update({ estado: false });
-
-      res.json({
-        ok: true,
-        msg: `Se eliminó el acceso de CMAR Live del usuario ${
-          accesoMultimedia.get().nombre
-        }`,
-        id,
-        accesoMultimedia,
-      });
-    }
-
-    if (!accesoMultimedia) {
-      return res.status(404).json({
-        msg: `No existe un usuario con el id ${id}`,
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      msg: "Hable con el administrador",
-    });
-  }
-};
-
-export const activarAccesoMultimedia = async (
-  req: CustomRequest,
-  res: Response
-) => {
-  const { id } = req.params;
-
-  try {
-    const solicitudMultimedia = await SolicitudMultimedia.findByPk(id);
-
-    if (!solicitudMultimedia) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe una solicitud de acceso multimedia con el id ${id}`,
-      });
-    }
-
-    const usuario_id = solicitudMultimedia.getDataValue("usuario_id");
-    const usuario = await Usuario.findByPk(usuario_id);
-
-    if (!usuario) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe un usuario asociado a la solicitud de acceso multimedia con el id ${id}`,
-      });
-    }
-
-    const nombre = `${usuario.getDataValue("primerNombre") || ""} ${
-      usuario.getDataValue("segundoNombre") || ""
-    } ${usuario.getDataValue("primerApellido") || ""} ${
-      usuario.getDataValue("segundoApellido") || ""
-    }`;
-
-    if (solicitudMultimedia.get().estado === false) {
-      await solicitudMultimedia.update({ estado: true });
-      res.json({
-        ok: true,
-        msg: `El acceso a CMAR Live de ${nombre} se activó`,
-        accesoMultimedia: solicitudMultimedia,
-        id: req.id,
-      });
-    } else {
-      return res.status(404).json({
-        ok: false,
-        msg: `El acceso a CMAR Live de ${nombre} ya está activo`,
-        accesoMultimedia: solicitudMultimedia,
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      error,
-      msg: "Hable con el administrador",
     });
   }
 };
@@ -562,8 +413,6 @@ export const denegarSolicitudMultimedia = async (
 ) => {
   const { solicitud_id, motivoDeNegacion } = req.body;
 
-  console.log("solicitud_id", solicitud_id, motivoDeNegacion);
-
   const transaction = await db.transaction();
 
   try {
@@ -613,10 +462,12 @@ export const denegarSolicitudMultimedia = async (
     solicitud.set({
       motivoDeNegacion,
       tiempoAprobacion: null,
-      estado: false,
+      estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
     });
 
     await solicitud.save({ transaction });
+
+    await transaction.commit();
 
     // Enviar correo electrónico
     const templatePath = path.join(
@@ -638,8 +489,6 @@ export const denegarSolicitudMultimedia = async (
       .replace("{{motivoDeNegacion}}", motivoDeNegacion);
 
     await enviarEmail(email, "Solicitud Denegada", personalizarEmail);
-
-    await transaction.commit();
 
     return res.status(200).json({
       ok: true,

@@ -187,4 +187,10 @@ cron.schedule("0 15 * * *", async () => {
   await eliminarCredenciales();
 });
 
+// cron.schedule("* * * * *", async () => {
+//   console.log("Ejecutando tarea cron...");
+//   await verificarFechasYEnviarCorreos();
+//   await eliminarCredenciales();
+// });
+
 console.info("Cron job configurado para ejecutarse.");

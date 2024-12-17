@@ -157,7 +157,7 @@ Usuario.belongsToMany(Voluntariado, {
 });
 
 // Relaciones adicionales
-UsuarioCongregacion.belongsTo(Pais, { foreignKey: "pais_id" });
+UsuarioCongregacion.belongsTo(Pais, { foreignKey: "pais_id", as: "pais" });
 
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuario_id" });
 AuditoriaUsuario.belongsTo(Usuario, { foreignKey: "usuarioQueRegistra_id" });
