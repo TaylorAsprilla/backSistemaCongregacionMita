@@ -5,11 +5,8 @@
 import { Router } from "express";
 import { check } from "express-validator";
 import {
-  activarAccesoMultimedia,
-  actualizarAccesoMultimedia,
   crearAccesoCongregacionMultimedia,
   crearAccesoMultimedia,
-  eliminarAccesoMultimedia,
 } from "../controllers/accesoMultimedia.controllers";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -50,9 +47,5 @@ router.post(
   ],
   crearAccesoCongregacionMultimedia
 );
-
-router.put("/:id", validarJWT, actualizarAccesoMultimedia);
-router.put("/activar/:id", validarJWT, activarAccesoMultimedia);
-router.delete("/:id", validarJWT, eliminarAccesoMultimedia);
 
 export default router;

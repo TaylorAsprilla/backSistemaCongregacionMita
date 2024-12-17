@@ -12,7 +12,7 @@ import {
   eliminarSolicitudMultimedia,
   getSolicitudesMultimedia,
   getUnaSolicitudMultimedia,
-  obtenerUsuariosConSolicitudesPendientes,
+  obtenerUsuariosConSolicitudesPorCongregacion,
   validarEmail,
 } from "../controllers/solicitudMultimedia.controllers";
 
@@ -23,7 +23,11 @@ import { denegarSolicitudMultimedia } from "../controllers/accesoMultimedia.cont
 const router = Router();
 
 // Rutas específicas
-router.get("/pendientes", validarJWT, obtenerUsuariosConSolicitudesPendientes);
+router.get(
+  "/pendientes",
+  validarJWT,
+  obtenerUsuariosConSolicitudesPorCongregacion
+);
 router.get("/buscarcorreo/:email", buscarCorreoElectronico);
 router.put("/validaremail/:id", validarEmail);
 router.put("/activar/:id", validarJWT, activarSolicitudMultimedia);
