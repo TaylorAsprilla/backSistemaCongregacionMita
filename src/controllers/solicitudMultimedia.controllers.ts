@@ -90,6 +90,17 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
               ],
             },
             {
+              model: Usuario,
+              as: "usuarioQueAprobo",
+              attributes: [
+                "id",
+                "primerNombre",
+                "segundoNombre",
+                "primerApellido",
+                "segundoApellido",
+              ],
+            },
+            {
               model: Parentesco,
               as: "parentesco",
               attributes: ["nombre"],

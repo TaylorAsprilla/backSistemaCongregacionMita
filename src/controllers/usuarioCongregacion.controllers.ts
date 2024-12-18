@@ -166,6 +166,19 @@ export const getUsuariosPorCongregacion = async (
           attributes: ["campo"],
           through: { attributes: [] },
         },
+        {
+          model: Usuario,
+          as: "usuarioQueRegistra",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "email",
+            "numeroCelular",
+          ],
+        },
       ],
       where: {
         estado: true,

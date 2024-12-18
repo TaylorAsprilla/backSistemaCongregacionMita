@@ -24,6 +24,12 @@ import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
 import Voluntariado from "../models/voluntariado.model";
 
 // Asociaciones uno a uno
+Usuario.hasOne(Usuario, {
+  as: "usuarioQueRegistra",
+  sourceKey: "idUsuarioQueRegistra",
+  foreignKey: "id",
+});
+
 Usuario.hasOne(Genero, {
   as: "genero",
   sourceKey: "genero_id",
@@ -81,6 +87,12 @@ Usuario.hasMany(SolicitudMultimedia, {
 SolicitudMultimedia.hasOne(Usuario, {
   as: "usuarioQueRegistra",
   sourceKey: "usuarioQueRegistra_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(Usuario, {
+  as: "usuarioQueAprobo",
+  sourceKey: "usuarioQueAprobo_id",
   foreignKey: "id",
 });
 
