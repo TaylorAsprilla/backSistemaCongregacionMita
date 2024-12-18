@@ -85,6 +85,12 @@ SolicitudMultimedia.hasOne(Usuario, {
 });
 
 SolicitudMultimedia.hasOne(Usuario, {
+  as: "usuarioQueAprobo",
+  sourceKey: "usuarioQueAprobo_id",
+  foreignKey: "id",
+});
+
+SolicitudMultimedia.hasOne(Usuario, {
   as: "usuario",
   sourceKey: "usuario_id",
   foreignKey: "id",
