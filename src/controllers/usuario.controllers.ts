@@ -56,6 +56,19 @@ export const getUsuarios = async (req: Request, res: Response) => {
           as: "usuarioCongregacionCampo",
           attributes: ["campo"],
         },
+        {
+          model: Usuario,
+          as: "usuarioQueRegistra",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "email",
+            "numeroCelular",
+          ],
+        },
       ],
       where: {
         estado: true,
@@ -282,6 +295,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ministerios,
     voluntariados,
     congregacion,
+    usuarioQueRegistra_id,
     ...campos
   } = body;
 
@@ -394,7 +408,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
 
       await auditoriaUsuario(
         Number(id),
-        Number(idUsuarioActual),
+        Number(usuarioQueRegistra_id),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
         transaction
       );
