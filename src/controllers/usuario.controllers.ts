@@ -295,7 +295,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
     ministerios,
     voluntariados,
     congregacion,
-    usuarioQueRegistra_id,
+    idUsuarioQueRegistra,
     ...campos
   } = body;
 
@@ -408,7 +408,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
 
       await auditoriaUsuario(
         Number(id),
-        Number(usuarioQueRegistra_id),
+        Number(idUsuarioQueRegistra),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
         transaction
       );
