@@ -13,6 +13,7 @@ import fs from "fs";
 import { auditoriaUsuario } from "../database/usuario.associations";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
+import { CustomRequest } from "../middlewares/validar-jwt";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -408,7 +409,7 @@ export const crearAccesoCongregacionMultimedia = async (
 };
 
 export const denegarSolicitudMultimedia = async (
-  req: Request,
+  req: CustomRequest,
   res: Response
 ) => {
   const { solicitud_id, motivoDeNegacion } = req.body;
@@ -463,6 +464,7 @@ export const denegarSolicitudMultimedia = async (
       motivoDeNegacion,
       tiempoAprobacion: null,
       estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
+      usuarioQueAprobo_id: req.id,
     });
 
     await solicitud.save({ transaction });
