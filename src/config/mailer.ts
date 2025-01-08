@@ -22,6 +22,6 @@ export const transporter = nodemailer.createTransport({
   },
 });
 
-transporter.verify().then(() => {
-  console.info("Ready for send emails");
-});
+// transporter.verify().then(() => {
+//   console.info("Ready for send emails");
+// });
