@@ -408,7 +408,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
 
       await auditoriaUsuario(
         Number(id),
-        Number(idUsuarioQueRegistra),
+        Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
         transaction
       );
