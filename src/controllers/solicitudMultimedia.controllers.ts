@@ -59,6 +59,7 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "motivoDeNegacion",
             "estado",
             "congregacionCercana",
             "observaciones",
