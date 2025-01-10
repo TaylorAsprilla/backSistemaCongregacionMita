@@ -65,7 +65,9 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "createdAt",
           ],
           where: {
-            emailVerificado: true,
+            emailVerificado: {
+              [Op.ne]: null, // Asegurar de que el campo emailVerificado tenga un valor
+            },
           },
           include: [
             {
@@ -142,8 +144,11 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
       ],
     });
 
+    const numeroDeSolicitudes = solicitudDeAccesos.length;
+
     res.json({
       ok: true,
+      numeroDeSolicitudes,
       solicitudDeAccesos,
     });
   } catch (error) {
