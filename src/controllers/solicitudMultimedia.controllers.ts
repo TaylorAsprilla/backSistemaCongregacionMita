@@ -194,6 +194,8 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
 ) => {
   const { usuario_id } = req.query;
 
+  console.log("usuario_id", usuario_id);
+
   try {
     // Obtener el país y la congregación a cargo del usuario
     const congregacionPais = await Pais.findOne({
@@ -209,10 +211,20 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
       },
     });
 
+    const congregacionCampo = await Campo.findOne({
+      where: {
+        [Op.or]: [
+          { idObreroEncargado: usuario_id },
+          { idObreroEncargadoDos: usuario_id },
+        ],
+      },
+    });
+
     const pais_id = congregacionPais?.getDataValue("id");
     const congregacion_id = congregacionCiudad?.getDataValue("id");
+    const campo_id = congregacionCampo?.getDataValue("id");
 
-    if (!pais_id && !congregacion_id) {
+    if (!pais_id && !congregacion_id && !campo_id) {
       return res.status(400).json({
         ok: false,
         msg: "El usuario no tiene un país o congregación a cargo",
@@ -234,6 +246,10 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
     } else if (congregacion_id) {
       whereCondition = {
         "$usuarioCongregacion.congregacion_id$": congregacion_id,
+      };
+    } else if (campo_id) {
+      whereCondition = {
+        "$usuarioCongregacion.campo_id$": campo_id,
       };
     }
 
@@ -275,13 +291,16 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "motivoDeNegacion",
             "congregacionCercana",
             "estado",
             "observaciones",
             "createdAt",
           ],
           where: {
-            emailVerificado: true,
+            emailVerificado: {
+              [Op.ne]: null, // Asegurar de que el campo emailVerificado tenga un valor
+            },
           },
           include: [
             {
