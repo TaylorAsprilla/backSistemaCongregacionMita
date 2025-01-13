@@ -194,8 +194,6 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
 ) => {
   const { usuario_id } = req.query;
 
-  console.log("usuario_id", usuario_id);
-
   try {
     // Obtener el país y la congregación a cargo del usuario
     const congregacionPais = await Pais.findOne({
