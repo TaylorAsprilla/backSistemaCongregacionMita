@@ -84,7 +84,7 @@ const SolicitudMultimedia = db.define(
         SOLICITUD_MULTIMEDIA_ENUM.CADUCADA,
         SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO
       ),
-      defaultValue: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+      defaultValue: SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
       allowNull: false,
     },
     emailVerificado: {
