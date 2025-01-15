@@ -435,6 +435,55 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
   }
 };
 
+export const transferirUsuario = async (req: CustomRequest, res: Response) => {
+  const { body } = req;
+  const { id } = req.params;
+  const { campo_id, congregacion_id, pais_id } = body;
+  const idUsuarioActual = req.id;
+
+  const transaction = await db.transaction();
+
+  try {
+    const usuario = await Usuario.findByPk(id, { transaction });
+    if (usuario) {
+      await actualizarCongregacion(
+        Number(id),
+        pais_id,
+        congregacion_id,
+        campo_id,
+        transaction
+      );
+
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.TRANSFERENCIA,
+        transaction
+      );
+
+      await transaction.commit();
+      res.json({
+        ok: true,
+        msg: `Se trasferió el usuario ${id}`,
+        id,
+        usuario,
+      });
+    }
+
+    if (!usuario) {
+      return res.status(404).json({
+        msg: `Error al transferir el usuario`,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
 
