@@ -10,6 +10,7 @@ import {
   getUsuario,
   getUsuarios,
   eliminarUsuario,
+  transcendioUsuario,
 } from "../controllers/usuario.controllers";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
@@ -64,6 +65,7 @@ router.post(
   crearUsuario
 );
 
+router.put("/transcender/:id", validarJWT, transcendioUsuario);
 router.put("/transferir/:id", validarJWT, transferirUsuario);
 router.put("/activar/:id", validarJWT, activarUsuario);
 router.put("/actualizarpermisos/:id", validarJWT, actualizarPermisos);

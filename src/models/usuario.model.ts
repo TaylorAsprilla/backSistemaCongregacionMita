@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 const Usuario = db.define(
   "Usuario",
@@ -29,7 +30,7 @@ const Usuario = db.define(
       type: DataTypes.STRING,
       validate: {
         isEmail: {
-          msg: "Debe ser una dirección de correo electrónico válida.",
+          msg: "Debe ser una direccion de correo electronico valida.",
         },
       },
     },
@@ -62,8 +63,12 @@ const Usuario = db.define(
       type: DataTypes.STRING,
     },
     estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: 1,
+      type: DataTypes.ENUM(
+        ESTADO_USUARIO_ENUM.ACTIVO,
+        ESTADO_USUARIO_ENUM.ELIMINADO,
+        ESTADO_USUARIO_ENUM.TRANSCENDIO
+      ),
+      defaultValue: ESTADO_USUARIO_ENUM.ACTIVO,
     },
     resetToken: {
       type: DataTypes.STRING,

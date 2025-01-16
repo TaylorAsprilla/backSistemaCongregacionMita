@@ -5,6 +5,7 @@ import Congregacion from "../models/congregacion.model";
 import Usuario from "../models/usuario.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
   try {
@@ -58,7 +59,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         },
       ],
       where: {
-        estado: true,
+        estado: ESTADO_USUARIO_ENUM.ACTIVO,
         [Op.or]: [{ "$usuarioCongregacionPais.id$": paisId }],
       },
     });
@@ -181,7 +182,7 @@ export const getUsuariosPorCongregacion = async (
         },
       ],
       where: {
-        estado: true,
+        estado: ESTADO_USUARIO_ENUM.ACTIVO,
         [Op.or]: [
           { "$usuarioCongregacionPais.id$": paisId },
           { "$usuarioCongregacionCongregacion.id$": congregacionId },
