@@ -490,36 +490,36 @@ export const denegarSolicitudMultimedia = async (
         await UsuarioPermiso.destroy({
           where: {
             usuario_id: usuarioId,
-            permiso_id: ROLES_ID.MULTIMEDIA,
+            permiso_id: Number(ROLES_ID.MULTIMEDIA),
           },
           transaction,
         });
-      }
-    } else if (
-      permisoIds.length === 1 &&
-      permisoIds[0] === ROLES_ID.MULTIMEDIA
-    ) {
-      // Si solo tiene el permiso 6, eliminar usuario y credenciales
-      await UsuarioPermiso.destroy({
-        where: {
-          usuario_id: usuarioId,
-          permiso_id: ROLES_ID.MULTIMEDIA,
-        },
-        transaction,
-      });
-
-      await Usuario.update(
-        {
-          email: null,
-          password: null,
-        },
-        {
+      } else if (
+        permisoIds.length === 1 &&
+        permisoIds[0] === Number(ROLES_ID.MULTIMEDIA)
+      ) {
+        // Si solo tiene el permiso 6, eliminar usuario y credenciales
+        await UsuarioPermiso.destroy({
           where: {
-            id: usuarioId,
+            usuario_id: usuarioId,
+            permiso_id: Number(ROLES_ID.MULTIMEDIA),
           },
           transaction,
-        }
-      );
+        });
+
+        await Usuario.update(
+          {
+            login: null,
+            password: null,
+          },
+          {
+            where: {
+              id: usuarioId,
+            },
+            transaction,
+          }
+        );
+      }
     }
 
     const email = usuario.getDataValue("email");
