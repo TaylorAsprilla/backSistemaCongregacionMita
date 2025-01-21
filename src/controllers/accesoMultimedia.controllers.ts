@@ -484,10 +484,7 @@ export const denegarSolicitudMultimedia = async (
       permiso.getDataValue("permiso_id")
     );
 
-    console.log("Permisos del usuario:", permisoIds);
-
     if (permisoIds.includes(Number(ROLES_ID.MULTIMEDIA))) {
-      console.log("Entro, ROLES_ID.MULTIMEDIA");
       if (permisoIds.length > 1) {
         // Eliminar solo el permiso 6 (MULTIMEDIA)
         await UsuarioPermiso.destroy({
