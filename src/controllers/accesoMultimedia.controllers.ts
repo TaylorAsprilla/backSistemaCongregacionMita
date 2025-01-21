@@ -429,18 +429,17 @@ export const denegarSolicitudMultimedia = async (
     }
 
     // Buscar al usuario relacionado directamente
-    const usuario = await Usuario.findByPk(
-      solicitud.getDataValue("usuario_id"),
-      {
-        attributes: [
-          "email",
-          "primerNombre",
-          "segundoNombre",
-          "primerApellido",
-          "segundoApellido",
-        ],
-      }
-    );
+    const usuarioId = solicitud.getDataValue("usuario_id");
+
+    const usuario = await Usuario.findByPk(usuarioId, {
+      attributes: [
+        "email",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+      ],
+    });
 
     if (!usuario) {
       await transaction.rollback();
@@ -448,6 +447,54 @@ export const denegarSolicitudMultimedia = async (
         ok: false,
         msg: `No se encontró el usuario asociado a la solicitud con ID ${solicitud_id}`,
       });
+    }
+
+    // Verificar permisos del usuario
+    const permisos = await UsuarioPermiso.findAll({
+      where: { usuario_id: usuarioId },
+      attributes: ["permiso_id"],
+    });
+
+    const permisoIds = permisos.map((permiso) =>
+      permiso.getDataValue("permiso_id")
+    );
+
+    if (permisoIds.includes(ROLES_ID.MULTIMEDIA)) {
+      if (permisoIds.length > 1) {
+        // Eliminar solo el permiso 6 (MULTIMEDIA)
+        await UsuarioPermiso.destroy({
+          where: {
+            usuario_id: usuarioId,
+            permiso_id: ROLES_ID.MULTIMEDIA,
+          },
+          transaction,
+        });
+      }
+    } else if (
+      permisoIds.length === 1 &&
+      permisoIds[0] === ROLES_ID.MULTIMEDIA
+    ) {
+      // Si solo tiene el permiso 6, eliminar usuario y credenciales
+      await UsuarioPermiso.destroy({
+        where: {
+          usuario_id: usuarioId,
+          permiso_id: ROLES_ID.MULTIMEDIA,
+        },
+        transaction,
+      });
+
+      await Usuario.update(
+        {
+          email: null,
+          password: null,
+        },
+        {
+          where: {
+            id: usuarioId,
+          },
+          transaction,
+        }
+      );
     }
 
     const email = usuario.getDataValue("email");
