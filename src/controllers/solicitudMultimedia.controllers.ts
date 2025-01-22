@@ -197,11 +197,12 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   try {
     // Obtener el país y la congregación a cargo del usuario
     const congregacionPais = await Pais.findOne({
-      where: { idObreroEncargado: usuario_id },
+      where: { idObreroEncargado: usuario_id, estado: true },
     });
 
     const congregacionCiudad = await Congregacion.findOne({
       where: {
+        estado: true,
         [Op.or]: [
           { idObreroEncargado: usuario_id },
           { idObreroEncargadoDos: usuario_id },
@@ -211,6 +212,7 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
 
     const congregacionCampo = await Campo.findOne({
       where: {
+        estado: true,
         [Op.or]: [
           { idObreroEncargado: usuario_id },
           { idObreroEncargadoDos: usuario_id },
