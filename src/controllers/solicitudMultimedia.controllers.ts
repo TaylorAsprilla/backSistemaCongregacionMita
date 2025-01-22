@@ -15,6 +15,7 @@ import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
 import { Op } from "sequelize";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -759,8 +760,15 @@ export const validarEmail = async (req: CustomRequest, res: Response) => {
     if (!!verificarStatus) {
       const nombre = await verificarStatus.get().nombre;
 
-      if (verificarStatus.get().emailVerificado === false) {
-        await verificarStatus.update({ emailVerificado: true });
+      if (
+        verificarStatus.get().emailVerificado === false ||
+        verificarStatus.get().emailVerificado ===
+          SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO
+      ) {
+        await verificarStatus.update({
+          emailVerificado: true,
+          estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+        });
         res.json({
           ok: true,
           msg: `El correo electrónico de ${nombre} esta verificado`,
