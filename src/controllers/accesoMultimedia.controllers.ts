@@ -23,7 +23,6 @@ const imagenEmail = environment.imagenEmail;
 const urlCmarLive = environment.urlCmarLive;
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
-  const { body } = req;
   const {
     solicitud_id,
     tiempoAprobacion,
@@ -563,6 +562,77 @@ export const denegarSolicitudMultimedia = async (
       .replace("{{motivoDeNegacion}}", motivoDeNegacion);
 
     await enviarEmail(email, "Solicitud Denegada", personalizarEmail);
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Solicitud denegada correctamente y correo enviado",
+      solicitud,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al denegar la solicitud:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al denegar la solicitud.",
+    });
+  }
+};
+
+export const eliminarSolicitudMultimedia = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const transaction = await db.transaction();
+
+  const { id } = req.params;
+
+  const idSolicitud = req.params.id;
+  const motivoDeNegacion = "Solicitud eliminada";
+
+  try {
+    // Buscar la solicitud
+    const solicitud = await SolicitudMultimedia.findByPk(idSolicitud);
+
+    if (!solicitud) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe la solicitud con el id ${idSolicitud}`,
+      });
+    }
+
+    // Buscar al usuario relacionado directamente
+    const usuarioId = solicitud.getDataValue("usuario_id");
+
+    const usuario = await Usuario.findByPk(usuarioId, {
+      attributes: [
+        "email",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+      ],
+    });
+
+    if (!usuario) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No se encontró el usuario asociado a la solicitud con ID ${idSolicitud}`,
+      });
+    }
+
+    // Actualizar la solicitud como eliminada
+    solicitud.set({
+      motivoDeNegacion,
+      tiempoAprobacion: null,
+      estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
+      usuarioQueAprobo_id: req.id,
+    });
+
+    await solicitud.save({ transaction });
+
+    await transaction.commit();
 
     return res.status(200).json({
       ok: true,

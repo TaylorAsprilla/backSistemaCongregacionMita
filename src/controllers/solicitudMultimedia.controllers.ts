@@ -15,7 +15,6 @@ import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
 import { Op } from "sequelize";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
-import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -554,122 +553,6 @@ export const actualizarSolicitudMultimedia = async (
       ok: false,
       msg: "Hable con el administrador",
       error,
-    });
-  }
-};
-
-export const eliminarSolicitudMultimedia = async (
-  req: CustomRequest,
-  res: Response
-) => {
-  const { id } = req.params;
-  const { body } = req;
-
-  try {
-    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
-    if (solicitudDeAcceso) {
-      const nombre = await solicitudDeAcceso.get().nombre;
-      const email = await solicitudDeAcceso.get().email;
-      const motivoDeNegacion = await body.motivoDeNegacion;
-
-      solicitudDeAcceso.set({
-        estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
-        motivoDeNegacion,
-      });
-      await solicitudDeAcceso.save();
-
-      // =======================================================================
-      //                         Enviar Correo de Verificación
-      // =======================================================================
-      const html = `
-      <div
-          style="
-            max-width: 100%;
-            width: 600px;
-            margin: 0 auto;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, 'sans-serif';
-            font-weight: normal;
-            font-size: 16px;
-            line-height: 22px;
-            color: #252525;
-            word-wrap: break-word;
-            word-break: break-word;
-            text-align: justify;
-          "
-        >
-          <div style="text-align: center">
-            <img
-              src="${imagenEmail}"
-              alt="CMAR Multimedia"
-              style="text-align: center; width: 100px"
-            />
-          </div>
-          <h3>Solicitud de Acceso</h3>
-          <p>Hola, ${nombre}</p>
-          <p>
-            Hemos recibido su solicitud para poder acceder a <b>CMAR LIVE</b> para disfrutar de
-            los servicios, vigilias y eventos especiales de la Congregación Mita,
-            lamentablemente hemos revisado su solicitud y esta ha sido denegada.
-          </p>
-        
-          <b>Motivos:</b>
-          <p>${motivoDeNegacion}</p>
-        
-          <p>
-            En un futuro puede presentar nuevamente su solicitud, si es que considera
-            que algún factor en su solicitud original cambio para acceder a la
-            plataforma CMAR LIVE, recuerda también explicarle a su obrero o persona que
-            llene la solicitud sus motivos por el cual cualificaría para un acceso a la
-            plataforma CMAR LIVE.
-          </p>
-        
-          <div>
-            <p
-              style="
-                margin: 30px 0 12px 0;
-                padding: 0;
-                color: #252525;
-                font-family: Arial, Helvetica, 'sans-serif';
-                font-weight: normal;
-                word-wrap: break-word;
-                word-break: break-word;
-                font-size: 12px;
-                line-height: 16px;
-                color: #909090;
-              "
-            >
-              Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-              en contacto con nosotros mediante nuestro correo electrónico
-              <a href="mailto:cmar.live@congregacionmita.com">
-                cmar.live@congregacionmita.com</a
-              >
-            </p>
-        
-            <br />
-            Cordialmente, <br />
-            <b>Congregación Mita, Inc.</b>
-          </div>
-        </div>`;
-
-      await enviarEmail(email, "Solicitud de Acceso - CMAR Multimedia", html);
-
-      res.json({
-        ok: true,
-        msg: `La solicitud de acceso al canal de multimedia de ${nombre} se eliminó`,
-        id: id,
-      });
-    }
-
-    if (!solicitudDeAcceso) {
-      return res.status(404).json({
-        msg: `No existe una solicitud de acceso con el id ${id}`,
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      error,
-      msg: "Hable con el administrador",
     });
   }
 };
