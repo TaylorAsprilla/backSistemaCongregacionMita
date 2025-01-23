@@ -9,7 +9,6 @@ import {
   actualizarSolicitudMultimedia,
   buscarCorreoElectronico,
   crearSolicitudMultimedia,
-  eliminarSolicitudMultimedia,
   getSolicitudesMultimedia,
   getUnaSolicitudMultimedia,
   obtenerUsuariosConSolicitudesPorCongregacion,
@@ -18,7 +17,10 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
-import { denegarSolicitudMultimedia } from "../controllers/accesoMultimedia.controllers";
+import {
+  denegarSolicitudMultimedia,
+  eliminarSolicitudMultimedia,
+} from "../controllers/accesoMultimedia.controllers";
 
 const router = Router();
 
