@@ -39,6 +39,11 @@ export const getUsuarios = async (req: Request, res: Response) => {
         "fechaNacimiento",
         "email",
         "numeroCelular",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
         "estado",
       ],
       include: [
