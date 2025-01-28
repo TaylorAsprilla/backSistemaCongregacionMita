@@ -36,6 +36,11 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         "fechaNacimiento",
         "email",
         "numeroCelular",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
         "estado",
       ],
       include: [
@@ -146,6 +151,11 @@ export const getUsuariosPorCongregacion = async (
         "fechaNacimiento",
         "email",
         "numeroCelular",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
         "estado",
       ],
       include: [
