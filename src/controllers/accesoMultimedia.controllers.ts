@@ -609,6 +609,13 @@ export const eliminarSolicitudMultimedia = async (
       usuarioQueAprobo_id: req.id,
     });
 
+    await auditoriaUsuario(
+      solicitud.getDataValue("usuario_id"),
+      Number(req.id),
+      AUDITORIAUSUARIO_ENUM.ELIMINAR_SOLICITUD,
+      transaction
+    );
+
     await solicitud.save({ transaction });
 
     await transaction.commit();
