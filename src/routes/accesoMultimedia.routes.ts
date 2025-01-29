@@ -11,8 +11,14 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import {
+  eliminarSolicitudMultimediaDeUnUsuario,
+  obtenerSolicitudPorUsuario,
+} from "../controllers/solicitudMultimedia.controllers";
 
 const router = Router();
+
+router.get("/usuario", validarJWT, obtenerSolicitudPorUsuario);
 
 router.post(
   "/",
@@ -47,5 +53,7 @@ router.post(
   ],
   crearAccesoCongregacionMultimedia
 );
+
+router.delete("/usuario", validarJWT, eliminarSolicitudMultimediaDeUnUsuario); // Eliminar una solicitud específica
 
 export default router;
