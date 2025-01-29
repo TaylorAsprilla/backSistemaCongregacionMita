@@ -601,27 +601,6 @@ export const eliminarSolicitudMultimedia = async (
       });
     }
 
-    // Buscar al usuario relacionado directamente
-    const usuarioId = solicitud.getDataValue("usuario_id");
-
-    const usuario = await Usuario.findByPk(usuarioId, {
-      attributes: [
-        "email",
-        "primerNombre",
-        "segundoNombre",
-        "primerApellido",
-        "segundoApellido",
-      ],
-    });
-
-    if (!usuario) {
-      await transaction.rollback();
-      return res.status(404).json({
-        ok: false,
-        msg: `No se encontró el usuario asociado a la solicitud con ID ${idSolicitud}`,
-      });
-    }
-
     // Actualizar la solicitud como eliminada
     solicitud.set({
       motivoDeNegacion,

@@ -15,6 +15,9 @@ import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
 import { Op } from "sequelize";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
+import db from "../database/connection";
+import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
+import { auditoriaUsuario } from "../database/usuario.associations";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -181,9 +184,53 @@ export const getUnaSolicitudMultimedia = async (
       solicitudDeAcceso,
       id,
     });
-  } else {
-    res.status(404).json({
-      msg: `No existe la solicitud con el id ${id}`,
+  }
+};
+
+export const obtenerSolicitudPorUsuario = async (
+  req: Request,
+  res: Response
+) => {
+  const { usuario_id } = req.query;
+
+  const transaction = await db.transaction();
+
+  try {
+    const solicitudExistente = await SolicitudMultimedia.findOne({
+      where: {
+        usuario_id,
+        estado: {
+          [Op.or]: [
+            SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
+            SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
+          ],
+        },
+      },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    if (solicitudExistente) {
+      return res.json({
+        ok: true,
+        msg: `Ya existe una solicitud multimedia para el feligrés con el número Mita: ${usuario_id}`,
+        usuario_id,
+      });
+    } else {
+      return res.json({
+        ok: false,
+        msg: `No existe una solicitud multimedia para el feligrés con el número Mita: ${usuario_id}`,
+        usuario_id,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al obtener la solicitud multimedia:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al obtener la solicitud multimedia.",
+      error,
     });
   }
 };
@@ -595,6 +642,77 @@ export const activarSolicitudMultimedia = async (
     res.status(500).json({
       error,
       msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const eliminarSolicitudMultimediaDeUnUsuario = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const { usuario_id } = req.query;
+
+  const transaction = await db.transaction();
+
+  try {
+    // Buscar la solicitud en estado APROBADA, PENDIENTE o EMAIL_NO_VERIFICADO
+    const solicitudes = await SolicitudMultimedia.findAll({
+      where: {
+        usuario_id,
+        estado: {
+          [Op.or]: [
+            SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
+            SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+            SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
+          ],
+        },
+      },
+      transaction,
+    });
+
+    if (solicitudes.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una solicitud en estado APROBADA, PENDIENTE o EMAIL_NO_VERIFICADO para el usuario con ID: ${usuario_id}`,
+      });
+    }
+
+    // Actualizar las solicitudes como eliminadas
+    for (const solicitud of solicitudes) {
+      await solicitud.update(
+        {
+          motivoDeNegacion: "Solicitud eliminada",
+          tiempoAprobacion: null,
+          estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
+          usuarioQueAprobo_id: req.id,
+        },
+        { transaction }
+      );
+
+      // Registrar en la auditoría
+      await auditoriaUsuario(
+        Number(usuario_id),
+        Number(req.id),
+        AUDITORIAUSUARIO_ENUM.ELIMINAR_SOLICITUD,
+        transaction
+      );
+    }
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Solicitudes eliminadas correctamente",
+      solicitudes,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al eliminar las solicitudes:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al eliminar las solicitudes.",
+      error,
     });
   }
 };
