@@ -484,7 +484,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
         <p>
           Ha registrado ${email} como cuenta de correo electrónico para <b>CMAR LIVE.</b> Por
           favor verifique su cuenta de correo electrónico haciendo clic en el
-          sifuiente enlace:
+          siguiente enlace:
         </p>
       
         <div
