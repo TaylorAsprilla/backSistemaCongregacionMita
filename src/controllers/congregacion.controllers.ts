@@ -238,9 +238,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
           ? idObreroEncargado
           : previousIdObreroEncargado,
       idObreroEncargadoDos:
-        idObreroEncargadoDos !== undefined
-          ? idObreroEncargadoDos
-          : previousIdObreroEncargadoDos,
+        idObreroEncargadoDos !== undefined ? idObreroEncargadoDos : null,
       email: email,
     };
 
