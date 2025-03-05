@@ -92,7 +92,7 @@ export const getUsuariosPorCongregacion = async (
   try {
     const idUsuario = Number(req.query.idUsuario);
 
-    // Validar si idusuario es un número válido
+    // Validar si idUsuario es un número válido
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
@@ -100,14 +100,14 @@ export const getUsuariosPorCongregacion = async (
       });
     }
 
-    // Buscar la congregación del obrero encargado y/o obrero auxiliar con el ID proporcionado
-    const [pais, congregacion, campo] = await Promise.all([
+    // Buscar todas las congregaciones y campos del obrero encargado y/o obrero auxiliar con el ID proporcionado
+    const [pais, congregaciones, campos] = await Promise.all([
       Pais.findOne({
         where: {
           idObreroEncargado: idUsuario,
         },
       }),
-      Congregacion.findOne({
+      Congregacion.findAll({
         where: {
           [Op.or]: [
             { idObreroEncargado: idUsuario },
@@ -115,7 +115,7 @@ export const getUsuariosPorCongregacion = async (
           ],
         },
       }),
-      Campo.findOne({
+      Campo.findAll({
         where: {
           [Op.or]: [
             { idObreroEncargado: idUsuario },
@@ -126,20 +126,20 @@ export const getUsuariosPorCongregacion = async (
     ]);
 
     // Verificar si el obrero encargado tiene asignada una congregación o campo
-    if (!pais && !congregacion && !campo) {
+    if (!pais && congregaciones.length === 0 && campos.length === 0) {
       return res.status(404).json({
         message: "El obrero no tiene asignada una congregación o campo.",
       });
     }
 
-    // Obtener el ID del país de la congregación y el ID del campo
+    // Obtener los IDs del país, congregaciones y campos
     const paisId = pais ? pais.getDataValue("id") : null;
-    const congregacionId = congregacion
-      ? congregacion.getDataValue("id")
-      : null;
-    const campoId = campo ? campo.getDataValue("id") : null;
+    const congregacionIds = congregaciones.map((congregacion) =>
+      congregacion.getDataValue("id")
+    );
+    const campoIds = campos.map((campo) => campo.getDataValue("id"));
 
-    // Obtener todos los usuarios asociados a esta congregación
+    // Obtener todos los usuarios asociados a estas congregaciones y campos
     const { count, rows } = await Usuario.findAndCountAll({
       attributes: [
         "id",
@@ -195,8 +195,8 @@ export const getUsuariosPorCongregacion = async (
         estado: ESTADO_USUARIO_ENUM.ACTIVO,
         [Op.or]: [
           { "$usuarioCongregacionPais.id$": paisId },
-          { "$usuarioCongregacionCongregacion.id$": congregacionId },
-          { "$usuarioCongregacionCampo.id$": campoId },
+          { "$usuarioCongregacionCongregacion.id$": congregacionIds },
+          { "$usuarioCongregacionCampo.id$": campoIds },
         ],
       },
     });

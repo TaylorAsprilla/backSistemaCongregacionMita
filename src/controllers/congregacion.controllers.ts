@@ -292,7 +292,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
 
     // Obtener el número de feligreses
     const numeroFeligreses = await UsuarioCongregacion.count({
-      where: { congregacion_id: id, estado: ESTADO_USUARIO_ENUM.ACTIVO },
+      where: { congregacion_id: id },
     });
 
     // Enviar correos electrónicos si los obreros cambiaron
