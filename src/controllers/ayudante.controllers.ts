@@ -33,6 +33,11 @@ export const getUsuariosRegistradosPorElUsuario = async (
         "fechaNacimiento",
         "email",
         "numeroCelular",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
         "estado",
       ],
       include: [
