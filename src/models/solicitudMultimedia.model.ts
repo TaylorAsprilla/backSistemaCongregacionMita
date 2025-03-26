@@ -81,9 +81,10 @@ const SolicitudMultimedia = db.define(
         SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
         SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
         SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
-        SOLICITUD_MULTIMEDIA_ENUM.CADUCADA
+        SOLICITUD_MULTIMEDIA_ENUM.CADUCADA,
+        SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO
       ),
-      defaultValue: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+      defaultValue: SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
       allowNull: false,
     },
     emailVerificado: {
@@ -117,7 +118,7 @@ const SolicitudMultimedia = db.define(
     },
     usuarioQueAprobo_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     terminos: {
       type: DataTypes.BOOLEAN,

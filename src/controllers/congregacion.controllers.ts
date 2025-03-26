@@ -12,6 +12,7 @@ import Campo from "../models/campo.model";
 import Usuario from "../models/usuario.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -139,7 +140,7 @@ export const crearCongregacion = async (req: Request, res: Response) => {
 
       await enviarEmail(
         emailObrero,
-        "Nueva Asignación de Congregación",
+        "Nueva Congregación Asignada",
         personalizarEmail
       );
     }
@@ -238,9 +239,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
           ? idObreroEncargado
           : previousIdObreroEncargado,
       idObreroEncargadoDos:
-        idObreroEncargadoDos !== undefined
-          ? idObreroEncargadoDos
-          : previousIdObreroEncargadoDos,
+        idObreroEncargadoDos !== undefined ? idObreroEncargadoDos : null,
       email: email,
     };
 

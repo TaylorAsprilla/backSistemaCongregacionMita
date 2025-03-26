@@ -5,10 +5,12 @@ import {
   actualizarPermisos,
   actualizarUsuario,
   crearUsuario,
-  eliminarUsuario,
+  transferirUsuario,
   getTodosLosUsuarios,
   getUsuario,
   getUsuarios,
+  eliminarUsuario,
+  transcendioUsuario,
 } from "../controllers/usuario.controllers";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
@@ -62,32 +64,12 @@ router.post(
   ],
   crearUsuario
 );
-router.put(
-  "/:id",
-  validarJWT,
-  [
-    check("primerNombre", "El primer nombre es obligatorio").not().isEmpty(),
-    check("primerApellido", "El primer apellido es obligatorio")
-      .not()
-      .isEmpty(),
-    check("fechaNacimiento", "La fecha de nacimiento es obligatoria")
-      .not()
-      .isEmpty(),
-    check("nacionalidad_id", "La nacionalidad es obligatoria").not().isEmpty(),
-    check("esJoven", "Selecciones si es o no joven").not().isEmpty(),
-    check("genero_id", "El género es obligatorio").not().isEmpty(),
-    check("estadoCivil_id", "El estado civil es obligatorio").not().isEmpty(),
-    check("rolCasa_id", "El rol es obligatorio").not().isEmpty(),
-    check("gradoAcademico_id", "El grado academico es obligatorio")
-      .not()
-      .isEmpty(),
-    check("tipoMiembro_id", "La tipo de miembro es obligatori").not().isEmpty(),
-    validarCampos,
-  ],
-  actualizarUsuario
-);
-router.delete("/:id", validarJWT, eliminarUsuario);
+
+router.put("/transcender/:id", validarJWT, transcendioUsuario);
+router.put("/transferir/:id", validarJWT, transferirUsuario);
 router.put("/activar/:id", validarJWT, activarUsuario);
 router.put("/actualizarpermisos/:id", validarJWT, actualizarPermisos);
+router.put("/:id", validarJWT, [], actualizarUsuario);
+router.delete("/:id", validarJWT, eliminarUsuario);
 
 export default router;

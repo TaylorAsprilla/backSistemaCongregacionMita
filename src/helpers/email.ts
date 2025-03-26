@@ -5,7 +5,7 @@ const environment = config[process.env.NODE_ENV || "development"];
 const { from, email } = environment.email;
 
 const enviarEmail = async (to: string, subject: string, html: string) => {
-  console.info("Enviando correos");
+  console.info("Enviando correos", to);
 
   try {
     const info = await transporter.sendMail({

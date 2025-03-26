@@ -20,6 +20,7 @@ import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
 import path from "path";
 import fs from "fs";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -38,6 +39,11 @@ export const getUsuarios = async (req: Request, res: Response) => {
         "fechaNacimiento",
         "email",
         "numeroCelular",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
         "estado",
       ],
       include: [
@@ -71,7 +77,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
         },
       ],
       where: {
-        estado: true,
+        estado: ESTADO_USUARIO_ENUM.ACTIVO,
       },
     });
 
@@ -101,7 +107,7 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
         },
       ],
       where: {
-        estado: true,
+        estado: ESTADO_USUARIO_ENUM.ACTIVO,
       },
     }),
     Usuario.count(),
@@ -156,7 +162,6 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       segundoNombre,
       primerApellido,
       segundoApellido,
-      numeroCelular,
       ministerios,
       voluntariados,
       congregacion,
@@ -408,7 +413,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
 
       await auditoriaUsuario(
         Number(id),
-        Number(idUsuarioQueRegistra),
+        Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
         transaction
       );
@@ -435,6 +440,100 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
   }
 };
 
+export const transferirUsuario = async (req: CustomRequest, res: Response) => {
+  const { body } = req;
+  const { id } = req.params;
+  const { campo_id, congregacion_id, pais_id } = body;
+  const idUsuarioActual = req.id;
+
+  const transaction = await db.transaction();
+
+  try {
+    const usuario = await Usuario.findByPk(id, { transaction });
+    if (usuario) {
+      await actualizarCongregacion(
+        Number(id),
+        pais_id,
+        congregacion_id,
+        campo_id,
+        transaction
+      );
+
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.TRANSFERENCIA,
+        transaction
+      );
+
+      await transaction.commit();
+      res.json({
+        ok: true,
+        msg: `Se trasferió el usuario ${id}`,
+        id,
+        usuario,
+      });
+    }
+
+    if (!usuario) {
+      return res.status(404).json({
+        msg: `Error al transferir el usuario`,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const transcendioUsuario = async (req: CustomRequest, res: Response) => {
+  const { id } = req.params;
+
+  const idUsuarioActual = req.id;
+
+  const transaction = await db.transaction();
+
+  try {
+    const usuario = await Usuario.findByPk(id, { transaction });
+    if (usuario) {
+      await usuario.update(
+        { estado: ESTADO_USUARIO_ENUM.TRANSCENDIO },
+        { transaction }
+      );
+
+      await auditoriaUsuario(
+        Number(id),
+        Number(idUsuarioActual),
+        AUDITORIAUSUARIO_ENUM.TRANSCENDIO,
+        transaction
+      );
+
+      await transaction.commit();
+      res.json({
+        ok: true,
+        msg: `El feligrés transcendió`,
+        id,
+        usuario,
+      });
+    }
+
+    if (!usuario) {
+      return res.status(404).json({
+        msg: `Error al trasender el feligrés`,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
 
@@ -444,7 +543,10 @@ export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
   try {
     const usuario = await Usuario.findByPk(id, { transaction });
     if (usuario) {
-      await usuario.update({ estado: false }, { transaction });
+      await usuario.update(
+        { estado: ESTADO_USUARIO_ENUM.ELIMINADO },
+        { transaction }
+      );
 
       await auditoriaUsuario(
         Number(id),
@@ -533,8 +635,11 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
       const segundoNombre = await usuario.get().segundoNombre;
       const primerApellido = await usuario.get().primerApellido;
 
-      if (usuario.get().estado === false) {
-        await usuario.update({ estado: true }, { transaction });
+      if (usuario.get().estado === ESTADO_USUARIO_ENUM.ELIMINADO) {
+        await usuario.update(
+          { estado: ESTADO_USUARIO_ENUM.ACTIVO },
+          { transaction }
+        );
 
         await auditoriaUsuario(
           Number(id),

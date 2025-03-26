@@ -15,6 +15,9 @@ import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
 import { Op } from "sequelize";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
+import db from "../database/connection";
+import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
+import { auditoriaUsuario } from "../database/usuario.associations";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -59,13 +62,16 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "motivoDeNegacion",
             "estado",
             "congregacionCercana",
             "observaciones",
             "createdAt",
           ],
           where: {
-            emailVerificado: true,
+            emailVerificado: {
+              [Op.ne]: null, // Asegurar de que el campo emailVerificado tenga un valor
+            },
           },
           include: [
             {
@@ -142,8 +148,11 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
       ],
     });
 
+    const numeroDeSolicitudes = solicitudDeAccesos.length;
+
     res.json({
       ok: true,
+      numeroDeSolicitudes,
       solicitudDeAccesos,
     });
   } catch (error) {
@@ -175,9 +184,53 @@ export const getUnaSolicitudMultimedia = async (
       solicitudDeAcceso,
       id,
     });
-  } else {
-    res.status(404).json({
-      msg: `No existe la solicitud con el id ${id}`,
+  }
+};
+
+export const obtenerSolicitudPorUsuario = async (
+  req: Request,
+  res: Response
+) => {
+  const { usuario_id } = req.query;
+
+  const transaction = await db.transaction();
+
+  try {
+    const solicitudExistente = await SolicitudMultimedia.findOne({
+      where: {
+        usuario_id,
+        estado: {
+          [Op.or]: [
+            SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
+            SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
+          ],
+        },
+      },
+      transaction,
+    });
+
+    await transaction.commit();
+
+    if (solicitudExistente) {
+      return res.json({
+        ok: true,
+        msg: `Ya existe una solicitud multimedia para el feligrés con el número Mita: ${usuario_id}`,
+        usuario_id,
+      });
+    } else {
+      return res.json({
+        ok: false,
+        msg: `No existe una solicitud multimedia para el feligrés con el número Mita: ${usuario_id}`,
+        usuario_id,
+      });
+    }
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al obtener la solicitud multimedia:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al obtener la solicitud multimedia.",
+      error,
     });
   }
 };
@@ -191,11 +244,22 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   try {
     // Obtener el país y la congregación a cargo del usuario
     const congregacionPais = await Pais.findOne({
-      where: { idObreroEncargado: usuario_id },
+      where: { idObreroEncargado: usuario_id, estado: true },
     });
 
     const congregacionCiudad = await Congregacion.findOne({
       where: {
+        estado: true,
+        [Op.or]: [
+          { idObreroEncargado: usuario_id },
+          { idObreroEncargadoDos: usuario_id },
+        ],
+      },
+    });
+
+    const congregacionCampo = await Campo.findOne({
+      where: {
+        estado: true,
         [Op.or]: [
           { idObreroEncargado: usuario_id },
           { idObreroEncargadoDos: usuario_id },
@@ -205,8 +269,9 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
 
     const pais_id = congregacionPais?.getDataValue("id");
     const congregacion_id = congregacionCiudad?.getDataValue("id");
+    const campo_id = congregacionCampo?.getDataValue("id");
 
-    if (!pais_id && !congregacion_id) {
+    if (!pais_id && !congregacion_id && !campo_id) {
       return res.status(400).json({
         ok: false,
         msg: "El usuario no tiene un país o congregación a cargo",
@@ -228,6 +293,10 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
     } else if (congregacion_id) {
       whereCondition = {
         "$usuarioCongregacion.congregacion_id$": congregacion_id,
+      };
+    } else if (campo_id) {
+      whereCondition = {
+        "$usuarioCongregacion.campo_id$": campo_id,
       };
     }
 
@@ -269,13 +338,16 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "motivoDeNegacion",
             "congregacionCercana",
             "estado",
             "observaciones",
             "createdAt",
           ],
           where: {
-            emailVerificado: true,
+            emailVerificado: {
+              [Op.ne]: null, // Asegurar de que el campo emailVerificado tenga un valor
+            },
           },
           include: [
             {
@@ -412,7 +484,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
         <p>
           Ha registrado ${email} como cuenta de correo electrónico para <b>CMAR LIVE.</b> Por
           favor verifique su cuenta de correo electrónico haciendo clic en el
-          sifuiente enlace:
+          siguiente enlace:
         </p>
       
         <div
@@ -532,122 +604,6 @@ export const actualizarSolicitudMultimedia = async (
   }
 };
 
-export const eliminarSolicitudMultimedia = async (
-  req: CustomRequest,
-  res: Response
-) => {
-  const { id } = req.params;
-  const { body } = req;
-
-  try {
-    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
-    if (solicitudDeAcceso) {
-      const nombre = await solicitudDeAcceso.get().nombre;
-      const email = await solicitudDeAcceso.get().email;
-      const motivoDeNegacion = await body.motivoDeNegacion;
-
-      solicitudDeAcceso.set({
-        estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
-        motivoDeNegacion,
-      });
-      await solicitudDeAcceso.save();
-
-      // =======================================================================
-      //                         Enviar Correo de Verificación
-      // =======================================================================
-      const html = `
-      <div
-          style="
-            max-width: 100%;
-            width: 600px;
-            margin: 0 auto;
-            box-sizing: border-box;
-            font-family: Arial, Helvetica, 'sans-serif';
-            font-weight: normal;
-            font-size: 16px;
-            line-height: 22px;
-            color: #252525;
-            word-wrap: break-word;
-            word-break: break-word;
-            text-align: justify;
-          "
-        >
-          <div style="text-align: center">
-            <img
-              src="${imagenEmail}"
-              alt="CMAR Multimedia"
-              style="text-align: center; width: 100px"
-            />
-          </div>
-          <h3>Solicitud de Acceso</h3>
-          <p>Hola, ${nombre}</p>
-          <p>
-            Hemos recibido su solicitud para poder acceder a <b>CMAR LIVE</b> para disfrutar de
-            los servicios, vigilias y eventos especiales de la Congregación Mita,
-            lamentablemente hemos revisado su solicitud y esta ha sido denegada.
-          </p>
-        
-          <b>Motivos:</b>
-          <p>${motivoDeNegacion}</p>
-        
-          <p>
-            En un futuro puede presentar nuevamente su solicitud, si es que considera
-            que algún factor en su solicitud original cambio para acceder a la
-            plataforma CMAR LIVE, recuerda también explicarle a su obrero o persona que
-            llene la solicitud sus motivos por el cual cualificaría para un acceso a la
-            plataforma CMAR LIVE.
-          </p>
-        
-          <div>
-            <p
-              style="
-                margin: 30px 0 12px 0;
-                padding: 0;
-                color: #252525;
-                font-family: Arial, Helvetica, 'sans-serif';
-                font-weight: normal;
-                word-wrap: break-word;
-                word-break: break-word;
-                font-size: 12px;
-                line-height: 16px;
-                color: #909090;
-              "
-            >
-              Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-              en contacto con nosotros mediante nuestro correo electrónico
-              <a href="mailto:cmar.live@congregacionmita.com">
-                cmar.live@congregacionmita.com</a
-              >
-            </p>
-        
-            <br />
-            Cordialmente, <br />
-            <b>Congregación Mita, Inc.</b>
-          </div>
-        </div>`;
-
-      await enviarEmail(email, "Solicitud de Acceso - CMAR Multimedia", html);
-
-      res.json({
-        ok: true,
-        msg: `La solicitud de acceso al canal de multimedia de ${nombre} se eliminó`,
-        id: id,
-      });
-    }
-
-    if (!solicitudDeAcceso) {
-      return res.status(404).json({
-        msg: `No existe una solicitud de acceso con el id ${id}`,
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      error,
-      msg: "Hable con el administrador",
-    });
-  }
-};
-
 export const activarSolicitudMultimedia = async (
   req: CustomRequest,
   res: Response
@@ -686,6 +642,77 @@ export const activarSolicitudMultimedia = async (
     res.status(500).json({
       error,
       msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const eliminarSolicitudMultimediaDeUnUsuario = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const { usuario_id } = req.query;
+
+  const transaction = await db.transaction();
+
+  try {
+    // Buscar la solicitud en estado APROBADA, PENDIENTE o EMAIL_NO_VERIFICADO
+    const solicitudes = await SolicitudMultimedia.findAll({
+      where: {
+        usuario_id,
+        estado: {
+          [Op.or]: [
+            SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
+            SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+            SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
+          ],
+        },
+      },
+      transaction,
+    });
+
+    if (solicitudes.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una solicitud en estado APROBADA, PENDIENTE o EMAIL_NO_VERIFICADO para el usuario con ID: ${usuario_id}`,
+      });
+    }
+
+    // Actualizar las solicitudes como eliminadas
+    for (const solicitud of solicitudes) {
+      await solicitud.update(
+        {
+          motivoDeNegacion: "Solicitud eliminada",
+          tiempoAprobacion: null,
+          estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
+          usuarioQueAprobo_id: req.id,
+        },
+        { transaction }
+      );
+
+      // Registrar en la auditoría
+      await auditoriaUsuario(
+        Number(usuario_id),
+        Number(req.id),
+        AUDITORIAUSUARIO_ENUM.ELIMINAR_SOLICITUD,
+        transaction
+      );
+    }
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Solicitudes eliminadas correctamente",
+      solicitudes,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al eliminar las solicitudes:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al eliminar las solicitudes.",
+      error,
     });
   }
 };
@@ -734,8 +761,15 @@ export const validarEmail = async (req: CustomRequest, res: Response) => {
     if (!!verificarStatus) {
       const nombre = await verificarStatus.get().nombre;
 
-      if (verificarStatus.get().emailVerificado === false) {
-        await verificarStatus.update({ emailVerificado: true });
+      if (
+        verificarStatus.get().emailVerificado === false ||
+        verificarStatus.get().emailVerificado ===
+          SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO
+      ) {
+        await verificarStatus.update({
+          emailVerificado: true,
+          estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+        });
         res.json({
           ok: true,
           msg: `El correo electrónico de ${nombre} esta verificado`,

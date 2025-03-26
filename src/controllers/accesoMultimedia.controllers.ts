@@ -13,6 +13,9 @@ import fs from "fs";
 import { auditoriaUsuario } from "../database/usuario.associations";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
+import { CustomRequest } from "../middlewares/validar-jwt";
+import { Op } from "sequelize";
+import { format } from "date-fns";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -20,90 +23,138 @@ const imagenEmail = environment.imagenEmail;
 const urlCmarLive = environment.urlCmarLive;
 
 export const crearAccesoMultimedia = async (req: Request, res: Response) => {
-  const { body } = req;
   const {
-    login,
-    password,
     solicitud_id,
     tiempoAprobacion,
     usuarioQueAprobo_id,
+    login,
+    password,
   } = req.body;
 
   let nombre: string = "";
   let email: string = "";
   let tiempoAprobacionDate = new Date(tiempoAprobacion);
+  const formattedTiempoAprobacion = format(tiempoAprobacionDate, "yyyy-MM-dd");
 
   const transaction = await db.transaction();
 
   // =======================================================================
-  //                          Validaciones
+  //                          Validar Solicitud
   // =======================================================================
   try {
-    const existeSolicitud = await SolicitudMultimedia.findByPk(solicitud_id);
+    const solicitud = await SolicitudMultimedia.findByPk(solicitud_id);
 
-    if (!existeSolicitud) {
+    if (!solicitud) {
       return res.status(400).json({
         ok: false,
         msg: `No existe una solicitud diligenciada para el usuario ID: ${solicitud_id}`,
       });
     }
 
+    const usuario_id = solicitud.getDataValue("usuario_id");
+    const usuario = await Usuario.findByPk(usuario_id);
+
+    if (!usuario) {
+      return res.status(400).json({
+        ok: false,
+        msg: `No existe un usuario asociado al ID: ${usuario_id}`,
+      });
+    }
+
+    email = usuario.getDataValue("email");
+    nombre = `
+      ${usuario.getDataValue("primerNombre")} 
+      ${usuario.getDataValue("segundoNombre")} 
+      ${usuario.getDataValue("primerApellido")} 
+      ${usuario.getDataValue("segundoApellido")}
+    `.trim();
+
+    // =======================================================================
+    //                Validar que el Login no esté duplicado
+    // =======================================================================
+
     if (login) {
       const existeLogin = await Usuario.findOne({
         where: {
-          login: login,
+          login,
+          id: { [Op.ne]: usuario_id }, // Excluir al usuario actual
         },
-        transaction,
       });
 
       if (existeLogin) {
         return res.status(400).json({
           ok: false,
-          msg: `Ya existe un usuario con el login <b>${login}</b>`,
+          msg: `Ya existe un usuario con el login "${login}".`,
         });
       }
     }
 
     // =======================================================================
-    //                          Guardar Usuario
+    //             Crear o Actualizar Credenciales del Usuario
     // =======================================================================
 
-    // Encriptar contraseña
-    if (password) {
+    const usuarioLogin = usuario.getDataValue("login");
+    const usuarioPassword = usuario.getDataValue("password");
+    let mensajeCorreo: string;
+
+    if (!usuarioLogin || !usuarioPassword) {
+      // Crear nuevas credenciales
       const salt = bcrypt.genSaltSync();
-      body.password = bcrypt.hashSync(password, salt);
+      const hashedPassword = bcrypt.hashSync(password, salt);
+
+      await Usuario.update(
+        { login, password: hashedPassword },
+        {
+          where: { id: usuario_id },
+          transaction,
+        }
+      );
+
+      mensajeCorreo = `<p><b>Credenciales de ingreso:</b></p>
+                        <ul style="list-style: none">
+                          <li>
+                            <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
+                          </li>
+                          <li><b>Usuario:&nbsp; </b> ${login}</li>
+                          <li><b>Contraseña:&nbsp;</b> ${password}</li>
+                          <li><b>Tiempo de aprobación:&nbsp;</b> ${formattedTiempoAprobacion}</li>
+                        </ul>`;
+    } else {
+      // Mantener las credenciales existentes
+      mensajeCorreo = `
+                      <h4>Información importante sobre sus credenciales</h4>
+                      <p>
+                        Nos complace informarle que sus credenciales de acceso se mantienen sin cambios, ya que ya dispone de un usuario registrado en nuestra plataforma.
+                      </p>
+                      <ul>
+                        <li><b>Usuario:</b> ${usuarioLogin}</li>
+                        <li><b>Tiempo de aprobación:&nbsp;</b> ${formattedTiempoAprobacion}</li>
+                      </ul>
+                      <p>
+                        En caso de no recordar su contraseña, puede restablecerla fácilmente seleccionando la opción <b>"Olvidé mi contraseña"</b> en la plataforma.
+                      </p>
+                    `;
     }
 
-    const usuario_id = existeSolicitud.getDataValue("usuario_id");
+    // =======================================================================
+    //                Actualizar Solicitud y Asignar Permisos
+    // =======================================================================
 
-    await Usuario.update(
-      { login, password: body.password },
-      {
-        where: {
-          id: usuario_id,
-        },
-        transaction,
-      }
-    );
-
-    const actualizado = await SolicitudMultimedia.update(
+    await SolicitudMultimedia.update(
       {
         tiempoAprobacion: tiempoAprobacionDate,
         usuarioQueAprobo_id,
         estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       },
       {
-        where: {
-          usuario_id,
-        },
-
+        where: { id: solicitud_id },
         transaction,
       }
     );
 
     await UsuarioPermiso.create(
       {
-        usuario_id: usuario_id,
+        usuario_id,
         permiso_id: ROLES_ID.MULTIMEDIA,
       },
       { transaction }
@@ -116,31 +167,13 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       transaction
     );
 
-    const usuario = await Usuario.findByPk(usuario_id, { transaction });
+    await transaction.commit();
 
-    if (!usuario) {
-      return res.status(400).json({
-        ok: false,
-        msg: `No existe un usuario con el ${usuario_id}`,
-      });
-    }
+    // =======================================================================
+    //                          Correo Electrónico
+    // =======================================================================
 
-    if (usuario) {
-      nombre = `
-      ${usuario.getDataValue("primerNombre")} 
-      ${usuario.getDataValue("segundoNombre")} 
-      ${usuario.getDataValue("primerApellido")} 
-      ${usuario.getDataValue("segundoApellido")}
-      `;
-
-      email = usuario.getDataValue("email");
-
-      await transaction.commit();
-      // =======================================================================
-      //                          Correo Electrónico
-      // =======================================================================
-
-      const html = `
+    const html = `
                 <div
                     style="
                       max-width: 100%;
@@ -172,15 +205,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                     </p>
                   
                     <div>
-                      <p><b>Credenciales de ingreso:</b></p>
-                      <ul style="list-style: none">
-                        <li>
-                          <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
-                        </li>
-                        <li><b>Usuario:&nbsp; </b> ${login}</li>
-                        <li><b>Contraseña:&nbsp;</b> ${password}</li>
-                        <li><b>Tiempo de aprobación:&nbsp;</b> ${tiempoAprobacion}</li>
-                      </ul>
+                       <p>${mensajeCorreo}</p>
                   
                       <p>
                         Recuerde que estas credenciales son personales, para uso único y exclusivo
@@ -216,19 +241,19 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                     </div>
                   </div>`;
 
-      await enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
-    }
+    await enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
 
     res.json({
       ok: true,
-      msg: "Acceso Multimedia creado ",
-      solicitud: existeSolicitud,
-      actualizado,
+      msg: "Acceso Multimedia creado correctamente.",
+      solicitud,
     });
   } catch (error) {
     await transaction.rollback();
+    console.error(error);
     res.status(500).json({
-      msg: "Hable con el administrador",
+      ok: false,
+      msg: "Error al crear el acceso multimedia. Comuníquese con el administrador.",
       error,
     });
   }
@@ -408,7 +433,7 @@ export const crearAccesoCongregacionMultimedia = async (
 };
 
 export const denegarSolicitudMultimedia = async (
-  req: Request,
+  req: CustomRequest,
   res: Response
 ) => {
   const { solicitud_id, motivoDeNegacion } = req.body;
@@ -428,18 +453,17 @@ export const denegarSolicitudMultimedia = async (
     }
 
     // Buscar al usuario relacionado directamente
-    const usuario = await Usuario.findByPk(
-      solicitud.getDataValue("usuario_id"),
-      {
-        attributes: [
-          "email",
-          "primerNombre",
-          "segundoNombre",
-          "primerApellido",
-          "segundoApellido",
-        ],
-      }
-    );
+    const usuarioId = solicitud.getDataValue("usuario_id");
+
+    const usuario = await Usuario.findByPk(usuarioId, {
+      attributes: [
+        "email",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+      ],
+    });
 
     if (!usuario) {
       await transaction.rollback();
@@ -447,6 +471,54 @@ export const denegarSolicitudMultimedia = async (
         ok: false,
         msg: `No se encontró el usuario asociado a la solicitud con ID ${solicitud_id}`,
       });
+    }
+
+    // Verificar permisos del usuario
+    const permisos = await UsuarioPermiso.findAll({
+      where: { usuario_id: usuarioId },
+      attributes: ["permiso_id"],
+    });
+
+    const permisoIds = permisos.map((permiso) =>
+      permiso.getDataValue("permiso_id")
+    );
+
+    if (permisoIds.includes(Number(ROLES_ID.MULTIMEDIA))) {
+      if (permisoIds.length > 1) {
+        // Eliminar solo el permiso 6 (MULTIMEDIA)
+        await UsuarioPermiso.destroy({
+          where: {
+            usuario_id: usuarioId,
+            permiso_id: Number(ROLES_ID.MULTIMEDIA),
+          },
+          transaction,
+        });
+      } else if (
+        permisoIds.length === 1 &&
+        permisoIds[0] === Number(ROLES_ID.MULTIMEDIA)
+      ) {
+        // Si solo tiene el permiso 6, eliminar usuario y credenciales
+        await UsuarioPermiso.destroy({
+          where: {
+            usuario_id: usuarioId,
+            permiso_id: Number(ROLES_ID.MULTIMEDIA),
+          },
+          transaction,
+        });
+
+        await Usuario.update(
+          {
+            login: null,
+            password: null,
+          },
+          {
+            where: {
+              id: usuarioId,
+            },
+            transaction,
+          }
+        );
+      }
     }
 
     const email = usuario.getDataValue("email");
@@ -463,6 +535,7 @@ export const denegarSolicitudMultimedia = async (
       motivoDeNegacion,
       tiempoAprobacion: null,
       estado: SOLICITUD_MULTIMEDIA_ENUM.DENEGADA,
+      usuarioQueAprobo_id: req.id,
     });
 
     await solicitud.save({ transaction });
@@ -489,6 +562,63 @@ export const denegarSolicitudMultimedia = async (
       .replace("{{motivoDeNegacion}}", motivoDeNegacion);
 
     await enviarEmail(email, "Solicitud Denegada", personalizarEmail);
+
+    return res.status(200).json({
+      ok: true,
+      msg: "Solicitud denegada correctamente y correo enviado",
+      solicitud,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Error al denegar la solicitud:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hubo un error al denegar la solicitud.",
+    });
+  }
+};
+
+export const eliminarSolicitudMultimedia = async (
+  req: CustomRequest,
+  res: Response
+) => {
+  const transaction = await db.transaction();
+
+  const { id } = req.params;
+
+  const idSolicitud = req.params.id;
+  const motivoDeNegacion = "Solicitud eliminada";
+
+  try {
+    // Buscar la solicitud
+    const solicitud = await SolicitudMultimedia.findByPk(idSolicitud);
+
+    if (!solicitud) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe la solicitud con el id ${idSolicitud}`,
+      });
+    }
+
+    // Actualizar la solicitud como eliminada
+    solicitud.set({
+      motivoDeNegacion,
+      tiempoAprobacion: null,
+      estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
+      usuarioQueAprobo_id: req.id,
+    });
+
+    await auditoriaUsuario(
+      solicitud.getDataValue("usuario_id"),
+      Number(req.id),
+      AUDITORIAUSUARIO_ENUM.ELIMINAR_SOLICITUD,
+      transaction
+    );
+
+    await solicitud.save({ transaction });
+
+    await transaction.commit();
 
     return res.status(200).json({
       ok: true,
