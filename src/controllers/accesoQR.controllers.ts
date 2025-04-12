@@ -6,37 +6,87 @@ import useragent from "useragent";
 import generarJWT from "../helpers/tokenJwt";
 import QrAccesos from "../models/qrAccesos";
 import Congregacion from "../models/congregacion.model";
+import config from "../config/config";
+import sharp from "sharp";
+import axios from "axios";
+
+const environment = config[process.env.NODE_ENV || "development"];
 
 export const generarQrCode = async (req: Request, res: Response) => {
   const { idCongregacion, descripcion } = req.body;
 
-  if (!idCongregacion) {
-    return res.status(400).json({ ok: false, msg: "idCongregacion requerido" });
+  // Validar que idCongregacion sea un número válido
+  if (!idCongregacion || typeof idCongregacion !== "number") {
+    return res.status(400).json({ ok: false, msg: "idCongregacion inválido" });
   }
 
-  const randomId = uuidv4().slice(0, 6).toUpperCase();
+  // Generar el código QR único
   const year = new Date().getFullYear();
-  const qrCode = `QR-CMARLIVE-${year}-${randomId}`;
+  const randomId = uuidv4().replace(/-/g, "").toUpperCase();
+  const qrCode = `${process.env.PREFIJO_QR || "QR"}-${year}-${randomId}`;
+  const baseUrl =
+    environment.loginPorQr || "https://cmar.live/sistemacmi/#/qr-login?ticket=";
+  const qrUrl = `${baseUrl}${qrCode}`;
 
   try {
-    // Generar imagen QR (base64)
-    const qrImage = await QRCode.toDataURL(qrCode);
-
-    // Guardar en BD
-    await QrCodigos.create({
-      qrCode,
-      descripcion,
-      idCongregacion,
+    // 1. Generar imagen del QR como buffer
+    const qrBuffer = await QRCode.toBuffer(qrUrl, {
+      width: 800,
+      margin: 2,
+      color: {
+        dark: "#1976d2",
+        light: "#ffffff",
+      },
     });
 
+    // 2. Cargar el QR generado con Sharp
+    let qrImage = sharp(qrBuffer);
+
+    // 3. Cargar el logo desde la URL
+    const logoUrl = environment.imagenEmail;
+    const logoResponse = await axios.get(logoUrl, {
+      responseType: "arraybuffer",
+    });
+
+    // Convertir la respuesta de axios a un buffer que Sharp pueda usar
+    const logoBuffer = Buffer.from(logoResponse.data);
+
+    // 4. Redimensionar el logo (ajusta según necesidad)
+    const resizedLogo = await sharp(logoBuffer).resize(100, 100).toBuffer();
+
+    // 5. Componer el logo en el centro del QR
+    qrImage = qrImage.composite([
+      {
+        input: resizedLogo,
+        gravity: "center", // Coloca el logo en el centro del QR
+      },
+    ]);
+
+    // 6. Convertir la imagen final a base64
+    const qrImageBase64 = await qrImage.png().toBuffer();
+    const qrImageBase64Encoded = qrImageBase64.toString("base64");
+
+    // 7. Guardar en la base de datos
+    await QrCodigos.create({
+      qrCode,
+      descripcion: descripcion || null,
+      idCongregacion,
+      activo: true,
+    });
+
+    // 8. Responder al cliente
     res.json({
       ok: true,
       qrCode,
-      qrImage,
+      qrUrl,
+      qrImage: qrImageBase64Encoded,
     });
   } catch (error) {
     console.error("Error generando el QR:", error);
-    res.status(500).json({ ok: false, msg: "Error al generar el QR" });
+    res.status(500).json({
+      ok: false,
+      msg: "Error interno, contacte al administrador",
+    });
   }
 };
 
@@ -54,9 +104,12 @@ export const loginPorQr = async (req: Request, res: Response) => {
   }
 
   try {
-    const qr = await QrCodigos.findOne({ where: { qrCode, activo: true } });
+    const qr = await QrCodigos.findOne({
+      where: { qrCode, activo: true },
+      include: [{ model: Congregacion }],
+    });
 
-    if (!qr) {
+    if (!qr || !qr.get("idCongregacion")) {
       return res
         .status(404)
         .json({ ok: false, msg: "Código QR no válido o inactivo" });
@@ -91,6 +144,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
       ok: true,
       token,
       congregacion,
+      nombre,
     });
   } catch (error) {
     console.error("Error al hacer login por QR:", error);

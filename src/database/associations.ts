@@ -10,6 +10,7 @@ import OpcionTransporte from "../models/opcionTransporte.model";
 import Pais from "../models/pais.model";
 import Parentesco from "../models/parentesco.model";
 import Permiso from "../models/permiso.model";
+import QrCodigos from "../models/qrCodigos.model";
 import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
@@ -184,4 +185,9 @@ UsuarioCongregacion.belongsTo(Congregacion, {
 UsuarioCongregacion.belongsTo(Campo, {
   foreignKey: "campo_id",
   as: "campo",
+});
+
+QrCodigos.belongsTo(Congregacion, {
+  foreignKey: "idCongregacion",
+  targetKey: "id",
 });

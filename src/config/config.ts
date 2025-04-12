@@ -27,6 +27,8 @@ const config: any = {
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
     ip: "92.214.55.43",
+    loginPorQr:
+      process.env.LOGIN_POR_QR_DEV || "http://localhost:4200/#/login?ticket=",
     whiteList: ["http://localhost:4200"],
   },
   qa: {
@@ -54,6 +56,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
+    loginPorQr: process.env.LOGIN_POR_QR_QA,
     whiteList: [
       "http://localhost:4200",
       "https://qa.cmar.live",
@@ -87,6 +90,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
+    loginPorQr: process.env.LOGIN_POR_QR_PROD,
     whiteList: [
       "http://localhost:4200",
       "https://cmar.live",
