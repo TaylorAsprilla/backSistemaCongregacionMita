@@ -66,7 +66,18 @@ export const generarQrCode = async (req: Request, res: Response) => {
     const qrImageBase64 = await qrImage.png().toBuffer();
     const qrImageBase64Encoded = qrImageBase64.toString("base64");
 
-    // 7. Guardar en la base de datos
+    // 7a. Desactivar QR anteriores de la misma congregación
+    await QrCodigos.update(
+      { activo: false },
+      {
+        where: {
+          idCongregacion,
+          activo: true,
+        },
+      }
+    );
+
+    // 7b. Guardar en la base de datos el nuevo QR
     await QrCodigos.create({
       qrCode,
       descripcion: descripcion || null,
