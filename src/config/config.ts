@@ -3,10 +3,10 @@ require("dotenv").config();
 const config: any = {
   development: {
     database: {
-      username: process.env.DB_USERNAME || "u434635530_tasprilla",
-      password: process.env.DB_PASSWORD || "0GgQuZy^F9v",
-      database: process.env.DB_DATABASE || "u434635530_informesCMI",
-      host: process.env.DB_HOST || "212.1.211.203",
+      username: process.env.DB_USERNAME_DEV,
+      password: process.env.DB_PASSWORD_DEV,
+      database: process.env.DB_DATABASE_DEV,
+      host: process.env.DB_HOST_DEV,
       dialect: process.env.DB_DIALECT || "mysql",
       sinCongregacion: process.env.SIN_CONGREGACION || 1,
       sinCampo: process.env.SIN_CAMPO || 1,
@@ -27,6 +27,8 @@ const config: any = {
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
     ip: "92.214.55.43",
+    loginPorQr:
+      process.env.LOGIN_POR_QR_DEV || "http://localhost:4200/#/login?ticket=",
     whiteList: ["http://localhost:4200"],
   },
   qa: {
@@ -54,6 +56,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
+    loginPorQr: process.env.LOGIN_POR_QR_QA,
     whiteList: [
       "http://localhost:4200",
       "https://qa.cmar.live",
@@ -87,6 +90,7 @@ const config: any = {
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
+    loginPorQr: process.env.LOGIN_POR_QR_PROD,
     whiteList: [
       "http://localhost:4200",
       "https://cmar.live",

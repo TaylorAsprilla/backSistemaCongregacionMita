@@ -43,6 +43,7 @@ import parentescoRoutes from "./routes/parentesco.routes";
 import usuarioCongregacionRoutes from "./routes/usuarioCongregacion.routes";
 import ayudanteRoutes from "./routes/ayudante.routes";
 import emailRoutes from "./routes/email.routes";
+import accesoQrRoutes from "./routes/accesoQR.routes";
 
 import cors from "cors";
 import db from "./database/connection";
@@ -104,6 +105,7 @@ class Server {
     usuarioCongregacion: "/api/usuariocongregacion",
     ayudante: "/api/ayudante",
     email: "/api/email",
+    accesoQr: "/api/accesoqr",
   };
 
   constructor() {
@@ -191,6 +193,7 @@ class Server {
     this.app.use(this.apiPaths.usuarioCongregacion, usuarioCongregacionRoutes);
     this.app.use(this.apiPaths.ayudante, ayudanteRoutes);
     this.app.use(this.apiPaths.email, emailRoutes);
+    this.app.use(this.apiPaths.accesoQr, accesoQrRoutes);
   }
 
   listen() {
