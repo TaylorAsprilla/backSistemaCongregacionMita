@@ -88,8 +88,6 @@ export const generarQrCode = async (req: Request, res: Response) => {
     // 8. Responder al cliente
     res.json({
       ok: true,
-      qrCode,
-      qrUrl,
       qrImage: qrImageBase64Encoded,
     });
   } catch (error) {
