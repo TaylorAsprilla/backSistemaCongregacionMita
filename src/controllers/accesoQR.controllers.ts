@@ -25,7 +25,7 @@ export const generarQrCode = async (req: Request, res: Response) => {
   const randomId = uuidv4().replace(/-/g, "").toUpperCase();
   const qrCode = `${process.env.PREFIJO_QR || "QR"}-${year}-${randomId}`;
   const baseUrl =
-    environment.loginPorQr || "https://cmar.live/sistemacmi/#/qr-login?ticket=";
+    environment.loginPorQr || "https://cmar.live/sistemacmi/#/login?ticket=";
   const qrUrl = `${baseUrl}${qrCode}`;
 
   try {
