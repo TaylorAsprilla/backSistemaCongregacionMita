@@ -98,6 +98,11 @@ const UbicacionConexion = db.define(
       },
       allowNull: true,
     },
+    isLoginCodeQr: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,

@@ -9,42 +9,51 @@ export async function guardarInformacionConexion(
   ipAddress: string,
   userAgent: string,
   loginUsuario: any = null,
-  loginCongregacion: any = null
+  loginCongregacion: any = null,
+  isLoginCodeQr: boolean = false
 ) {
   try {
+    if (!ipAddress || !userAgent) {
+      throw new Error("IP o UserAgent inválido");
+    }
+
     const deviceDetector = new DeviceDetector();
     const deviceResult = deviceDetector.parse(userAgent);
 
     const location = await obtenerUbicacionPorIP(ipAddress);
 
-    if (location.status === "success") {
-      const ubicacion = {
-        ...location,
-        userAgent,
-        navegador: deviceResult.client?.name || "Desconocido",
-        tipoDispositivo: deviceResult.device?.type || "Desconocido",
-        dispositivo: deviceResult.device?.model || "Desconocido",
-        marca: deviceResult.device?.brand || "Desconocido",
-        modelo: deviceResult.device?.model || "Desconocido",
-        so: deviceResult.os?.name || "Desconocido",
-        version: deviceResult.os?.version || "Desconocido",
-        plataforma: deviceResult.os?.platform || "Desconocido",
-        motorNavegador:
-          deviceResult.client?.type === "browser"
-            ? (deviceResult.client as BrowserResult).engine || "Desconocido"
-            : "Desconocido",
-        idUsuario:
-          loginUsuario instanceof Usuario
-            ? loginUsuario.getDataValue("id")
-            : null,
-        idCongregacion:
-          loginCongregacion instanceof Congregacion
-            ? loginCongregacion.getDataValue("id")
-            : null,
-      };
-
-      await UbicacionConexion.create(ubicacion);
+    if (location.status !== "success") {
+      console.warn("No se pudo determinar la ubicación por IP");
+      return;
     }
+
+    const ubicacion = {
+      ...location,
+      userAgent,
+      navegador: deviceResult.client?.name || "Desconocido",
+      tipoDispositivo: deviceResult.device?.type || "Desconocido",
+      dispositivo: deviceResult.device?.model || "Desconocido",
+      marca: deviceResult.device?.brand || "Desconocido",
+      modelo: deviceResult.device?.model || "Desconocido",
+      so: deviceResult.os?.name || "Desconocido",
+      version: deviceResult.os?.version || "Desconocido",
+      plataforma: deviceResult.os?.platform || "Desconocido",
+      motorNavegador:
+        deviceResult.client?.type === "browser"
+          ? (deviceResult.client as BrowserResult).engine || "Desconocido"
+          : "Desconocido",
+      idUsuario:
+        loginUsuario instanceof Usuario
+          ? loginUsuario.getDataValue("id")
+          : null,
+      idCongregacion:
+        loginCongregacion instanceof Congregacion
+          ? loginCongregacion.getDataValue("id")
+          : null,
+      isLoginCodeQr,
+    };
+
+    await UbicacionConexion.create(ubicacion);
   } catch (error) {
     console.error(
       "Error al obtener la ubicación por IP: guardarInformacionConexion",
