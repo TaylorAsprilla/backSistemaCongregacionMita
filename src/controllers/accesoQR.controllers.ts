@@ -9,6 +9,7 @@ import Congregacion from "../models/congregacion.model";
 import config from "../config/config";
 import sharp from "sharp";
 import axios from "axios";
+import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -101,10 +102,14 @@ export const generarQrCode = async (req: Request, res: Response) => {
 
 export const loginPorQr = async (req: Request, res: Response) => {
   const { qrCode, nombre } = req.body;
-  const ip =
-    req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  let ip = (
+    req.ip ||
+    req.headers["x-forwarded-for"] ||
+    req.socket.remoteAddress ||
+    ""
+  ).toString();
   const userAgentRaw = req.headers["user-agent"] || "";
-  const agent = useragent.parse(userAgentRaw);
+  let agent = useragent.parse(userAgentRaw);
 
   if (!qrCode || !nombre) {
     return res
@@ -144,10 +149,16 @@ export const loginPorQr = async (req: Request, res: Response) => {
     await QrAccesos.create({
       idQrCode: qr.getDataValue("id"),
       nombre,
-      ip,
+      ip, // Ensure ip is a string
       userAgent: userAgentRaw,
       dispositivo: `${agent.os.toString()} - ${agent.device.toString()}`,
     });
+
+    try {
+      await guardarInformacionConexion(ip, userAgentRaw, null, null, true);
+    } catch (error) {
+      console.error("Error al guardar información de conexión:", error);
+    }
 
     res.json({
       ok: true,

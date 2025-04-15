@@ -11,6 +11,7 @@
     "deploy:prod": "eb deploy Sistemacmi-env",
     "dist": "sh ./scripts/dist.sh",
     "clean": "rm -rf build",
+    "clean-modules": "rm -rf node_modules",
     "copy-templates": "copyfiles src/templates/* build/",
     "copy-assets": "copyfiles src/assets/**/* build/"
   },

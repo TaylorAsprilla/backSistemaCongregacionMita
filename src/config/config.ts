@@ -29,7 +29,7 @@ const config: any = {
     ip: "92.214.55.43",
     loginPorQr:
       process.env.LOGIN_POR_QR_DEV || "http://localhost:4200/#/login?ticket=",
-    whiteList: ["http://localhost:4200"],
+    whiteList: ["http://localhost:4200", "http://localhost:56046"],
   },
   qa: {
     database: {
