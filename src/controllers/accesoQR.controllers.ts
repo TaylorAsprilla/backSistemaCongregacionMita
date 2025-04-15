@@ -102,14 +102,14 @@ export const generarQrCode = async (req: Request, res: Response) => {
 
 export const loginPorQr = async (req: Request, res: Response) => {
   const { qrCode, nombre } = req.body;
-  let ip = (
+  const ip = (
     req.ip ||
     req.headers["x-forwarded-for"] ||
     req.socket.remoteAddress ||
     ""
   ).toString();
   const userAgentRaw = req.headers["user-agent"] || "";
-  let agent = useragent.parse(userAgentRaw);
+  const agent = useragent.parse(userAgentRaw);
 
   if (!qrCode || !nombre) {
     return res
@@ -154,11 +154,22 @@ export const loginPorQr = async (req: Request, res: Response) => {
       dispositivo: `${agent.os.toString()} - ${agent.device.toString()}`,
     });
 
-    try {
-      await guardarInformacionConexion(ip, userAgentRaw, null, null, true);
-    } catch (error) {
-      console.error("Error al guardar información de conexión:", error);
-    }
+    // Guardar información extendida de conexión
+    guardarInformacionConexion(
+      ip,
+      userAgentRaw,
+      null,
+      congregacion,
+      true
+    ).catch((err) =>
+      console.error("Error al guardar información de conexión:", err)
+    );
+
+    console.info(
+      `Login QR exitoso: ${nombre}, Congregación: ${congregacion.getDataValue(
+        "congregacion"
+      )}, IP: ${ip}, Dispositivo: ${agent.os} - ${agent.device}`
+    );
 
     res.json({
       ok: true,
