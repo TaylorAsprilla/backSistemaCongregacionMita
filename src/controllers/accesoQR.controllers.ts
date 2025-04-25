@@ -13,6 +13,78 @@ import { guardarInformacionConexion } from "../helpers/guardarInformacionConexio
 
 const environment = config[process.env.NODE_ENV || "development"];
 
+export const getUltimoQrGenerado = async (req: Request, res: Response) => {
+  try {
+    // Buscar el último QR generado basado en la columna `creado_en`
+    const ultimoQr = await QrCodigos.findOne({
+      order: [["createdAt", "DESC"]], // Ordenar por la fecha de creación en orden descendente
+    });
+
+    // Verificar si existe un QR generado
+    if (!ultimoQr) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No se encontró ningún código QR generado.",
+      });
+    }
+
+    // Generar la URL del QR
+    const baseUrl =
+      environment.loginPorQr || "https://cmar.live/sistemacmi/#/login?ticket=";
+    const qrUrl = `${baseUrl}${ultimoQr.getDataValue("qrCode")}`;
+
+    // Generar la imagen del QR como buffer
+    const qrBuffer = await QRCode.toBuffer(qrUrl, {
+      width: 800,
+      margin: 2,
+      color: {
+        dark: "#1976d2",
+        light: "#ffffff",
+      },
+    });
+
+    // Cargar el QR generado con Sharp
+    let qrImage = sharp(qrBuffer);
+
+    // Cargar el logo desde la URL
+    const logoUrl =
+      environment.logoQR ||
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg";
+    const logoResponse = await axios.get(logoUrl, {
+      responseType: "arraybuffer",
+    });
+
+    // Convertir la respuesta de axios a un buffer que Sharp pueda usar
+    const logoBuffer = Buffer.from(logoResponse.data);
+
+    // Redimensionar el logo
+    const resizedLogo = await sharp(logoBuffer).resize(100, 100).toBuffer();
+
+    // Componer el logo en el centro del QR
+    qrImage = qrImage.composite([
+      {
+        input: resizedLogo,
+        gravity: "center", // Coloca el logo en el centro del QR
+      },
+    ]);
+
+    // Convertir la imagen final a base64
+    const qrImageBase64 = await qrImage.png().toBuffer();
+    const qrImageBase64Encoded = qrImageBase64.toString("base64");
+
+    res.json({
+      ok: true,
+      qr: ultimoQr,
+      qrImage: qrImageBase64Encoded, // Imagen del QR en formato base64
+    });
+  } catch (error) {
+    console.error("Error al obtener el último QR generado:", error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error interno, contacte al administrador.",
+    });
+  }
+};
 export const generarQrCode = async (req: Request, res: Response) => {
   const { idCongregacion, descripcion } = req.body;
 
@@ -44,7 +116,9 @@ export const generarQrCode = async (req: Request, res: Response) => {
     let qrImage = sharp(qrBuffer);
 
     // 3. Cargar el logo desde la URL
-    const logoUrl = environment.imagenEmail;
+    const logoUrl =
+      environment.logoQR ||
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg";
     const logoResponse = await axios.get(logoUrl, {
       responseType: "arraybuffer",
     });

@@ -1,0 +1,6 @@
+export enum GRUPOGEMELOS {
+  GEMELO = "GEMELO",
+  MELLIZO = "MELLIZO",
+  TRILLIZO = "TRILLIZO",
+  OTRO = "OTRO",
+}
