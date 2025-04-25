@@ -23,6 +23,8 @@ const config: any = {
     verificarLink: "http://localhost:4200/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
+    logoQR:
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
@@ -53,6 +55,8 @@ const config: any = {
     verificarLink: "https://qa.cmar.live/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
+    logoQR:
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,
@@ -87,6 +91,8 @@ const config: any = {
     verificarLink: "https://cmar.live/sistemacmi/#/nueva-contrasena/",
     imagenEmail:
       "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
+    logoQR:
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg",
     urlCmarLive: "https://cmar.live/",
     jwtSecretReset: process.env.JWT_SECRET_RESET,
     ipApi: process.env.IP_API,

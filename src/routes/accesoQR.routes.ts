@@ -1,9 +1,14 @@
 import { Router } from "express";
-import { generarQrCode, loginPorQr } from "../controllers/accesoQR.controllers";
+import {
+  generarQrCode,
+  getUltimoQrGenerado,
+  loginPorQr,
+} from "../controllers/accesoQR.controllers";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
+router.get("/ultimoQr", validarJWT, getUltimoQrGenerado);
 router.post("/generarQr", validarJWT, generarQrCode);
 router.post("/loginQr", loginPorQr);
 
