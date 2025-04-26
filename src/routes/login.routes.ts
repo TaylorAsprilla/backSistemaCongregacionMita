@@ -92,6 +92,8 @@ router.put(
   crearLogin
 );
 
+// Renew Token
+
 router.get("/renew", validarJWT, renewToken);
 
 export default router;
