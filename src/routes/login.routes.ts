@@ -20,6 +20,10 @@ import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
+// Renew Token
+
+router.get("/renew", validarJWT, renewToken);
+
 // Login
 router.post(
   "/",
@@ -91,9 +95,5 @@ router.put(
   ],
   crearLogin
 );
-
-// Renew Token
-
-router.get("/renew", validarJWT, renewToken);
 
 export default router;
