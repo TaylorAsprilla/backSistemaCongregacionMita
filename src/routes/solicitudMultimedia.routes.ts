@@ -13,14 +13,14 @@ import {
   getUnaSolicitudMultimedia,
   obtenerUsuariosConSolicitudesPorCongregacion,
   validarEmail,
-} from "../controllers/solicitudMultimedia.controllers";
+} from "../controllers/solicitudMultimedia.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import {
   denegarSolicitudMultimedia,
   eliminarSolicitudMultimedia,
-} from "../controllers/accesoMultimedia.controllers";
+} from "../controllers/accesoMultimedia.controller";
 
 const router = Router();
 

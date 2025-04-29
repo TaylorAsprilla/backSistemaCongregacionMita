@@ -3,7 +3,7 @@
 */
 
 import { Router } from "express";
-import { buscarCorreoElectronico } from "../controllers/usuario.controllers";
+import { buscarCorreoElectronico } from "../controllers/usuario.controller";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();

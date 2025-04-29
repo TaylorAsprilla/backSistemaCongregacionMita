@@ -11,7 +11,7 @@ import {
   getUsuarios,
   eliminarUsuario,
   transcendioUsuario,
-} from "../controllers/usuario.controllers";
+} from "../controllers/usuario.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

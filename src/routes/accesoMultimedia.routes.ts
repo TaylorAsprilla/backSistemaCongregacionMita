@@ -7,14 +7,14 @@ import { check } from "express-validator";
 import {
   crearAccesoCongregacionMultimedia,
   crearAccesoMultimedia,
-} from "../controllers/accesoMultimedia.controllers";
+} from "../controllers/accesoMultimedia.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import {
   eliminarSolicitudMultimediaDeUnUsuario,
   obtenerSolicitudPorUsuario,
-} from "../controllers/solicitudMultimedia.controllers";
+} from "../controllers/solicitudMultimedia.controller";
 
 const router = Router();
 
