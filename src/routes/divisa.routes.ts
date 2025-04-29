@@ -8,7 +8,7 @@ import {
   actualizarDivisa,
   crearDivisa,
   getDivisa,
-} from "../controllers/divisa.controllers";
+} from "../controllers/divisa.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

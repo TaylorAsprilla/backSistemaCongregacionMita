@@ -3,7 +3,7 @@ import {
   generarQrCode,
   getUltimoQrGenerado,
   loginPorQr,
-} from "../controllers/accesoQR.controllers";
+} from "../controllers/accesoQR.controller";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();

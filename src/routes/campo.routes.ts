@@ -11,7 +11,7 @@ import {
   eliminarCampo,
   getCampo,
   getCampos,
-} from "../controllers/campo.controllers";
+} from "../controllers/campo.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

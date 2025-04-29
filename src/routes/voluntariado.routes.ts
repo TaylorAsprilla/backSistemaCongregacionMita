@@ -11,7 +11,7 @@ import {
   eliminarVoluntariado,
   getUnVoluntariado,
   getVoluntariados,
-} from "../controllers/voluntariado.model";
+} from "../controllers/voluntariado.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

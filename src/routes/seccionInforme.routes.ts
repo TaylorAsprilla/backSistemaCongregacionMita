@@ -11,7 +11,7 @@ import {
   eliminarSeccionInforme,
   getSeccionesInformes,
   getSeccionInforme,
-} from "../controllers/seccionInforme.controllers";
+} from "../controllers/seccionInforme.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

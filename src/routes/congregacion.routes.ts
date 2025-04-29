@@ -11,7 +11,7 @@ import {
   eliminarCongregacion,
   getCongregacion,
   getCongregaciones,
-} from "../controllers/congregacion.controllers";
+} from "../controllers/congregacion.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

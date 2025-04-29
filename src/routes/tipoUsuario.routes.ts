@@ -10,7 +10,7 @@ import {
   eliminarTipoUsuario,
   getTipoUsuario,
   getUnTipoUsuario,
-} from "../controllers/tipoUsuario.controllers";
+} from "../controllers/tipoUsuario.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

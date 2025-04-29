@@ -8,7 +8,7 @@ import {
   actualizarActividad,
   crearActividad,
   getActividad,
-} from "../controllers/actividad.controllers";
+} from "../controllers/actividad.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

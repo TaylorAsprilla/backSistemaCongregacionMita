@@ -11,7 +11,7 @@ import {
   eliminarTipoDocumento,
   getTipoDocumento,
   getUnTipoDocumento,
-} from "../controllers/tipoDocumento.controllers";
+} from "../controllers/tipoDocumento.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

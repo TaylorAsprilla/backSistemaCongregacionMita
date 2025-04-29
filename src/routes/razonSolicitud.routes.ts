@@ -10,7 +10,7 @@ import {
   crearUnaRazonSolicitud,
   eliminarRazonSolicitud,
   getRazonSolitudes,
-} from "../controllers/razonSolicitud.controllers";
+} from "../controllers/razonSolicitud.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

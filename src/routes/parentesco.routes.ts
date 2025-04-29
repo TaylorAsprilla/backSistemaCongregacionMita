@@ -11,7 +11,7 @@ import {
   eliminarParentesco,
   getParentesco,
   getUnParentesco,
-} from "../controllers/parentesco.controllers";
+} from "../controllers/parentesco.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

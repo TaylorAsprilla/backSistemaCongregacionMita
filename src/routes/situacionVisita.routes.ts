@@ -8,7 +8,7 @@ import {
   actualizarSituacionVisita,
   crearSituacionVisita,
   getSituacionVisita,
-} from "../controllers/situacionVisita.controllers";
+} from "../controllers/situacionVisita.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

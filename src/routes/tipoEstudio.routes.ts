@@ -11,7 +11,7 @@ import {
   eliminarTipoEstudio,
   getTipoEstudio,
   getUnTipoEstudio,
-} from "../controllers/tipoEstudio.controllers";
+} from "../controllers/tipoEstudio.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

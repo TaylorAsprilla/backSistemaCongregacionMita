@@ -11,7 +11,7 @@ import {
   eliminarGradoAcademico,
   getGradoAcademico,
   getUnGradoAcademico,
-} from "../controllers/gradoAcademico.controllers";
+} from "../controllers/gradoAcademico.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
