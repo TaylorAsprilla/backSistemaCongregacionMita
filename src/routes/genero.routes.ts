@@ -10,7 +10,7 @@ import {
   crearGenero,
   eliminarGenero,
   getGenero,
-} from "../controllers/genero.controllers";
+} from "../controllers/genero.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

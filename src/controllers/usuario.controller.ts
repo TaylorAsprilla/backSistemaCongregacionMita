@@ -13,7 +13,7 @@ import {
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
-import { Op, Transaction } from "sequelize";
+import { col, fn, Op, Transaction, where } from "sequelize";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import Congregacion from "../models/congregacion.model";
 import Pais from "../models/pais.model";
@@ -143,6 +143,64 @@ export const getUsuario = async (req: Request, res: Response) => {
   } else {
     res.status(404).json({
       msg: `No se encuentra el número Mita <b>${id}</b>`,
+    });
+  }
+};
+
+export const buscarNumerosMitas = async (req: Request, res: Response) => {
+  const { numerosMitas, fechaNacimiento } = req.body; // Recibe un array de números Mitas y una fecha de nacimiento en el cuerpo de la solicitud
+
+  // Validar que `numerosMitas` sea un array y que `fechaNacimiento` sea proporcionada
+  if (!Array.isArray(numerosMitas) || numerosMitas.length === 0) {
+    return res.status(400).json({
+      ok: false,
+      msg: "Debe proporcionar un array de números Mitas.",
+    });
+  }
+
+  if (!fechaNacimiento) {
+    return res.status(400).json({
+      ok: false,
+      msg: "Debe proporcionar una fecha de nacimiento.",
+    });
+  }
+
+  try {
+    // Buscar usuarios cuyos IDs coincidan con los números Mitas proporcionados y tengan la misma fecha de nacimiento
+    const usuarios = await Usuario.findAll({
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "fechaNacimiento",
+      ],
+      where: {
+        id: numerosMitas,
+        [Op.and]: [
+          where(fn("DATE", col("fechaNacimiento")), fechaNacimiento), // Compara solo la parte de la fecha
+        ],
+      },
+    });
+
+    if (usuarios.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No se encontraron usuarios con los números Mitas y la fecha de nacimiento proporcionados.",
+      });
+    }
+
+    res.json({
+      ok: true,
+      usuarios,
+    });
+  } catch (error) {
+    console.error("Error al buscar números Mitas:", error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error interno, contacte al administrador.",
+      error,
     });
   }
 };

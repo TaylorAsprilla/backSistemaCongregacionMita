@@ -10,7 +10,7 @@ import {
   eliminarInforme,
   getInforme,
   getInformes,
-} from "../controllers/informe.controllers";
+} from "../controllers/informe.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

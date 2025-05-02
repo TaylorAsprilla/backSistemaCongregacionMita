@@ -11,7 +11,8 @@ import {
   getUsuarios,
   eliminarUsuario,
   transcendioUsuario,
-} from "../controllers/usuario.controllers";
+  buscarNumerosMitas,
+} from "../controllers/usuario.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 
@@ -20,6 +21,9 @@ const router = Router();
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
 router.get("/:id", validarJWT, getUsuario);
+
+router.post("/buscar-numeros-mitas", validarJWT, buscarNumerosMitas);
+
 router.post(
   "/",
   validarJWT,

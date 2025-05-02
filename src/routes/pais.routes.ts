@@ -11,7 +11,7 @@ import {
   eliminarPais,
   getPais,
   getPaises,
-} from "../controllers/pais.controllers";
+} from "../controllers/pais.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

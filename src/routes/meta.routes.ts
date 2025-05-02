@@ -9,7 +9,7 @@ import {
   crearMeta,
   getMeta,
   getMetas,
-} from "../controllers/meta.controllers";
+} from "../controllers/meta.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

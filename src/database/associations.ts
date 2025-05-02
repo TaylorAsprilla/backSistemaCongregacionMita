@@ -4,6 +4,7 @@ import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
+import GrupoGemelos from "../models/grupoGemelos.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
 import OpcionTransporte from "../models/opcionTransporte.model";
@@ -19,6 +20,7 @@ import TipoEstudio from "../models/tipoEstudio.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import UsuarioGrupoGemelos from "../models/usuarioGrupoGemelos.model";
 import UsuarioMinisterio from "../models/usuarioMinisterio.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import UsuarioVoluntariado from "../models/usuarioVoluntariado.model";
@@ -190,4 +192,16 @@ UsuarioCongregacion.belongsTo(Campo, {
 QrCodigos.belongsTo(Congregacion, {
   foreignKey: "idCongregacion",
   targetKey: "id",
+});
+
+GrupoGemelos.belongsToMany(Usuario, {
+  through: UsuarioGrupoGemelos,
+  foreignKey: "grupoGemelos_id",
+  as: "usuarios",
+});
+
+Usuario.belongsToMany(GrupoGemelos, {
+  through: UsuarioGrupoGemelos,
+  foreignKey: "usuario_id",
+  as: "gruposGemelos",
 });

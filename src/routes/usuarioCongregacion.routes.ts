@@ -4,7 +4,7 @@ import {
   getUsuariosPorCampo,
   getUsuariosPorCongregacion,
   getUsuariosPorPais,
-} from "../controllers/usuarioCongregacion.controllers";
+} from "../controllers/usuarioCongregacion.controller";
 
 const router = Router();
 

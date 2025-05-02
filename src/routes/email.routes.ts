@@ -3,7 +3,7 @@ import validarJWT from "../middlewares/validar-jwt";
 import {
   emailBienvenidaObreroACongregacion,
   enviarEmailBienvenida,
-} from "../controllers/email.controllers";
+} from "../controllers/email.controller";
 
 const router = Router();
 

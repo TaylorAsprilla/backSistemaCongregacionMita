@@ -11,7 +11,7 @@ import {
   eliminarOpcionTransporte,
   getOpcionTransporte,
   getUnaOpcionTransporte,
-} from "../controllers/opcionTransporte.controllers";
+} from "../controllers/opcionTransporte.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 

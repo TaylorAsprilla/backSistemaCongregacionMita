@@ -9,7 +9,7 @@ import {
   crearContabilidad,
   getContabilidad,
   getUnaContabilidad,
-} from "../controllers/contabilidad.controllers";
+} from "../controllers/contabilidad.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

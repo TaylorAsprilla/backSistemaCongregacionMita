@@ -9,7 +9,7 @@ import {
   crearTipostatus,
   eliminarTipoStatus,
   getTipostatus,
-} from "../controllers/tipoStatus.controllers";
+} from "../controllers/tipoStatus.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";

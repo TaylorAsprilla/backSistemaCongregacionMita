@@ -3,7 +3,7 @@
 */
 
 import { Router } from "express";
-import { getHome } from "../controllers/home.controllers";
+import { getHome } from "../controllers/home.controller";
 
 const router = Router();
 

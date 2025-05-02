@@ -6,7 +6,7 @@ import { Router } from "express";
 import {
   getNacionalidad,
   getNacionalidades,
-} from "../controllers/nacionalidad.controllers";
+} from "../controllers/nacionalidad.controller";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();

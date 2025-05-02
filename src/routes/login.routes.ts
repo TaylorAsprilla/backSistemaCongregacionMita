@@ -13,7 +13,7 @@ import {
   login,
   renewToken,
   resetPassword,
-} from "../controllers/login.controllers";
+} from "../controllers/login.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
