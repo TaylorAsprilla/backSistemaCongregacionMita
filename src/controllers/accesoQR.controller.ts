@@ -10,6 +10,7 @@ import config from "../config/config";
 import sharp from "sharp";
 import axios from "axios";
 import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
+import UbicacionConexion from "../models/ubicacionConexion.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -255,4 +256,66 @@ export const loginPorQr = async (req: Request, res: Response) => {
     console.error("Error al hacer login por QR:", error);
     res.status(500).json({ ok: false, msg: "Error interno" });
   }
+};
+
+export const getQrAccesos = async (req: Request, res: Response) => {
+  try {
+    // Realizar consulta para obtener accesos con login QR
+    const accesos = await obtenerAccesosQr();
+
+    // Validar si no se encontraron accesos
+    if (accesos.length === 0) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No se encontraron accesos QR.",
+        data: [],
+      });
+    }
+
+    // Devolver resultados con status 200
+    return res.status(200).json({
+      ok: true,
+      msg: "Accesos obtenidos correctamente mediante código QR.",
+      data: accesos,
+    });
+  } catch (error: any) {
+    console.error("Error al obtener accesos QR:", error);
+
+    return res.status(500).json({
+      ok: false,
+      msg: "Ocurrió un error al consultar los accesos QR.",
+      error: error.message || "Error desconocido",
+    });
+  }
+};
+
+// Función para obtener los accesos QR con las relaciones necesarias
+const obtenerAccesosQr = async () => {
+  return await UbicacionConexion.findAll({
+    where: { isLoginCodeQr: true }, // Filtrar accesos QR
+    attributes: [
+      "ip",
+      "dispositivo",
+      "createdAt",
+      "isLoginCodeQr",
+      "idCongregacion",
+      "pais",
+      "ciudad",
+    ],
+    order: [["createdAt", "DESC"]], // Ordenar por fecha descendente
+    include: [
+      {
+        model: QrAccesos,
+        as: "qrAcceso", // Alias que definiste en la asociación
+        attributes: ["nombre"], // Obtener solo el nombre
+        required: false, // LEFT JOIN
+      },
+      {
+        model: Congregacion,
+        as: "congregacion", // Alias para Congregacion
+        attributes: ["congregacion"], // Información de la congregación
+        required: false,
+      },
+    ],
+  });
 };

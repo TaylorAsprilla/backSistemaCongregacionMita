@@ -11,6 +11,7 @@ import OpcionTransporte from "../models/opcionTransporte.model";
 import Pais from "../models/pais.model";
 import Parentesco from "../models/parentesco.model";
 import Permiso from "../models/permiso.model";
+import QrAccesos from "../models/qrAccesos";
 import QrCodigos from "../models/qrCodigos.model";
 import RazonSolicitud from "../models/razonSolicitud.model";
 import RolCasa from "../models/rolCasa.model";
@@ -18,6 +19,7 @@ import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import TipoMiembro from "../models/tipoMiembro.model";
+import UbicacionConexion from "../models/ubicacionConexion.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import UsuarioGrupoGemelos from "../models/usuarioGrupoGemelos.model";
@@ -204,4 +206,32 @@ Usuario.belongsToMany(GrupoGemelos, {
   through: UsuarioGrupoGemelos,
   foreignKey: "usuario_id",
   as: "gruposGemelos",
+});
+
+UbicacionConexion.belongsTo(Usuario, {
+  foreignKey: "idUsuario",
+  as: "usuario",
+});
+
+Usuario.hasMany(UbicacionConexion, {
+  foreignKey: "idUsuario",
+  as: "ubicaciones",
+});
+
+UbicacionConexion.hasOne(QrAccesos, {
+  foreignKey: "ip",
+  sourceKey: "ip",
+  as: "qrAcceso",
+});
+
+QrAccesos.hasMany(UbicacionConexion, {
+  foreignKey: "ip", // Este campo debe existir en `UbicacionConexion`
+  sourceKey: "ip", // Se asocia con el campo `id` de `QrAccesos`
+  as: "ubicaciones", // Alias para acceder a las conexiones en `UbicacionConexion`
+});
+
+UbicacionConexion.belongsTo(Congregacion, {
+  foreignKey: "idCongregacion",
+  targetKey: "id",
+  as: "congregacion",
 });
