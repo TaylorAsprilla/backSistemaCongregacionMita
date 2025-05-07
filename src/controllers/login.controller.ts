@@ -13,6 +13,18 @@ import { ROLES_ID } from "../enum/roles.enum";
 import Congregacion from "../models/congregacion.model";
 import Campo from "../models/campo.model";
 import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
+import Genero from "../models/genero.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import Ministerio from "../models/ministerio.model";
+import Permiso from "../models/permiso.model";
+import Voluntariado from "../models/voluntariado.model";
+import Pais from "../models/pais.model";
+import TipoMiembro from "../models/tipoMiembro.model";
+import EstadoCivil from "../models/estadoCivil.model";
+import Nacionalidad from "../models/nacionalidad.model";
+import RolCasa from "../models/rolCasa.model";
+import GradoAcademico from "../models/gradoAcademico.model";
+import TipoDocumento from "../models/tipoDocumento.model";
 
 const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
   config[process.env.NODE_ENV || "development"];
@@ -104,49 +116,183 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
   let buscarUsuario;
   let buscarCongregacion;
 
-  buscarUsuario = await Usuario.findOne({
-    include: [
-      {
-        all: true,
-        required: false,
-      },
-    ],
-    where: {
-      login: login,
-    },
-  });
-
-  if (buscarUsuario) {
-    token = await generarJWT(idUsuario, buscarUsuario.getDataValue("login"));
-
-    res.json({
-      ok: true,
-      token,
-      usuario: buscarUsuario,
-    });
-  } else {
-    buscarCongregacion = await Congregacion.findOne({
+  try {
+    buscarUsuario = await Usuario.findOne({
+      include: [
+        {
+          model: Genero,
+          as: "genero",
+          attributes: ["id", "genero"],
+          required: false,
+        },
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["id", "estadoCivil", "estado"],
+          required: false,
+        },
+        {
+          model: Nacionalidad,
+          as: "nacionalidad",
+          attributes: ["nombre"],
+          required: false,
+        },
+        {
+          model: RolCasa,
+          as: "rolCasa",
+          attributes: ["id", "rolCasa", "estado"],
+          required: false,
+        },
+        {
+          model: TipoMiembro,
+          as: "tipoMiembro",
+          attributes: ["id", "miembro", "estado"],
+          required: false,
+        },
+        {
+          model: GradoAcademico,
+          as: "gradoAcademico",
+          attributes: ["id", "gradoAcademico", "estado"],
+          required: false,
+        },
+        {
+          model: TipoDocumento,
+          as: "tipoDocumento",
+          attributes: ["id", "documento", "estado"],
+          required: false,
+        },
+        {
+          model: UsuarioCongregacion,
+          as: "usuarioCongregacion",
+          attributes: ["usuario_id", "pais_id", "congregacion_id", "campo_id"],
+          required: false,
+        },
+        {
+          model: Ministerio,
+          as: "usuarioMinisterio",
+          attributes: ["id", "ministerio"],
+          required: false,
+        },
+        {
+          model: Permiso,
+          as: "usuarioPermiso",
+          attributes: ["id", "permiso"],
+          required: false,
+        },
+        {
+          model: Voluntariado,
+          as: "usuarioVoluntariado",
+          attributes: ["id", "nombreVoluntariado"],
+          required: false,
+        },
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["id", "pais", "idDivisa", "idObreroEncargado"],
+          through: {
+            attributes: [
+              "usuario_id",
+              "pais_id",
+              "congregacion_id",
+              "campo_id",
+            ],
+          },
+          required: true,
+        },
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          attributes: [
+            "id",
+            "congregacion",
+            "idObreroEncargado",
+            "idObreroEncargadoDos",
+          ],
+          through: {
+            attributes: [
+              "usuario_id",
+              "pais_id",
+              "congregacion_id",
+              "campo_id",
+            ],
+          },
+          required: true,
+        },
+      ],
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "fechaNacimiento",
+        "numeroCelular",
+        "numeroDocumento",
+        "telefonoCasa",
+        "direccion",
+        "ciudadDireccion",
+        "departamentoDireccion",
+        "codigoPostalDireccion",
+        "paisDireccion",
+        "direccionPostal",
+        "ciudadPostal",
+        "departamentoPostal",
+        "codigoPostal",
+        "paisPostal",
+        "anoConocimiento",
+        "ocupacion",
+        "esJoven",
+        "foto",
+        "estado",
+        "email",
+        "login",
+        "especializacionEmpleo",
+        "password",
+      ],
       where: {
-        email: login,
+        login: login,
       },
     });
 
-    if (buscarCongregacion) {
-      token = await generarJWT(
-        idUsuario,
-        buscarCongregacion.getDataValue("email")
-      );
+    if (buscarUsuario) {
+      token = await generarJWT(idUsuario, buscarUsuario.getDataValue("login"));
+
       res.json({
         ok: true,
         token,
-        congregacion: buscarCongregacion,
+        usuario: buscarUsuario,
       });
     } else {
-      res.status(404).json({
-        ok: false,
-        msg: "Usuario o congregación no encontrados",
+      buscarCongregacion = await Congregacion.findOne({
+        where: {
+          email: login,
+        },
       });
+
+      if (buscarCongregacion) {
+        token = await generarJWT(
+          idUsuario,
+          buscarCongregacion.getDataValue("email")
+        );
+        res.json({
+          ok: true,
+          token,
+          congregacion: buscarCongregacion,
+        });
+      } else {
+        res.status(404).json({
+          ok: false,
+          msg: "Usuario o congregación no encontrados",
+        });
+      }
     }
+  } catch (error) {
+    console.error("Error al renovar el token:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error interno del servidor",
+      error: error || "Error desconocido",
+    });
   }
 };
 
