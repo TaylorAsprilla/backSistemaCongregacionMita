@@ -163,8 +163,8 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
         },
         {
           model: UsuarioCongregacion,
-          as: "usuarioCongregacion", // Alias definido en las asociaciones
-          attributes: ["usuario_id", "pais_id", "congregacion_id", "campo_id"], // Selecciona solo los atributos necesarios
+          as: "usuarioCongregacion",
+          attributes: ["usuario_id", "pais_id", "congregacion_id", "campo_id"],
           required: false,
         },
         {
