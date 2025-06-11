@@ -662,7 +662,6 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
         usuario_id,
         estado: {
           [Op.or]: [
-            SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
             SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
             SOLICITUD_MULTIMEDIA_ENUM.EMAIL_NO_VERIFICADO,
           ],
@@ -675,7 +674,7 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
       await transaction.rollback();
       return res.status(404).json({
         ok: false,
-        msg: `No existe una solicitud en estado APROBADA, PENDIENTE o EMAIL_NO_VERIFICADO para el usuario con ID: ${usuario_id}`,
+        msg: `No existe una solicitud en estado PENDIENTE o EMAIL_NO_VERIFICADO para el usuario con ID: ${usuario_id}`,
       });
     }
 
@@ -683,7 +682,8 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
     for (const solicitud of solicitudes) {
       await solicitud.update(
         {
-          motivoDeNegacion: "Solicitud eliminada",
+          motivoDeNegacion:
+            "Solicitud eliminada, porque se creó una solicitud nueva",
           tiempoAprobacion: null,
           estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
           usuarioQueAprobo_id: req.id,
