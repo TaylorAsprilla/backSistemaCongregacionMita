@@ -8,6 +8,7 @@ import enviarEmail from "../helpers/email";
 import config from "../config/config";
 import db from "../database/connection";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
+import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -38,7 +39,7 @@ const verificarFechasYEnviarCorreos = async () => {
 
   const solicitudes = await SolicitudMultimedia.findAll({
     where: {
-      estado: true,
+      estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       emailVerificado: true,
     },
     include: [{ model: Usuario, as: "usuario" }],
@@ -97,7 +98,7 @@ const eliminarCredenciales = async () => {
         tiempoAprobacion: {
           [Op.lte]: hoy,
         },
-        estado: true,
+        estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       },
       include: [{ model: Usuario, as: "usuario" }],
     });
@@ -157,7 +158,7 @@ const eliminarCredenciales = async () => {
           );
 
           await SolicitudMultimedia.update(
-            { estado: false },
+            { estado: SOLICITUD_MULTIMEDIA_ENUM.CADUCADA },
             { where: { id: solicitud.getDataValue("id") }, transaction }
           );
         }
