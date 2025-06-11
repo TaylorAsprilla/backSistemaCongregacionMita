@@ -89,6 +89,8 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       }
     }
 
+    await eliminarRolesusuario(usuario_id, transaction);
+
     // =======================================================================
     //             Crear o Actualizar Credenciales del Usuario
     // =======================================================================
@@ -473,53 +475,7 @@ export const denegarSolicitudMultimedia = async (
       });
     }
 
-    // Verificar permisos del usuario
-    const permisos = await UsuarioPermiso.findAll({
-      where: { usuario_id: usuarioId },
-      attributes: ["permiso_id"],
-    });
-
-    const permisoIds = permisos.map((permiso) =>
-      permiso.getDataValue("permiso_id")
-    );
-
-    if (permisoIds.includes(Number(ROLES_ID.MULTIMEDIA))) {
-      if (permisoIds.length > 1) {
-        // Eliminar solo el permiso 6 (MULTIMEDIA)
-        await UsuarioPermiso.destroy({
-          where: {
-            usuario_id: usuarioId,
-            permiso_id: Number(ROLES_ID.MULTIMEDIA),
-          },
-          transaction,
-        });
-      } else if (
-        permisoIds.length === 1 &&
-        permisoIds[0] === Number(ROLES_ID.MULTIMEDIA)
-      ) {
-        // Si solo tiene el permiso 6, eliminar usuario y credenciales
-        await UsuarioPermiso.destroy({
-          where: {
-            usuario_id: usuarioId,
-            permiso_id: Number(ROLES_ID.MULTIMEDIA),
-          },
-          transaction,
-        });
-
-        await Usuario.update(
-          {
-            login: null,
-            password: null,
-          },
-          {
-            where: {
-              id: usuarioId,
-            },
-            transaction,
-          }
-        );
-      }
-    }
+    await eliminarRolesusuario(usuarioId, transaction);
 
     const email = usuario.getDataValue("email");
     if (!email) {
@@ -633,4 +589,57 @@ export const eliminarSolicitudMultimedia = async (
       msg: "Hubo un error al denegar la solicitud.",
     });
   }
+};
+
+const eliminarRolesusuario = async (usuarioId: number, transaction?: any) => {
+  // Verificar permisos del usuario
+  const permisos = await UsuarioPermiso.findAll({
+    where: { usuario_id: usuarioId },
+    attributes: ["permiso_id"],
+    transaction,
+  });
+
+  // Si no tiene permisos, no hacer nada
+  if (!permisos.length)
+    return { ok: true, msg: "El usuario no tiene permisos." };
+
+  const permisoIds = permisos.map((permiso) =>
+    permiso.getDataValue("permiso_id")
+  );
+
+  if (permisoIds.includes(Number(ROLES_ID.MULTIMEDIA))) {
+    if (permisoIds.length > 1) {
+      // Eliminar solo el permiso 6 (MULTIMEDIA)
+      await UsuarioPermiso.destroy({
+        where: {
+          usuario_id: usuarioId,
+          permiso_id: Number(ROLES_ID.MULTIMEDIA),
+        },
+        transaction,
+      });
+      await Usuario.update(
+        { login: null, password: null },
+        { where: { id: usuarioId }, transaction }
+      );
+      console.log(
+        `Permiso MULTIMEDIA eliminado y credenciales del usuario ID ${usuarioId} actualizadas.`
+      );
+      return { ok: true, msg: "Permiso MULTIMEDIA y credenciales eliminados." };
+    } else {
+      // Tiene MULTIMEDIA y otros: eliminar solo MULTIMEDIA
+      await UsuarioPermiso.destroy({
+        where: {
+          usuario_id: usuarioId,
+          permiso_id: Number(ROLES_ID.MULTIMEDIA),
+        },
+        transaction,
+      });
+      console.log(`Permiso MULTIMEDIA eliminado del usuario ID ${usuarioId}.`);
+
+      return { ok: true, msg: "Permiso MULTIMEDIA eliminado." };
+    }
+  }
+  // Si no tiene MULTIMEDIA, no hacer nada
+  console.log("No se eliminó ningún permiso.");
+  return { ok: true, msg: "No se eliminó ningún permiso." };
 };

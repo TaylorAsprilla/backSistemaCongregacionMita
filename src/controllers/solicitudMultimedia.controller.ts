@@ -652,6 +652,7 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
 ) => {
   const { usuario_id } = req.query;
 
+  console.log("Eliminando solicitudes multimedia para el usuario:", usuario_id);
   const transaction = await db.transaction();
 
   try {
