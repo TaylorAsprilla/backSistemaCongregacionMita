@@ -22,7 +22,7 @@ const SolicitudMultimedia = db.define(
     },
     personaEncamada: {
       type: DataTypes.BOOLEAN,
-      defaultValue: null,
+      defaultValue: false,
       allowNull: true,
     },
     personaEncargada: {
@@ -37,7 +37,7 @@ const SolicitudMultimedia = db.define(
     },
     enfermedadCronica: {
       type: DataTypes.BOOLEAN,
-      defaultValue: null,
+      defaultValue: false,
       allowNull: true,
     },
     enfermedadQuePadece: {
