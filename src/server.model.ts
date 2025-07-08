@@ -119,7 +119,7 @@ class Server {
 
     // Métodos Iniciales
     this.dbConnection();
-    this.midedlewares();
+    this.middlewares();
     // Definir mis rutas
     this.routes();
   }
@@ -133,12 +133,13 @@ class Server {
     }
   }
 
-  midedlewares() {
+  middlewares() {
     // CORS
     this.app.use(cors({ origin: whiteList }));
 
-    // Lectura del body
-    this.app.use(express.json());
+    // Aumenta el tamaño máximo permitido del body para JSON y formularios
+    this.app.use(express.json({ limit: "10mb" }));
+    this.app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
     // Carpeta pública
     // this.app.use(express.static("public")); //TODO Carpeta pública
