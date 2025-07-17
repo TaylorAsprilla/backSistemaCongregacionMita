@@ -20,7 +20,7 @@ const router = Router();
 
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
-router.get("/:id", validarJWT, getUsuario);
+router.get("/:id", getUsuario);
 
 router.post("/buscar-numeros-mitas", validarJWT, buscarNumerosMitas);
 
