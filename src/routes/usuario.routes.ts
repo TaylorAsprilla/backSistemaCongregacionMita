@@ -12,16 +12,49 @@ import {
   eliminarUsuario,
   transcendioUsuario,
   buscarNumerosMitas,
+  buscarPorNumeroDocumento,
 } from "../controllers/usuario.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 
 const router = Router();
 
+// ==========================================
+// RUTAS GET - Consultas
+// ==========================================
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
+
+// Búsqueda por número de documento (query params)
+router.get(
+  "/buscar-documento",
+
+  [
+    check("numeroDocumento").custom((value, { req }) => {
+      if (!req.query?.numeroDocumento) {
+        throw new Error("El número de documento es obligatorio");
+      }
+      return true;
+    }),
+    check("paisId").custom((value, { req }) => {
+      if (!req.query?.paisId) {
+        throw new Error("El ID del país es obligatorio");
+      }
+      if (isNaN(Number(req.query?.paisId))) {
+        throw new Error("El ID del país debe ser un número válido");
+      }
+      return true;
+    }),
+  ],
+  validarCampos,
+  buscarPorNumeroDocumento
+);
+
 router.get("/:id", getUsuario);
 
+// ==========================================
+// RUTAS POST - Creación y búsquedas complejas
+// ==========================================
 router.post("/buscar-numeros-mitas", validarJWT, buscarNumerosMitas);
 
 router.post(
@@ -69,11 +102,18 @@ router.post(
   crearUsuario
 );
 
+// ==========================================
+// RUTAS PUT - Actualizaciones
+// ==========================================
 router.put("/transcender/:id", validarJWT, transcendioUsuario);
 router.put("/transferir/:id", validarJWT, transferirUsuario);
 router.put("/activar/:id", validarJWT, activarUsuario);
 router.put("/actualizarpermisos/:id", validarJWT, actualizarPermisos);
 router.put("/:id", validarJWT, [], actualizarUsuario);
+
+// ==========================================
+// RUTAS DELETE - Eliminación
+// ==========================================
 router.delete("/:id", validarJWT, eliminarUsuario);
 
 export default router;
