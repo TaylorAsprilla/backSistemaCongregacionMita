@@ -300,6 +300,49 @@ export const buscarPorNumeroDocumento = async (req: Request, res: Response) => {
   }
 };
 
+export const buscarPorNumeroMita = async (req: Request, res: Response) => {
+  const { numeroMita } = req.query;
+
+  if (!numeroMita) {
+    return res.status(400).json({
+      ok: false,
+      msg: "Debe proporcionar un número Mita.",
+    });
+  }
+
+  try {
+    const usuario = await Usuario.findByPk(numeroMita as string, {
+      attributes: [
+        "id",
+        "primerNombre",
+        "segundoNombre",
+        "primerApellido",
+        "segundoApellido",
+        "email",
+      ],
+    });
+
+    if (!usuario) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No se encontró un usuario con el número Mita proporcionado.",
+      });
+    }
+
+    res.json({
+      ok: true,
+      usuario,
+    });
+  } catch (error) {
+    console.error("Error al buscar usuarios por número Mita:", error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error interno, contacte al administrador.",
+      error,
+    });
+  }
+};
+
 export const crearUsuario = async (req: CustomRequest, res: Response) => {
   const transaction: Transaction = await db.transaction();
   const idUsuarioActual = req.id;
