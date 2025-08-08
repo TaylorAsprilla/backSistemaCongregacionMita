@@ -176,7 +176,8 @@ export const generarQrCode = async (req: Request, res: Response) => {
 };
 
 export const loginPorQr = async (req: Request, res: Response) => {
-  const { qrCode, nombre } = req.body;
+  const { qrCode, numeroMita, nombre, tipoPuesto } = req.body;
+
   const ip = (
     req.ip ||
     req.headers["x-forwarded-for"] ||
@@ -186,10 +187,8 @@ export const loginPorQr = async (req: Request, res: Response) => {
   const userAgentRaw = req.headers["user-agent"] || "";
   const agent = useragent.parse(userAgentRaw);
 
-  if (!qrCode || !nombre) {
-    return res
-      .status(400)
-      .json({ ok: false, msg: "qrCode y nombre requeridos" });
+  if (!qrCode || !nombre || !numeroMita || !tipoPuesto) {
+    return res.status(400).json({ ok: false, msg: "Datos incompletos" });
   }
 
   try {
@@ -224,6 +223,8 @@ export const loginPorQr = async (req: Request, res: Response) => {
     await QrAccesos.create({
       idQrCode: qr.getDataValue("id"),
       nombre,
+      idUsuario: numeroMita,
+      tipoPuesto,
       ip, // Ensure ip is a string
       userAgent: userAgentRaw,
       dispositivo: `${agent.os.toString()} - ${agent.device.toString()}`,

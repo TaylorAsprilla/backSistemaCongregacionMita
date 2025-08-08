@@ -8,7 +8,15 @@ const QrAccesos = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    idUsuario: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     nombre: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    tipoPuesto: {
       type: DataTypes.STRING,
       allowNull: false,
     },

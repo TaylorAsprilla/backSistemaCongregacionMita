@@ -13,6 +13,7 @@ import {
   transcendioUsuario,
   buscarNumerosMitas,
   buscarPorNumeroDocumento,
+  buscarPorNumeroMita,
 } from "../controllers/usuario.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
@@ -49,6 +50,8 @@ router.get(
   validarCampos,
   buscarPorNumeroDocumento
 );
+
+router.get("/buscarnumeromita", buscarPorNumeroMita);
 
 router.get("/:id", getUsuario);
 
