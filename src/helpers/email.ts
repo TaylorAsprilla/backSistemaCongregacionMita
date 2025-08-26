@@ -4,7 +4,12 @@ import { transporter } from "../config/mailer";
 const environment = config[process.env.NODE_ENV || "development"];
 const { from, email } = environment.email;
 
-const enviarEmail = async (to: string, subject: string, html: string) => {
+const enviarEmail = async (
+  to: string,
+  subject: string,
+  html: string,
+  bcc?: string
+) => {
   console.info("Enviando correos", to);
 
   try {
@@ -13,6 +18,7 @@ const enviarEmail = async (to: string, subject: string, html: string) => {
       to: to,
       subject: subject,
       html: html,
+      bcc: bcc,
     });
 
     console.info("Cuenta de correo", info.accepted);

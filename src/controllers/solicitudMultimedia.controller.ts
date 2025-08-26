@@ -132,16 +132,55 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
               model: Pais,
               as: "pais",
               attributes: ["id", "pais"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
             },
             {
               model: Congregacion,
               as: "congregacion",
               attributes: ["id", "congregacion"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
             },
             {
               model: Campo,
               as: "campo",
               attributes: ["id", "campo"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
             },
           ],
         },
@@ -156,6 +195,7 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
       solicitudDeAccesos,
     });
   } catch (error) {
+    console.error("Error al obtener las solicitudes multimedia:", error);
     res.status(500).json({
       msg: "Hable con el administrador",
       error,
@@ -596,6 +636,7 @@ export const actualizarSolicitudMultimedia = async (
       solicitudDeAccesoActualizado,
     });
   } catch (error) {
+    console.error("Error al actualizar la solicitud de acceso:", error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",

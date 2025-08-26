@@ -69,6 +69,56 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       ${usuario.getDataValue("segundoApellido")}
     `.trim();
 
+    // ================= OBTENER OBREROS DE LA CONGREGACIÓN =====================
+    let nombreObrerosCongregacion: string[] = [];
+    let correosObrerosCongregacion: string[] = [];
+
+    // Buscar la congregación del usuario usando UsuarioCongregacion
+    const usuarioCongregacion = await db.models.UsuarioCongregacion.findOne({
+      where: { usuario_id },
+    });
+
+    if (
+      usuarioCongregacion &&
+      usuarioCongregacion.getDataValue("congregacion_id")
+    ) {
+      const congregacion = await Congregacion.findByPk(
+        usuarioCongregacion.getDataValue("congregacion_id")
+      );
+      if (congregacion) {
+        // Buscar obreros asignados (pueden ser uno o dos)
+        const obrerosIds: number[] = [];
+        if (congregacion.getDataValue("idObreroEncargado"))
+          obrerosIds.push(congregacion.getDataValue("idObreroEncargado"));
+        if (congregacion.getDataValue("idObreroEncargadoDos"))
+          obrerosIds.push(congregacion.getDataValue("idObreroEncargadoDos"));
+
+        if (obrerosIds.length) {
+          const obreros = await Usuario.findAll({
+            where: { id: obrerosIds },
+            attributes: [
+              "primerNombre",
+              "segundoNombre",
+              "primerApellido",
+              "segundoApellido",
+              "email",
+            ],
+          });
+          nombreObrerosCongregacion = obreros.map((o) =>
+            `${o.getDataValue("primerNombre") || ""} ${
+              o.getDataValue("segundoNombre") || ""
+            } ${o.getDataValue("primerApellido") || ""} ${
+              o.getDataValue("segundoApellido") || ""
+            }`.trim()
+          );
+          // Guardar los correos de los obreros
+          correosObrerosCongregacion = obreros.map((o) =>
+            o.getDataValue("email")
+          );
+        }
+      }
+    }
+
     // =======================================================================
     //                Validar que el Login no esté duplicado
     // =======================================================================
@@ -175,75 +225,46 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     //                          Correo Electrónico
     // =======================================================================
 
-    const html = `
-                <div
-                    style="
-                      max-width: 100%;
-                      width: 600px;
-                      margin: 0 auto;
-                      box-sizing: border-box;
-                      font-family: Arial, Helvetica, 'sans-serif';
-                      font-weight: normal;
-                      font-size: 16px;
-                      line-height: 22px;
-                      color: #252525;
-                      word-wrap: break-word;
-                      word-break: break-word;
-                      text-align: justify;
-                    "
-                  >
-                    <div style="text-align: center">
-                      <img
-                        src="${imagenEmail}"
-                        alt="CMAR Multimedia"
-                        style="text-align: center; width: 100px"
-                      />
-                    </div>
-                    <h3>Bienvenido(a) a CMAR LIVE</h3>
-                    <p>Hola, ${nombre}</p>
-                    <p>
-                      Le damos la bienvenida a <b>CMAR LIVE</b> donde podrá disfrutar de los servicios,
-                      vigilias y eventos especiales de la Congregación Mita.
-                    </p>
-                  
-                    <div>
-                       <p>${mensajeCorreo}</p>
-                  
-                      <p>
-                        Recuerde que estas credenciales son personales, para uso único y exclusivo
-                        del beneficiario solicitante; si notamos un uso inadecuado de la cuenta
-                        aprobada, nos veremos en la necesidad de cancelar su acceso a la
-                        plataforma indefinidamente.
-                      </p>
-                      <p
-                        style="
-                          margin: 30px 0 12px 0;
-                          padding: 0;
-                          color: #252525;
-                          font-family: Arial, Helvetica, 'sans-serif';
-                          font-weight: normal;
-                          word-wrap: break-word;
-                          word-break: break-word;
-                          font-size: 12px;
-                          line-height: 16px;
-                          color: #909090;
-                        "
-                      >
-                        Nota: No responda a este correo electrónico. Si tiene alguna duda, póngase
-                        en contacto con nosotros mediante nuestro correo electrónico
-                        <a href="mailto:cmar.live@congregacionmita.com">
-                         cmar.live@congregacionmita.com</a
-                        >
-                      </p>
-                  
-                      <br />
-                      Cordialmente,
-                      <br />
-                      <b>Congregación Mita, Inc.</b>
-                    </div>
-                  </div>`;
+    // Enviar correo electrónico
+    const templatePath = path.join(
+      __dirname,
+      "../templates/accesoCmarLive.html"
+    );
+    const emailTemplate = fs.readFileSync(templatePath, "utf8");
 
-    await enviarEmail(email, "Bienvenido(a) a CMAR LIVE", html);
+    const personalizarEmail = emailTemplate
+      .replace("{{imagenEmail}}", imagenEmail)
+      .replace("{{nombre}}", nombre)
+      .replace("{{mensaje}}", mensajeCorreo);
+
+    await enviarEmail(email, "Bienvenido(a) a CMAR LIVE", personalizarEmail);
+
+    // Enviar correo electrónico 2
+    const templatePathObrero = path.join(
+      __dirname,
+      "../templates/accesoCmarLiveObrero.html"
+    );
+    const emailTemplateObrero = fs.readFileSync(templatePathObrero, "utf8");
+
+    if (
+      nombreObrerosCongregacion.length > 0 &&
+      correosObrerosCongregacion.length > 0
+    ) {
+      for (let i = 0; i < nombreObrerosCongregacion.length; i++) {
+        const personalizarEmailObrero = emailTemplateObrero
+          .replace("{{imagenEmail}}", imagenEmail)
+          .replace("{{nombre}}", nombreObrerosCongregacion[i])
+          .replace("{{hermanito}}", nombre)
+          .replace("{{tiempoAprobacion}}", formattedTiempoAprobacion)
+          .replace("{{congregacion}}", nombreObrerosCongregacion[i]);
+
+        await enviarEmail(
+          correosObrerosCongregacion[i],
+          "Acceso a CMAR LIVE",
+          personalizarEmailObrero
+        );
+      }
+    }
 
     res.json({
       ok: true,
