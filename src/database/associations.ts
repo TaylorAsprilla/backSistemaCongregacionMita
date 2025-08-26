@@ -235,3 +235,28 @@ UbicacionConexion.belongsTo(Congregacion, {
   targetKey: "id",
   as: "congregacion",
 });
+
+Pais.belongsTo(Usuario, {
+  foreignKey: "idObreroEncargado",
+  as: "obreroEncargado",
+});
+
+Congregacion.belongsTo(Usuario, {
+  foreignKey: "idObreroEncargado",
+  as: "obreroEncargado",
+});
+
+Congregacion.belongsTo(Usuario, {
+  foreignKey: "idObreroEncargadoDos",
+  as: "obreroEncargadoDos",
+});
+
+Campo.belongsTo(Usuario, {
+  foreignKey: "idObreroEncargado",
+  as: "obreroEncargado",
+});
+
+Campo.belongsTo(Usuario, {
+  foreignKey: "idObreroEncargadoDos",
+  as: "obreroEncargadoDos",
+});
