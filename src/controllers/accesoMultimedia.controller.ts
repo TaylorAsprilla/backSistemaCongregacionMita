@@ -31,8 +31,9 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     password,
   } = req.body;
 
-  let nombre: string = "";
-  let email: string = "";
+  let nombre = "";
+  let email = "";
+  let nombreCongregacion = "";
   let tiempoAprobacionDate = new Date(tiempoAprobacion);
   const formattedTiempoAprobacion = format(tiempoAprobacionDate, "yyyy-MM-dd");
 
@@ -42,9 +43,11 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   //                          Validar Solicitud
   // =======================================================================
   try {
-    const solicitud = await SolicitudMultimedia.findByPk(solicitud_id);
-
+    // Validar solicitud y usuario en paralelo
+    const solicitudPromise = SolicitudMultimedia.findByPk(solicitud_id);
+    let solicitud = await solicitudPromise;
     if (!solicitud) {
+      await transaction.rollback();
       return res.status(400).json({
         ok: false,
         msg: `No existe una solicitud diligenciada para el usuario ID: ${solicitud_id}`,
@@ -52,9 +55,10 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     }
 
     const usuario_id = solicitud.getDataValue("usuario_id");
-    const usuario = await Usuario.findByPk(usuario_id);
-
+    const usuarioPromise = Usuario.findByPk(usuario_id);
+    let usuario = await usuarioPromise;
     if (!usuario) {
+      await transaction.rollback();
       return res.status(400).json({
         ok: false,
         msg: `No existe un usuario asociado al ID: ${usuario_id}`,
@@ -62,22 +66,21 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     }
 
     email = usuario.getDataValue("email");
-    nombre = `
-      ${usuario.getDataValue("primerNombre")} 
-      ${usuario.getDataValue("segundoNombre")} 
-      ${usuario.getDataValue("primerApellido")} 
-      ${usuario.getDataValue("segundoApellido")}
-    `.trim();
+    nombre = `${usuario.getDataValue("primerNombre") || ""} ${
+      usuario.getDataValue("segundoNombre") || ""
+    } ${usuario.getDataValue("primerApellido") || ""} ${
+      usuario.getDataValue("segundoApellido") || ""
+    }`
+      .replace(/\s+/g, " ")
+      .trim();
 
-    // ================= OBTENER OBREROS DE LA CONGREGACIÓN =====================
+    // OBTENER OBREROS DE LA CONGREGACIÓN
     let nombreObrerosCongregacion: string[] = [];
     let correosObrerosCongregacion: string[] = [];
-
-    // Buscar la congregación del usuario usando UsuarioCongregacion
     const usuarioCongregacion = await db.models.UsuarioCongregacion.findOne({
       where: { usuario_id },
     });
-
+    let obrerosIds = [];
     if (
       usuarioCongregacion &&
       usuarioCongregacion.getDataValue("congregacion_id")
@@ -86,37 +89,34 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
         usuarioCongregacion.getDataValue("congregacion_id")
       );
       if (congregacion) {
-        // Buscar obreros asignados (pueden ser uno o dos)
-        const obrerosIds: number[] = [];
+        nombreCongregacion = congregacion.getDataValue("congregacion");
         if (congregacion.getDataValue("idObreroEncargado"))
           obrerosIds.push(congregacion.getDataValue("idObreroEncargado"));
         if (congregacion.getDataValue("idObreroEncargadoDos"))
           obrerosIds.push(congregacion.getDataValue("idObreroEncargadoDos"));
-
-        if (obrerosIds.length) {
-          const obreros = await Usuario.findAll({
-            where: { id: obrerosIds },
-            attributes: [
-              "primerNombre",
-              "segundoNombre",
-              "primerApellido",
-              "segundoApellido",
-              "email",
-            ],
-          });
-          nombreObrerosCongregacion = obreros.map((o) =>
-            `${o.getDataValue("primerNombre") || ""} ${
-              o.getDataValue("segundoNombre") || ""
-            } ${o.getDataValue("primerApellido") || ""} ${
-              o.getDataValue("segundoApellido") || ""
-            }`.trim()
-          );
-          // Guardar los correos de los obreros
-          correosObrerosCongregacion = obreros.map((o) =>
-            o.getDataValue("email")
-          );
-        }
       }
+    }
+    if (obrerosIds.length) {
+      const obreros = await Usuario.findAll({
+        where: { id: obrerosIds },
+        attributes: [
+          "primerNombre",
+          "segundoNombre",
+          "primerApellido",
+          "segundoApellido",
+          "email",
+        ],
+      });
+      nombreObrerosCongregacion = obreros.map((o) =>
+        `${o.getDataValue("primerNombre") || ""} ${
+          o.getDataValue("segundoNombre") || ""
+        } ${o.getDataValue("primerApellido") || ""} ${
+          o.getDataValue("segundoApellido") || ""
+        }`
+          .replace(/\s+/g, " ")
+          .trim()
+      );
+      correosObrerosCongregacion = obreros.map((o) => o.getDataValue("email"));
     }
 
     // =======================================================================
@@ -130,8 +130,8 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
           id: { [Op.ne]: usuario_id }, // Excluir al usuario actual
         },
       });
-
       if (existeLogin) {
+        await transaction.rollback();
         return res.status(400).json({
           ok: false,
           msg: `Ya existe un usuario con el login "${login}".`,
@@ -139,7 +139,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       }
     }
 
-    await eliminarRolesusuario(usuario_id, transaction);
+    await eliminarRolesUsuario(usuario_id, transaction);
 
     // =======================================================================
     //             Crear o Actualizar Credenciales del Usuario
@@ -147,8 +147,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
 
     const usuarioLogin = usuario.getDataValue("login");
     const usuarioPassword = usuario.getDataValue("password");
-    let mensajeCorreo: string;
-
+    let mensajeCorreo = "";
     if (!usuarioLogin || !usuarioPassword) {
       // Crear nuevas credenciales
       const salt = bcrypt.genSaltSync();
@@ -156,17 +155,11 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
 
       await Usuario.update(
         { login, password: hashedPassword },
-        {
-          where: { id: usuario_id },
-          transaction,
-        }
+        { where: { id: usuario_id }, transaction }
       );
-
       mensajeCorreo = `<p><b>Credenciales de ingreso:</b></p>
                         <ul style="list-style: none">
-                          <li>
-                            <b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a>
-                          </li>
+                          <li><b>Link de Acceso:&nbsp; </b> <a href="${urlCmarLive}">cmar.live</a></li>
                           <li><b>Usuario:&nbsp; </b> ${login}</li>
                           <li><b>Contraseña:&nbsp;</b> ${password}</li>
                           <li><b>Tiempo de aprobación:&nbsp;</b> ${formattedTiempoAprobacion}</li>
@@ -182,10 +175,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
                         <li><b>Usuario:</b> ${usuarioLogin}</li>
                         <li><b>Tiempo de aprobación:&nbsp;</b> ${formattedTiempoAprobacion}</li>
                       </ul>
-                      <p>
-                        En caso de no recordar su contraseña, puede restablecerla fácilmente seleccionando la opción <b>"Olvidé mi contraseña"</b> en la plataforma.
-                      </p>
-                    `;
+                      <p>En caso de no recordar su contraseña, puede restablecerla fácilmente seleccionando la opción <b>"Olvidé mi contraseña"</b> en la plataforma.</p>`;
     }
 
     // =======================================================================
@@ -198,20 +188,12 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
         usuarioQueAprobo_id,
         estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       },
-      {
-        where: { id: solicitud_id },
-        transaction,
-      }
+      { where: { id: solicitud_id }, transaction }
     );
-
     await UsuarioPermiso.create(
-      {
-        usuario_id,
-        permiso_id: ROLES_ID.MULTIMEDIA,
-      },
+      { usuario_id, permiso_id: ROLES_ID.MULTIMEDIA },
       { transaction }
     );
-
     await auditoriaUsuario(
       usuario_id,
       Number(usuarioQueAprobo_id),
@@ -225,45 +207,60 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     //                          Correo Electrónico
     // =======================================================================
 
-    // Enviar correo electrónico
+    // Helper to replace all variables globally in template
+    function renderTemplate(
+      template: string,
+      variables: Record<string, string>
+    ) {
+      let result = template;
+      for (const key in variables) {
+        const value = variables[key] ?? "";
+        result = result.replace(new RegExp(`{{${key}}}`, "g"), value);
+      }
+      return result;
+    }
+
+    // Enviar correo electrónico principal
     const templatePath = path.join(
       __dirname,
       "../templates/accesoCmarLive.html"
     );
     const emailTemplate = fs.readFileSync(templatePath, "utf8");
+    const personalizarEmail = renderTemplate(emailTemplate, {
+      imagenEmail,
+      nombre,
+      mensajeCorreo,
+    });
 
-    const personalizarEmail = emailTemplate
-      .replace("{{imagenEmail}}", imagenEmail)
-      .replace("{{nombre}}", nombre)
-      .replace("{{mensaje}}", mensajeCorreo);
-
+    console.log("Email del hermanito", email);
+    // Enviar email principal SIEMPRE antes de los correos a obreros
     await enviarEmail(email, "Bienvenido(a) a CMAR LIVE", personalizarEmail);
 
-    // Enviar correo electrónico 2
-    const templatePathObrero = path.join(
-      __dirname,
-      "../templates/accesoCmarLiveObrero.html"
-    );
-    const emailTemplateObrero = fs.readFileSync(templatePathObrero, "utf8");
-
+    // Correo a obreros (en paralelo)
     if (
       nombreObrerosCongregacion.length > 0 &&
       correosObrerosCongregacion.length > 0
     ) {
-      for (let i = 0; i < nombreObrerosCongregacion.length; i++) {
-        const personalizarEmailObrero = emailTemplateObrero
-          .replace("{{imagenEmail}}", imagenEmail)
-          .replace("{{nombre}}", nombreObrerosCongregacion[i])
-          .replace("{{hermanito}}", nombre)
-          .replace("{{tiempoAprobacion}}", formattedTiempoAprobacion)
-          .replace("{{congregacion}}", nombreObrerosCongregacion[i]);
-
-        await enviarEmail(
+      const templatePathObrero = path.join(
+        __dirname,
+        "../templates/accesoCmarLiveObrero.html"
+      );
+      const emailTemplateObrero = fs.readFileSync(templatePathObrero, "utf8");
+      const emailPromises = nombreObrerosCongregacion.map((nombreObrero, i) => {
+        const personalizarEmailObrero = renderTemplate(emailTemplateObrero, {
+          imagenEmail,
+          nombre: nombreObrero,
+          hermanito: nombre,
+          tiempoAprobacion: formattedTiempoAprobacion,
+          congregacion: nombreCongregacion,
+        });
+        return enviarEmail(
           correosObrerosCongregacion[i],
-          "Acceso a CMAR LIVE",
+          `Acceso a CMAR LIVE del hermanito(a) ${nombre}`,
           personalizarEmailObrero
         );
-      }
+      });
+      await Promise.all(emailPromises);
     }
 
     res.json({
@@ -272,7 +269,20 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
       solicitud,
     });
   } catch (error) {
-    await transaction.rollback();
+    // Solo hacer rollback si la transacción no está terminada
+    // Sequelize transaction state: use transaction.finished === 'commit' or 'rollback'
+    // Use (transaction as any).finished to avoid TS error
+    if (
+      transaction &&
+      (transaction as any).finished !== "commit" &&
+      (transaction as any).finished !== "rollback"
+    ) {
+      try {
+        await transaction.rollback();
+      } catch (e) {
+        console.error("Error rolling back transaction:", e);
+      }
+    }
     console.error(error);
     res.status(500).json({
       ok: false,
@@ -496,7 +506,7 @@ export const denegarSolicitudMultimedia = async (
       });
     }
 
-    await eliminarRolesusuario(usuarioId, transaction);
+    await eliminarRolesUsuario(usuarioId, transaction);
 
     const email = usuario.getDataValue("email");
     if (!email) {
@@ -612,7 +622,7 @@ export const eliminarSolicitudMultimedia = async (
   }
 };
 
-const eliminarRolesusuario = async (usuarioId: number, transaction?: any) => {
+const eliminarRolesUsuario = async (usuarioId: number, transaction?: any) => {
   // Verificar permisos del usuario
   const permisos = await UsuarioPermiso.findAll({
     where: { usuario_id: usuarioId },
