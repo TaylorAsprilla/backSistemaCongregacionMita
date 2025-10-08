@@ -18,6 +18,7 @@ import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import Congregacion from "../models/congregacion.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import path from "path";
 import fs from "fs";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
@@ -645,42 +646,350 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
   const transaction = await db.transaction();
 
   try {
+    // =======================================================================
+    //                   Obtener datos del usuario y ubicación anterior
+    // =======================================================================
+    
     const usuario = await Usuario.findByPk(id, { transaction });
-    if (usuario) {
-      await actualizarCongregacion(
-        Number(id),
-        pais_id,
-        congregacion_id,
-        campo_id,
-        transaction
-      );
-
-      await auditoriaUsuario(
-        Number(id),
-        Number(idUsuarioActual),
-        AUDITORIAUSUARIO_ENUM.TRANSFERENCIA,
-        transaction
-      );
-
-      await transaction.commit();
-      res.json({
-        ok: true,
-        msg: `Se trasferió el usuario ${id}`,
-        id,
-        usuario,
-      });
-    }
-
     if (!usuario) {
+      await transaction.rollback();
       return res.status(404).json({
-        msg: `Error al transferir el usuario`,
+        ok: false,
+        msg: `No existe un usuario con el id ${id}`,
       });
     }
+
+    // Obtener la congregación anterior del usuario
+    const congregacionAnterior = await UsuarioCongregacion.findOne({
+      where: { usuario_id: Number(id) },
+      transaction,
+    });
+
+    const datosUsuario = {
+      nombre: `${usuario.getDataValue("primerNombre") || ""} ${
+        usuario.getDataValue("segundoNombre") || ""
+      } ${usuario.getDataValue("primerApellido") || ""} ${
+        usuario.getDataValue("segundoApellido") || ""
+      }`.replace(/\s+/g, " ").trim(),
+      email: usuario.getDataValue("email") || "No disponible",
+      celular: usuario.getDataValue("numeroCelular") || "No disponible",
+    };
+
+    // =======================================================================
+    //                   Actualizar congregación del usuario
+    // =======================================================================
+    
+    await actualizarCongregacion(
+      Number(id),
+      pais_id,
+      congregacion_id,
+      campo_id,
+      transaction
+    );
+
+    await auditoriaUsuario(
+      Number(id),
+      Number(idUsuarioActual),
+      AUDITORIAUSUARIO_ENUM.TRANSFERENCIA,
+      transaction
+    );
+
+    // =======================================================================
+    //                   Obtener información de las nuevas ubicaciones
+    // =======================================================================
+    
+    const [nuevoPais, nuevaCongregacion, nuevoCampo] = await Promise.all([
+      Pais.findByPk(pais_id, { transaction }),
+      Congregacion.findByPk(congregacion_id, { transaction }),
+      Campo.findByPk(campo_id, { transaction }),
+    ]);
+
+    if (!nuevoPais || !nuevaCongregacion || !nuevoCampo) {
+      await transaction.rollback();
+      return res.status(400).json({
+        ok: false,
+        msg: "Error: País, congregación o campo no encontrados",
+      });
+    }
+
+    const nuevaUbicacion = {
+      pais: nuevoPais.getDataValue("pais"),
+      congregacion: nuevaCongregacion.getDataValue("congregacion"),
+      campo: nuevoCampo.getDataValue("campo"),
+    };
+
+    await transaction.commit();
+
+    // =======================================================================
+    //                   Enviar notificaciones por email
+    // =======================================================================
+    
+    // Helper para renderizar plantillas de email
+    function renderTemplate(template: string, variables: Record<string, string>) {
+      let result = template;
+      for (const key in variables) {
+        const value = variables[key] ?? "";
+        result = result.replace(new RegExp(`{{${key}}}`, "g"), value);
+      }
+      return result;
+    }
+
+    // Determinar qué cambió para enviar emails condicionales
+    const paisAnterior = congregacionAnterior ? congregacionAnterior.getDataValue("pais_id") : null;
+    const congregacionAnteriorId = congregacionAnterior ? congregacionAnterior.getDataValue("congregacion_id") : null;
+    const campoAnterior = congregacionAnterior ? congregacionAnterior.getDataValue("campo_id") : null;
+
+    const paisCambio = paisAnterior !== pais_id;
+    const congregacionCambio = congregacionAnteriorId !== congregacion_id;
+    const campoCambio = campoAnterior !== campo_id;
+
+    console.log("Validación de cambios:");
+    console.log(`País: ${paisAnterior} -> ${pais_id} (cambió: ${paisCambio})`);
+    console.log(`Congregación: ${congregacionAnteriorId} -> ${congregacion_id} (cambió: ${congregacionCambio})`);
+    console.log(`Campo: ${campoAnterior} -> ${campo_id} (cambió: ${campoCambio})`);
+
+    // Cargar template de email
+    const templatePath = path.join(
+      __dirname,
+      "../templates/nuevoFeligresTransferido.html"
+    );
+    const emailTemplate = fs.readFileSync(templatePath, "utf8");
+
+    // Variables comunes para el email
+    const variablesComunes = {
+      imagenEmail,
+      nombreFeligres: datosUsuario.nombre,
+      emailFeligres: datosUsuario.email,
+      celularFeligres: datosUsuario.celular,
+      nuevoPais: nuevaUbicacion.pais,
+      nuevaCongregacion: nuevaUbicacion.congregacion,
+      nuevoCampo: nuevaUbicacion.campo,
+    };
+
+    const emailPromises: Promise<void>[] = [];
+
+    // =======================================================================
+    //                   Notificar al Obrero País (si el país cambió)
+    // =======================================================================
+    if (paisCambio && congregacionAnterior && nuevoPais.getDataValue("idObreroEncargado")) {
+      const obreroPromise = Usuario.findByPk(nuevoPais.getDataValue("idObreroEncargado"))
+        .then(async (obreroPais) => {
+          if (obreroPais && obreroPais.getDataValue("email")) {
+            const nombreObrero = `${obreroPais.getDataValue("primerNombre") || ""} ${
+              obreroPais.getDataValue("segundoNombre") || ""
+            } ${obreroPais.getDataValue("primerApellido") || ""} ${
+              obreroPais.getDataValue("segundoApellido") || ""
+            }`.replace(/\s+/g, " ").trim();
+
+            const emailPersonalizado = renderTemplate(emailTemplate, {
+              ...variablesComunes,
+              nombreObrero,
+              tipoJurisdiccion: "país",
+            });
+
+            await enviarEmail(
+              obreroPais.getDataValue("email"),
+              "Nuevo Feligrés Transferido - País",
+              emailPersonalizado
+            );
+            console.log(`Email enviado al Obrero País: ${nombreObrero}`);
+          }
+        })
+        .catch(error => console.error("Error enviando email al Obrero País:", error));
+      
+      emailPromises.push(obreroPromise);
+    }
+
+    // =======================================================================
+    //                   Notificar al Obrero Congregación (si la congregación cambió)
+    // =======================================================================
+    if (congregacionCambio && congregacionAnterior) {
+      // Obrero Encargado Principal
+      if (nuevaCongregacion.getDataValue("idObreroEncargado")) {
+        const obreroPromise = Usuario.findByPk(nuevaCongregacion.getDataValue("idObreroEncargado"))
+          .then(async (obreroCongregacion) => {
+            if (obreroCongregacion && obreroCongregacion.getDataValue("email")) {
+              const nombreObrero = `${obreroCongregacion.getDataValue("primerNombre") || ""} ${
+                obreroCongregacion.getDataValue("segundoNombre") || ""
+              } ${obreroCongregacion.getDataValue("primerApellido") || ""} ${
+                obreroCongregacion.getDataValue("segundoApellido") || ""
+              }`.replace(/\s+/g, " ").trim();
+
+              const emailPersonalizado = renderTemplate(emailTemplate, {
+                ...variablesComunes,
+                nombreObrero,
+                tipoJurisdiccion: "congregación",
+              });
+
+              await enviarEmail(
+                obreroCongregacion.getDataValue("email"),
+                "Nuevo Feligrés Transferido - Congregación",
+                emailPersonalizado
+              );
+              console.log(`Email enviado al Obrero Congregación Principal: ${nombreObrero}`);
+            }
+          })
+          .catch(error => console.error("Error enviando email al Obrero Congregación Principal:", error));
+        
+        emailPromises.push(obreroPromise);
+      }
+
+      // Obrero Encargado Secundario
+      if (nuevaCongregacion.getDataValue("idObreroEncargadoDos")) {
+        const obreroPromise = Usuario.findByPk(nuevaCongregacion.getDataValue("idObreroEncargadoDos"))
+          .then(async (obreroCongregacionDos) => {
+            if (obreroCongregacionDos && obreroCongregacionDos.getDataValue("email")) {
+              const nombreObrero = `${obreroCongregacionDos.getDataValue("primerNombre") || ""} ${
+                obreroCongregacionDos.getDataValue("segundoNombre") || ""
+              } ${obreroCongregacionDos.getDataValue("primerApellido") || ""} ${
+                obreroCongregacionDos.getDataValue("segundoApellido") || ""
+              }`.replace(/\s+/g, " ").trim();
+
+              const emailPersonalizado = renderTemplate(emailTemplate, {
+                ...variablesComunes,
+                nombreObrero,
+                tipoJurisdiccion: "congregación",
+              });
+
+              await enviarEmail(
+                obreroCongregacionDos.getDataValue("email"),
+                "Nuevo Feligrés Transferido - Congregación",
+                emailPersonalizado
+              );
+              console.log(`Email enviado al Obrero Congregación Secundario: ${nombreObrero}`);
+            }
+          })
+          .catch(error => console.error("Error enviando email al Obrero Congregación Secundario:", error));
+        
+        emailPromises.push(obreroPromise);
+      }
+    }
+
+    // =======================================================================
+    //                   Notificar al Obrero Campo (si el campo cambió)
+    // =======================================================================
+    if (campoCambio && congregacionAnterior) {
+      // Obrero Encargado Principal
+      if (nuevoCampo.getDataValue("idObreroEncargado")) {
+        const obreroPromise = Usuario.findByPk(nuevoCampo.getDataValue("idObreroEncargado"))
+          .then(async (obreroCampo) => {
+            if (obreroCampo && obreroCampo.getDataValue("email")) {
+              const nombreObrero = `${obreroCampo.getDataValue("primerNombre") || ""} ${
+                obreroCampo.getDataValue("segundoNombre") || ""
+              } ${obreroCampo.getDataValue("primerApellido") || ""} ${
+                obreroCampo.getDataValue("segundoApellido") || ""
+              }`.replace(/\s+/g, " ").trim();
+
+              const emailPersonalizado = renderTemplate(emailTemplate, {
+                ...variablesComunes,
+                nombreObrero,
+                tipoJurisdiccion: "campo",
+              });
+
+              await enviarEmail(
+                obreroCampo.getDataValue("email"),
+                "Nuevo Feligrés Transferido - Campo",
+                emailPersonalizado
+              );
+              console.log(`Email enviado al Obrero Campo Principal: ${nombreObrero}`);
+            }
+          })
+          .catch(error => console.error("Error enviando email al Obrero Campo Principal:", error));
+        
+        emailPromises.push(obreroPromise);
+      }
+
+      // Obrero Encargado Secundario
+      if (nuevoCampo.getDataValue("idObreroEncargadoDos")) {
+        const obreroPromise = Usuario.findByPk(nuevoCampo.getDataValue("idObreroEncargadoDos"))
+          .then(async (obreroCampoDos) => {
+            if (obreroCampoDos && obreroCampoDos.getDataValue("email")) {
+              const nombreObrero = `${obreroCampoDos.getDataValue("primerNombre") || ""} ${
+                obreroCampoDos.getDataValue("segundoNombre") || ""
+              } ${obreroCampoDos.getDataValue("primerApellido") || ""} ${
+                obreroCampoDos.getDataValue("segundoApellido") || ""
+              }`.replace(/\s+/g, " ").trim();
+
+              const emailPersonalizado = renderTemplate(emailTemplate, {
+                ...variablesComunes,
+                nombreObrero,
+                tipoJurisdiccion: "campo",
+              });
+
+              await enviarEmail(
+                obreroCampoDos.getDataValue("email"),
+                "Nuevo Feligrés Transferido - Campo",
+                emailPersonalizado
+              );
+              console.log(`Email enviado al Obrero Campo Secundario: ${nombreObrero}`);
+            }
+          })
+          .catch(error => console.error("Error enviando email al Obrero Campo Secundario:", error));
+        
+        emailPromises.push(obreroPromise);
+      }
+    }
+
+    // Ejecutar todos los emails secuencialmente para evitar conflictos
+    for (const emailPromise of emailPromises) {
+      await emailPromise;
+    }
+
+    let mensajeEmails = "";
+    if (emailPromises.length === 0) {
+      if (!congregacionAnterior) {
+        mensajeEmails = "No se enviaron emails porque este es un usuario nuevo (primera asignación).";
+      } else if (!paisCambio && !congregacionCambio && !campoCambio) {
+        mensajeEmails = "No se enviaron emails porque no hubo cambios en la ubicación del usuario.";
+      } else {
+        mensajeEmails = "No se enviaron emails porque los obreros correspondientes no tienen emails configurados.";
+      }
+    } else {
+      mensajeEmails = `Se enviaron ${emailPromises.length} notificaciones a los obreros correspondientes.`;
+    }
+
+    console.log(`Usuario transferido: ${datosUsuario.nombre}. ${mensajeEmails}`);
+
+    res.json({
+      ok: true,
+      msg: "Usuario transferido satisfactoriamente",
+      mensajeEmails,
+      id,
+      usuario,
+      transferencia: {
+        ubicacionAnterior: congregacionAnterior ? {
+          pais_id: paisAnterior,
+          congregacion_id: congregacionAnteriorId,
+          campo_id: campoAnterior,
+        } : null,
+        ubicacionNueva: {
+          pais_id,
+          congregacion_id,
+          campo_id,
+        },
+        cambios: {
+          paisCambio,
+          congregacionCambio,
+          campoCambio,
+        },
+        emailsEnviados: emailPromises.length,
+      },
+    });
+
   } catch (error) {
-    await transaction.rollback();
+    console.log("Error en transferirUsuario:", error);
+    
+    // Solo hacer rollback si la transacción no ha sido committed
+    try {
+      await transaction.rollback();
+    } catch (rollbackError) {
+      console.log("Error durante rollback (posiblemente ya committed):", rollbackError);
+    }
+    
     res.status(500).json({
+      ok: false,
       msg: "Hable con el administrador",
-      error,
+      error: error instanceof Error ? error.message : "Error desconocido",
     });
   }
 };

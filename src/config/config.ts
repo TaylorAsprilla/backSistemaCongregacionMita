@@ -7,6 +7,7 @@ const config: any = {
       password: process.env.DB_PASSWORD_DEV,
       database: process.env.DB_DATABASE_DEV,
       host: process.env.DB_HOST_DEV,
+      port: process.env.DB_PORT_DEV || 3306,
       dialect: process.env.DB_DIALECT || "mysql",
       sinCongregacion: process.env.SIN_CONGREGACION || 1,
       sinCampo: process.env.SIN_CAMPO || 1,
@@ -32,6 +33,42 @@ const config: any = {
     loginPorQr:
       process.env.LOGIN_POR_QR_DEV || "http://localhost:4200/#/login?ticket=",
     whiteList: ["http://localhost:4200", "http://localhost:56046"],
+  },
+  docker: {
+    database: {
+      username: "congregacion_user",
+      password: "congregacion_pass_2024",
+      database: "congregacion_mita_local",
+      host: process.env.NODE_ENV === "development" ? "localhost" : "db",
+      port: process.env.NODE_ENV === "development" ? 3307 : 3306,
+      dialect: "mysql",
+      sinCongregacion: 1,
+      sinCampo: 1,
+    },
+    email: {
+      host: process.env.HOST_EMAIL_DEVELOPMENT || "smtp.gmail.com",
+      port: process.env.PORT_EMAIL_DEVELOPMENT || 587,
+      email: process.env.USER_EMAIL_DEVELOPMENT,
+      password: process.env.PASS_EMAIL_DEVELOPMENT,
+      from: process.env.FROM_EMAIL_DEVELOPMENT,
+      service: process.env.SERVICE_EMAIL_DEVELOPMENT || "gmail",
+    },
+    urlDeValidacion: "http://localhost:4200/#/validaremail",
+    verificarLink: "http://localhost:4200/#/nueva-contrasena/",
+    imagenEmail:
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.png",
+    logoQR:
+      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg",
+    urlCmarLive: "https://cmar.live/",
+    jwtSecretReset: process.env.JWT_SECRET_RESET || "docker-dev-secret-2024",
+    ipApi: "http://ip-api.com/json/",
+    ip: "127.0.0.1",
+    loginPorQr: "http://localhost:4200/#/login?ticket=",
+    whiteList: [
+      "http://localhost:4200",
+      "http://localhost:3000",
+      "http://localhost:8081",
+    ],
   },
   qa: {
     database: {

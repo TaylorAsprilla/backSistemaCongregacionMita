@@ -13,7 +13,15 @@
     "clean": "rm -rf build",
     "clean-modules": "rm -rf node_modules",
     "copy-templates": "copyfiles src/templates/* build/",
-    "copy-assets": "copyfiles src/assets/**/* build/"
+    "copy-assets": "copyfiles src/assets/**/* build/",
+    "docker:build": "bash docker/scripts/docker-commands.sh build",
+    "docker:up": "bash docker/scripts/docker-commands.sh up",
+    "docker:down": "bash docker/scripts/docker-commands.sh down",
+    "docker:logs": "bash docker/scripts/docker-commands.sh logs",
+    "docker:clean": "bash docker/scripts/docker-commands.sh clean",
+    "docker:db-only": "bash docker/scripts/docker-commands.sh db-only",
+    "docker:reset": "bash docker/scripts/docker-commands.sh reset",
+    "docker:help": "bash docker/scripts/docker-commands.sh help"
   },
   "keywords": [
     "Congregación Mita",

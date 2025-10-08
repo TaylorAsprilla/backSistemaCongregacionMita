@@ -17,12 +17,46 @@
   <div style="text-align: center; margin-bottom: 20px">
     <img src="{{imagenEmail}}" alt="CMAR Live" style="width: 100px" />
   </div>
-  <h3 style="text-align: center">Nueva Congregación Asignada</h3>
+  <h3 style="text-align: center">Nuevo Feligrés Transferido</h3>
   <p>Hola, {{nombreObrero}}</p>
-  <p>Nos complace informarle que se le ha asignado una nueva congregación.</p>
+  <p>
+    Nos complace informarle que ha recibido un nuevo feligrés en su
+    {{tipoJurisdiccion}}.
+  </p>
 
-  <p><b>Congregación:</b> {{nombreCongregacion}}</p>
-  <p><b>Feligreses Registrados:</b> {{numeroFeligreses}}</p>
+  <div
+    style="
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    "
+  >
+    <p><b>Información del Feligrés:</b></p>
+    <p><b>Nombre:</b> {{nombreFeligres}}</p>
+    <p><b>Email:</b> {{emailFeligres}}</p>
+    <p><b>Celular:</b> {{celularFeligres}}</p>
+  </div>
+
+  <div
+    style="
+      background-color: #e8f4fd;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    "
+  >
+    <p><b>Nueva Ubicación:</b></p>
+    <p><b>País:</b> {{nuevoPais}}</p>
+    <p><b>Congregación:</b> {{nuevaCongregacion}}</p>
+    <p><b>Campo:</b> {{nuevoCampo}}</p>
+  </div>
+
+  <p>
+    Este feligrés ha sido transferido y ahora forma parte de su congregación a cargo. Le
+    recomendamos ponerse en contacto con él para darle la bienvenida y
+    proporcionarle la información necesaria sobre su nueva congregación.
+  </p>
 
   <p>
     Si tiene alguna pregunta o necesita ayuda, no dude en ponerse en contacto
