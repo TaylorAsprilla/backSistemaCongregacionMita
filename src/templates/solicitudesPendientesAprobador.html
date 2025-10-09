@@ -1,0 +1,106 @@
+<div
+  style="
+    max-width: 100%;
+    width: 600px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: normal;
+    font-size: 16px;
+    line-height: 22px;
+    color: #252525;
+    word-wrap: break-word;
+    word-break: break-word;
+    text-align: justify;
+  "
+>
+  <div style="text-align: center; margin-bottom: 20px">
+    <img src="{{imagenEmail}}" alt="CMAR Live" style="width: 100px" />
+  </div>
+  <h3 style="text-align: center">Solicitudes Multimedia Pendientes</h3>
+  <p>Hola, {{nombreAprobador}}</p>
+  <p>
+    Este es un recordatorio automático sobre las solicitudes multimedia
+    pendientes en tu {{tipoCongregacion}}:
+    <strong>{{nombreCongregacion}}</strong>.
+  </p>
+
+  <div
+    style="
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    "
+  >
+    <h4 style="margin: 0 0 10px 0; color: #856404">Resumen de Solicitudes</h4>
+    <p style="margin: 5px 0">
+      <strong>Total de solicitudes pendientes:</strong> {{totalSolicitudes}}
+    </p>
+    <p style="margin: 5px 0">
+      <strong>Fecha del reporte:</strong> {{fechaReporte}}
+    </p>
+  </div>
+
+  <div
+    style="
+      background-color: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 15px;
+      margin: 20px 0;
+    "
+  >
+    <h4 style="margin: 0 0 15px 0; color: #007bff">
+      Lista de Solicitudes Pendientes
+    </h4>
+    {{listaSolicitudes}}
+  </div>
+
+  <div
+    style="
+      background-color: #e3f2fd;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    "
+  >
+    <p style="margin: 0"><strong>💡 Instrucciones:</strong></p>
+    <p style="margin: 5px 0">
+      1. Accede al sistema CMAR Live para revisar las solicitudes detalladamente
+    </p>
+    <p style="margin: 5px 0">
+      2. Evalúa cada solicitud según los criterios establecidos
+    </p>
+    <p style="margin: 5px 0">
+      3. Procede a aprobar o denegar según corresponda
+    </p>
+  </div>
+
+  <p>
+    Si tienes alguna pregunta o necesitas ayuda, no dudes en ponerse en contacto
+    con nosotros a través de nuestro correo electrónico:
+    <a href="mailto:recepcion@ootspr.org">recepcion@ootspr.org</a>.
+  </p>
+
+  <p
+    style="
+      margin: 30px 0 12px 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 12px;
+      line-height: 16px;
+      color: #909090;
+      text-align: center;
+    "
+  >
+    Nota: Este es un correo electrónico automático generado semanalmente. Solo
+    recibes este correo porque tienes permisos de aprobador multimedia.
+  </p>
+
+  <br />
+  <p style="text-align: center">
+    Cordialmente, <br />
+    <b>Congregación Mita, Inc.</b>
+  </p>
+</div>
