@@ -1,4 +1,5 @@
 import "./crons/notifyExpiration";
+import "./crons/notifyPendingRequests";
 
 import express, { Application } from "express";
 import usuarioRoutes from "./routes/usuario.routes";
@@ -45,6 +46,7 @@ import ayudanteRoutes from "./routes/ayudante.routes";
 import emailRoutes from "./routes/email.routes";
 import accesoQrRoutes from "./routes/accesoQR.routes";
 import grupoGemelosRoutes from "./routes/grupoGemelos.routes";
+import cronRoutes from "./routes/cron.routes";
 
 import cors from "cors";
 import db from "./database/connection";
@@ -108,6 +110,7 @@ class Server {
     email: "/api/email",
     accesoQr: "/api/accesoqr",
     grupoGemelos: "/api/grupogemelos",
+    cron: "/api/cron",
   };
 
   constructor() {
@@ -198,6 +201,7 @@ class Server {
     this.app.use(this.apiPaths.email, emailRoutes);
     this.app.use(this.apiPaths.accesoQr, accesoQrRoutes);
     this.app.use(this.apiPaths.grupoGemelos, grupoGemelosRoutes);
+    this.app.use(this.apiPaths.cron, cronRoutes);
   }
 
   listen() {
