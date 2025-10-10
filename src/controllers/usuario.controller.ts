@@ -22,6 +22,7 @@ import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import path from "path";
 import fs from "fs";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
+import EstadoCivil from "../models/estadoCivil.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -48,6 +49,11 @@ export const getUsuarios = async (req: Request, res: Response) => {
         "estado",
       ],
       include: [
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["estadoCivil"],
+        },
         {
           model: Pais,
           as: "usuarioCongregacionPais",
@@ -649,7 +655,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // =======================================================================
     //                   Obtener datos del usuario y ubicación anterior
     // =======================================================================
-    
+
     const usuario = await Usuario.findByPk(id, { transaction });
     if (!usuario) {
       await transaction.rollback();
@@ -670,7 +676,9 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
         usuario.getDataValue("segundoNombre") || ""
       } ${usuario.getDataValue("primerApellido") || ""} ${
         usuario.getDataValue("segundoApellido") || ""
-      }`.replace(/\s+/g, " ").trim(),
+      }`
+        .replace(/\s+/g, " ")
+        .trim(),
       email: usuario.getDataValue("email") || "No disponible",
       celular: usuario.getDataValue("numeroCelular") || "No disponible",
     };
@@ -678,7 +686,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // =======================================================================
     //                   Actualizar congregación del usuario
     // =======================================================================
-    
+
     await actualizarCongregacion(
       Number(id),
       pais_id,
@@ -697,7 +705,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // =======================================================================
     //                   Obtener información de las nuevas ubicaciones
     // =======================================================================
-    
+
     const [nuevoPais, nuevaCongregacion, nuevoCampo] = await Promise.all([
       Pais.findByPk(pais_id, { transaction }),
       Congregacion.findByPk(congregacion_id, { transaction }),
@@ -723,9 +731,12 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // =======================================================================
     //                   Enviar notificaciones por email
     // =======================================================================
-    
+
     // Helper para renderizar plantillas de email
-    function renderTemplate(template: string, variables: Record<string, string>) {
+    function renderTemplate(
+      template: string,
+      variables: Record<string, string>
+    ) {
       let result = template;
       for (const key in variables) {
         const value = variables[key] ?? "";
@@ -735,9 +746,15 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     }
 
     // Determinar qué cambió para enviar emails condicionales
-    const paisAnterior = congregacionAnterior ? congregacionAnterior.getDataValue("pais_id") : null;
-    const congregacionAnteriorId = congregacionAnterior ? congregacionAnterior.getDataValue("congregacion_id") : null;
-    const campoAnterior = congregacionAnterior ? congregacionAnterior.getDataValue("campo_id") : null;
+    const paisAnterior = congregacionAnterior
+      ? congregacionAnterior.getDataValue("pais_id")
+      : null;
+    const congregacionAnteriorId = congregacionAnterior
+      ? congregacionAnterior.getDataValue("congregacion_id")
+      : null;
+    const campoAnterior = congregacionAnterior
+      ? congregacionAnterior.getDataValue("campo_id")
+      : null;
 
     const paisCambio = paisAnterior !== pais_id;
     const congregacionCambio = congregacionAnteriorId !== congregacion_id;
@@ -745,8 +762,12 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
 
     console.log("Validación de cambios:");
     console.log(`País: ${paisAnterior} -> ${pais_id} (cambió: ${paisCambio})`);
-    console.log(`Congregación: ${congregacionAnteriorId} -> ${congregacion_id} (cambió: ${congregacionCambio})`);
-    console.log(`Campo: ${campoAnterior} -> ${campo_id} (cambió: ${campoCambio})`);
+    console.log(
+      `Congregación: ${congregacionAnteriorId} -> ${congregacion_id} (cambió: ${congregacionCambio})`
+    );
+    console.log(
+      `Campo: ${campoAnterior} -> ${campo_id} (cambió: ${campoCambio})`
+    );
 
     // Cargar template de email
     const templatePath = path.join(
@@ -771,15 +792,23 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // =======================================================================
     //                   Notificar al Obrero País (si el país cambió)
     // =======================================================================
-    if (paisCambio && congregacionAnterior && nuevoPais.getDataValue("idObreroEncargado")) {
-      const obreroPromise = Usuario.findByPk(nuevoPais.getDataValue("idObreroEncargado"))
+    if (
+      paisCambio &&
+      congregacionAnterior &&
+      nuevoPais.getDataValue("idObreroEncargado")
+    ) {
+      const obreroPromise = Usuario.findByPk(
+        nuevoPais.getDataValue("idObreroEncargado")
+      )
         .then(async (obreroPais) => {
           if (obreroPais && obreroPais.getDataValue("email")) {
-            const nombreObrero = `${obreroPais.getDataValue("primerNombre") || ""} ${
-              obreroPais.getDataValue("segundoNombre") || ""
-            } ${obreroPais.getDataValue("primerApellido") || ""} ${
-              obreroPais.getDataValue("segundoApellido") || ""
-            }`.replace(/\s+/g, " ").trim();
+            const nombreObrero = `${
+              obreroPais.getDataValue("primerNombre") || ""
+            } ${obreroPais.getDataValue("segundoNombre") || ""} ${
+              obreroPais.getDataValue("primerApellido") || ""
+            } ${obreroPais.getDataValue("segundoApellido") || ""}`
+              .replace(/\s+/g, " ")
+              .trim();
 
             const emailPersonalizado = renderTemplate(emailTemplate, {
               ...variablesComunes,
@@ -795,8 +824,10 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
             console.log(`Email enviado al Obrero País: ${nombreObrero}`);
           }
         })
-        .catch(error => console.error("Error enviando email al Obrero País:", error));
-      
+        .catch((error) =>
+          console.error("Error enviando email al Obrero País:", error)
+        );
+
       emailPromises.push(obreroPromise);
     }
 
@@ -806,14 +837,21 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     if (congregacionCambio && congregacionAnterior) {
       // Obrero Encargado Principal
       if (nuevaCongregacion.getDataValue("idObreroEncargado")) {
-        const obreroPromise = Usuario.findByPk(nuevaCongregacion.getDataValue("idObreroEncargado"))
+        const obreroPromise = Usuario.findByPk(
+          nuevaCongregacion.getDataValue("idObreroEncargado")
+        )
           .then(async (obreroCongregacion) => {
-            if (obreroCongregacion && obreroCongregacion.getDataValue("email")) {
-              const nombreObrero = `${obreroCongregacion.getDataValue("primerNombre") || ""} ${
-                obreroCongregacion.getDataValue("segundoNombre") || ""
-              } ${obreroCongregacion.getDataValue("primerApellido") || ""} ${
-                obreroCongregacion.getDataValue("segundoApellido") || ""
-              }`.replace(/\s+/g, " ").trim();
+            if (
+              obreroCongregacion &&
+              obreroCongregacion.getDataValue("email")
+            ) {
+              const nombreObrero = `${
+                obreroCongregacion.getDataValue("primerNombre") || ""
+              } ${obreroCongregacion.getDataValue("segundoNombre") || ""} ${
+                obreroCongregacion.getDataValue("primerApellido") || ""
+              } ${obreroCongregacion.getDataValue("segundoApellido") || ""}`
+                .replace(/\s+/g, " ")
+                .trim();
 
               const emailPersonalizado = renderTemplate(emailTemplate, {
                 ...variablesComunes,
@@ -826,24 +864,38 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
                 "Nuevo Feligrés Transferido - Congregación",
                 emailPersonalizado
               );
-              console.log(`Email enviado al Obrero Congregación Principal: ${nombreObrero}`);
+              console.log(
+                `Email enviado al Obrero Congregación Principal: ${nombreObrero}`
+              );
             }
           })
-          .catch(error => console.error("Error enviando email al Obrero Congregación Principal:", error));
-        
+          .catch((error) =>
+            console.error(
+              "Error enviando email al Obrero Congregación Principal:",
+              error
+            )
+          );
+
         emailPromises.push(obreroPromise);
       }
 
       // Obrero Encargado Secundario
       if (nuevaCongregacion.getDataValue("idObreroEncargadoDos")) {
-        const obreroPromise = Usuario.findByPk(nuevaCongregacion.getDataValue("idObreroEncargadoDos"))
+        const obreroPromise = Usuario.findByPk(
+          nuevaCongregacion.getDataValue("idObreroEncargadoDos")
+        )
           .then(async (obreroCongregacionDos) => {
-            if (obreroCongregacionDos && obreroCongregacionDos.getDataValue("email")) {
-              const nombreObrero = `${obreroCongregacionDos.getDataValue("primerNombre") || ""} ${
-                obreroCongregacionDos.getDataValue("segundoNombre") || ""
-              } ${obreroCongregacionDos.getDataValue("primerApellido") || ""} ${
-                obreroCongregacionDos.getDataValue("segundoApellido") || ""
-              }`.replace(/\s+/g, " ").trim();
+            if (
+              obreroCongregacionDos &&
+              obreroCongregacionDos.getDataValue("email")
+            ) {
+              const nombreObrero = `${
+                obreroCongregacionDos.getDataValue("primerNombre") || ""
+              } ${obreroCongregacionDos.getDataValue("segundoNombre") || ""} ${
+                obreroCongregacionDos.getDataValue("primerApellido") || ""
+              } ${obreroCongregacionDos.getDataValue("segundoApellido") || ""}`
+                .replace(/\s+/g, " ")
+                .trim();
 
               const emailPersonalizado = renderTemplate(emailTemplate, {
                 ...variablesComunes,
@@ -856,11 +908,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
                 "Nuevo Feligrés Transferido - Congregación",
                 emailPersonalizado
               );
-              console.log(`Email enviado al Obrero Congregación Secundario: ${nombreObrero}`);
+              console.log(
+                `Email enviado al Obrero Congregación Secundario: ${nombreObrero}`
+              );
             }
           })
-          .catch(error => console.error("Error enviando email al Obrero Congregación Secundario:", error));
-        
+          .catch((error) =>
+            console.error(
+              "Error enviando email al Obrero Congregación Secundario:",
+              error
+            )
+          );
+
         emailPromises.push(obreroPromise);
       }
     }
@@ -871,14 +930,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     if (campoCambio && congregacionAnterior) {
       // Obrero Encargado Principal
       if (nuevoCampo.getDataValue("idObreroEncargado")) {
-        const obreroPromise = Usuario.findByPk(nuevoCampo.getDataValue("idObreroEncargado"))
+        const obreroPromise = Usuario.findByPk(
+          nuevoCampo.getDataValue("idObreroEncargado")
+        )
           .then(async (obreroCampo) => {
             if (obreroCampo && obreroCampo.getDataValue("email")) {
-              const nombreObrero = `${obreroCampo.getDataValue("primerNombre") || ""} ${
-                obreroCampo.getDataValue("segundoNombre") || ""
-              } ${obreroCampo.getDataValue("primerApellido") || ""} ${
-                obreroCampo.getDataValue("segundoApellido") || ""
-              }`.replace(/\s+/g, " ").trim();
+              const nombreObrero = `${
+                obreroCampo.getDataValue("primerNombre") || ""
+              } ${obreroCampo.getDataValue("segundoNombre") || ""} ${
+                obreroCampo.getDataValue("primerApellido") || ""
+              } ${obreroCampo.getDataValue("segundoApellido") || ""}`
+                .replace(/\s+/g, " ")
+                .trim();
 
               const emailPersonalizado = renderTemplate(emailTemplate, {
                 ...variablesComunes,
@@ -891,24 +954,35 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
                 "Nuevo Feligrés Transferido - Campo",
                 emailPersonalizado
               );
-              console.log(`Email enviado al Obrero Campo Principal: ${nombreObrero}`);
+              console.log(
+                `Email enviado al Obrero Campo Principal: ${nombreObrero}`
+              );
             }
           })
-          .catch(error => console.error("Error enviando email al Obrero Campo Principal:", error));
-        
+          .catch((error) =>
+            console.error(
+              "Error enviando email al Obrero Campo Principal:",
+              error
+            )
+          );
+
         emailPromises.push(obreroPromise);
       }
 
       // Obrero Encargado Secundario
       if (nuevoCampo.getDataValue("idObreroEncargadoDos")) {
-        const obreroPromise = Usuario.findByPk(nuevoCampo.getDataValue("idObreroEncargadoDos"))
+        const obreroPromise = Usuario.findByPk(
+          nuevoCampo.getDataValue("idObreroEncargadoDos")
+        )
           .then(async (obreroCampoDos) => {
             if (obreroCampoDos && obreroCampoDos.getDataValue("email")) {
-              const nombreObrero = `${obreroCampoDos.getDataValue("primerNombre") || ""} ${
-                obreroCampoDos.getDataValue("segundoNombre") || ""
-              } ${obreroCampoDos.getDataValue("primerApellido") || ""} ${
-                obreroCampoDos.getDataValue("segundoApellido") || ""
-              }`.replace(/\s+/g, " ").trim();
+              const nombreObrero = `${
+                obreroCampoDos.getDataValue("primerNombre") || ""
+              } ${obreroCampoDos.getDataValue("segundoNombre") || ""} ${
+                obreroCampoDos.getDataValue("primerApellido") || ""
+              } ${obreroCampoDos.getDataValue("segundoApellido") || ""}`
+                .replace(/\s+/g, " ")
+                .trim();
 
               const emailPersonalizado = renderTemplate(emailTemplate, {
                 ...variablesComunes,
@@ -921,11 +995,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
                 "Nuevo Feligrés Transferido - Campo",
                 emailPersonalizado
               );
-              console.log(`Email enviado al Obrero Campo Secundario: ${nombreObrero}`);
+              console.log(
+                `Email enviado al Obrero Campo Secundario: ${nombreObrero}`
+              );
             }
           })
-          .catch(error => console.error("Error enviando email al Obrero Campo Secundario:", error));
-        
+          .catch((error) =>
+            console.error(
+              "Error enviando email al Obrero Campo Secundario:",
+              error
+            )
+          );
+
         emailPromises.push(obreroPromise);
       }
     }
@@ -938,17 +1019,22 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     let mensajeEmails = "";
     if (emailPromises.length === 0) {
       if (!congregacionAnterior) {
-        mensajeEmails = "No se enviaron emails porque este es un usuario nuevo (primera asignación).";
+        mensajeEmails =
+          "No se enviaron emails porque este es un usuario nuevo (primera asignación).";
       } else if (!paisCambio && !congregacionCambio && !campoCambio) {
-        mensajeEmails = "No se enviaron emails porque no hubo cambios en la ubicación del usuario.";
+        mensajeEmails =
+          "No se enviaron emails porque no hubo cambios en la ubicación del usuario.";
       } else {
-        mensajeEmails = "No se enviaron emails porque los obreros correspondientes no tienen emails configurados.";
+        mensajeEmails =
+          "No se enviaron emails porque los obreros correspondientes no tienen emails configurados.";
       }
     } else {
       mensajeEmails = `Se enviaron ${emailPromises.length} notificaciones a los obreros correspondientes.`;
     }
 
-    console.log(`Usuario transferido: ${datosUsuario.nombre}. ${mensajeEmails}`);
+    console.log(
+      `Usuario transferido: ${datosUsuario.nombre}. ${mensajeEmails}`
+    );
 
     res.json({
       ok: true,
@@ -957,11 +1043,13 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       id,
       usuario,
       transferencia: {
-        ubicacionAnterior: congregacionAnterior ? {
-          pais_id: paisAnterior,
-          congregacion_id: congregacionAnteriorId,
-          campo_id: campoAnterior,
-        } : null,
+        ubicacionAnterior: congregacionAnterior
+          ? {
+              pais_id: paisAnterior,
+              congregacion_id: congregacionAnteriorId,
+              campo_id: campoAnterior,
+            }
+          : null,
         ubicacionNueva: {
           pais_id,
           congregacion_id,
@@ -975,17 +1063,19 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
         emailsEnviados: emailPromises.length,
       },
     });
-
   } catch (error) {
     console.log("Error en transferirUsuario:", error);
-    
+
     // Solo hacer rollback si la transacción no ha sido committed
     try {
       await transaction.rollback();
     } catch (rollbackError) {
-      console.log("Error durante rollback (posiblemente ya committed):", rollbackError);
+      console.log(
+        "Error durante rollback (posiblemente ya committed):",
+        rollbackError
+      );
     }
-    
+
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
