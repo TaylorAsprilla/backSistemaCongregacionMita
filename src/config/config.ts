@@ -140,6 +140,7 @@ const config: any = {
       "http://cmar.live",
       "http://www.cmar.live",
       "https://www.cmar.live",
+      "https://taylorasprilla.dev/",
     ],
   },
 };
