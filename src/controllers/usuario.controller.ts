@@ -46,6 +46,7 @@ export const getUsuarios = async (req: Request, res: Response) => {
         "departamentoDireccion",
         "codigoPostalDireccion",
         "paisDireccion",
+        "esJoven",
         "estado",
       ],
       include: [

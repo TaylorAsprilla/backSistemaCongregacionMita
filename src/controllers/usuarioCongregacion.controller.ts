@@ -5,6 +5,7 @@ import Congregacion from "../models/congregacion.model";
 import Usuario from "../models/usuario.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
+import EstadoCivil from "../models/estadoCivil.model";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
@@ -156,6 +157,7 @@ export const getUsuariosPorCongregacion = async (
         "departamentoDireccion",
         "codigoPostalDireccion",
         "paisDireccion",
+        "esJoven",
         "estado",
       ],
       include: [
@@ -189,6 +191,11 @@ export const getUsuariosPorCongregacion = async (
             "email",
             "numeroCelular",
           ],
+        },
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["estadoCivil"],
         },
       ],
       where: {
