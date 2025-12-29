@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import config from "../config/config";
 import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
+import * as fs from "fs";
+import * as path from "path";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
@@ -22,6 +24,15 @@ import { auditoriaUsuario } from "../database/usuario.associations";
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 const urlDeValidacion = environment.urlDeValidacion;
+
+const templatePathAccesoExtendido = path.join(
+  __dirname,
+  "../templates/accesoExtendido.html"
+);
+const emailTemplateAccesoExtendido = fs.readFileSync(
+  templatePathAccesoExtendido,
+  "utf8"
+);
 
 export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
   try {
@@ -626,14 +637,40 @@ export const actualizarSolicitudMultimedia = async (
   const { id } = req.params;
   const { body } = req;
 
+  console.log("ID de la solicitud a actualizar:", body);
+
   try {
-    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id);
+    const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id, {
+      include: [
+        {
+          model: Usuario,
+          as: "usuario",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "email",
+          ],
+        },
+      ],
+    });
     if (!solicitudDeAcceso) {
       return res.status(404).json({
         ok: false,
         msg: `No existe una solicitud con el id ${id}`,
       });
     }
+
+    // Verificar si tiempoAprobacion cambió
+    const tiempoAprobacionAnterior =
+      solicitudDeAcceso.getDataValue("tiempoAprobacion");
+    const tiempoAprobacionNuevo = body.tiempoAprobacion;
+
+    const tiempoAprobacionCambio =
+      tiempoAprobacionNuevo &&
+      tiempoAprobacionAnterior !== tiempoAprobacionNuevo;
 
     // =======================================================================
     //                          Actualizar la Solicitud de Accesos
@@ -642,6 +679,54 @@ export const actualizarSolicitudMultimedia = async (
     const solicitudDeAccesoActualizado = await solicitudDeAcceso.update(body, {
       new: true,
     });
+
+    // =======================================================================
+    //          Enviar email de extensión si tiempoAprobacion cambió
+    // =======================================================================
+
+    if (tiempoAprobacionCambio) {
+      const usuario = solicitudDeAcceso.get("usuario") as any;
+      const emailUsuario = usuario?.email;
+      const nombreUsuario = `${usuario?.primerNombre || ""} ${
+        usuario?.segundoNombre || ""
+      } ${usuario?.primerApellido || ""} ${
+        usuario?.segundoApellido || ""
+      }`.trim();
+
+      if (emailUsuario) {
+        try {
+          // Formatear la fecha de extensión
+          const fechaExtension = new Date(
+            tiempoAprobacionNuevo
+          ).toLocaleDateString("es-ES", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+
+          // Personalizar el email
+          const emailPersonalizado = emailTemplateAccesoExtendido
+            .replace("{{imagenEmail}}", imagenEmail)
+            .replace("{{nombre}}", nombreUsuario)
+            .replace("{{fechaExtension}}", fechaExtension);
+
+          // Enviar el correo
+          await enviarEmail(
+            emailUsuario,
+            "Su acceso a CMAR LIVE ha sido extendido",
+            emailPersonalizado
+          );
+
+          console.log(
+            `Email de extensión enviado a ${emailUsuario} (${nombreUsuario})`
+          );
+        } catch (emailError) {
+          console.error("Error al enviar email de extensión:", emailError);
+          // No detener la ejecución si falla el envío del email
+        }
+      }
+    }
+
     res.json({
       ok: true,
       msg: "Solicitud de Acceso Actualizada",
