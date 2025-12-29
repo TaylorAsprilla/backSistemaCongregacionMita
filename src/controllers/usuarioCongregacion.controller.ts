@@ -42,6 +42,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         "departamentoDireccion",
         "codigoPostalDireccion",
         "paisDireccion",
+        "esJoven",
         "estado",
       ],
       include: [
@@ -62,6 +63,11 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
           as: "usuarioCongregacionCampo",
           attributes: ["campo"],
           through: { attributes: [] },
+        },
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["estadoCivil"],
         },
       ],
       where: {
@@ -242,7 +248,7 @@ export const getUsuariosPorCampo = async (req: Request, res: Response) => {
         SELECT     
          distinct(u.id), u.primerNombre, u.segundoNombre, u.primerApellido, u.segundoApellido, 
           u.apodo, u.fechaNacimiento, u.email, u.numeroCelular, p.pais, co.congregacion, 
-          ca.campo, u.estado 
+          ca.campo, u.esJoven, u.estado 
         FROM  
           usuario u 
         INNER JOIN 
