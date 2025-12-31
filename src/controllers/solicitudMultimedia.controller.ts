@@ -4,6 +4,7 @@ import enviarEmail from "../helpers/email";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import * as fs from "fs";
 import * as path from "path";
+import bcrypt from "bcryptjs";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
@@ -15,15 +16,19 @@ import OpcionTransporte from "../models/opcionTransporte.model";
 import Parentesco from "../models/parentesco.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import Pais from "../models/pais.model";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
+import Permiso from "../models/permiso.model";
 import { Op } from "sequelize";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 import db from "../database/connection";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import { auditoriaUsuario } from "../database/usuario.associations";
+import generarPassword from "../helpers/generarPassword";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 const urlDeValidacion = environment.urlDeValidacion;
+const urlCmarLive = environment.urlCmarLive;
 
 const templatePathAccesoExtendido = path.join(
   __dirname,
@@ -31,6 +36,15 @@ const templatePathAccesoExtendido = path.join(
 );
 const emailTemplateAccesoExtendido = fs.readFileSync(
   templatePathAccesoExtendido,
+  "utf8"
+);
+
+const templatePathAccesoCmarLive = path.join(
+  __dirname,
+  "../templates/accesoCmarLive.html"
+);
+const emailTemplateAccesoCmarLive = fs.readFileSync(
+  templatePathAccesoCmarLive,
   "utf8"
 );
 
@@ -639,6 +653,8 @@ export const actualizarSolicitudMultimedia = async (
 
   console.log("ID de la solicitud a actualizar:", body);
 
+  const transaction = await db.transaction();
+
   try {
     const solicitudDeAcceso = await SolicitudMultimedia.findByPk(id, {
       include: [
@@ -652,16 +668,30 @@ export const actualizarSolicitudMultimedia = async (
             "primerApellido",
             "segundoApellido",
             "email",
+            "login",
+            "password",
           ],
         },
       ],
+      transaction,
     });
+
     if (!solicitudDeAcceso) {
+      await transaction.rollback();
       return res.status(404).json({
         ok: false,
         msg: `No existe una solicitud con el id ${id}`,
       });
     }
+
+    const usuario = solicitudDeAcceso.get("usuario") as any;
+    const usuario_id = usuario?.id;
+    const emailUsuario = usuario?.email;
+    const nombreUsuario = `${usuario?.primerNombre || ""} ${
+      usuario?.segundoNombre || ""
+    } ${usuario?.primerApellido || ""} ${
+      usuario?.segundoApellido || ""
+    }`.trim();
 
     // Verificar si tiempoAprobacion cambió
     const tiempoAprobacionAnterior =
@@ -673,44 +703,148 @@ export const actualizarSolicitudMultimedia = async (
       tiempoAprobacionAnterior !== tiempoAprobacionNuevo;
 
     // =======================================================================
+    //             Verificar y Crear Credenciales si no existen
+    // =======================================================================
+
+    const usuarioLogin = usuario?.login;
+    const usuarioPassword = usuario?.password;
+    let credencialesCreadas = false;
+    let passwordGenerado = "";
+
+    if (!usuarioLogin || !usuarioPassword) {
+      // Crear nuevas credenciales
+      const nuevoLogin = emailUsuario;
+      passwordGenerado = generarPassword();
+      const salt = bcrypt.genSaltSync();
+      const hashedPassword = bcrypt.hashSync(passwordGenerado, salt);
+
+      await Usuario.update(
+        { login: nuevoLogin, password: hashedPassword },
+        { where: { id: usuario_id }, transaction }
+      );
+
+      credencialesCreadas = true;
+      console.log(
+        `Nuevas credenciales creadas para el usuario ${usuario_id}: ${nuevoLogin}`
+      );
+    }
+
+    // =======================================================================
+    //             Verificar y Agregar Permiso de Multimedia
+    // =======================================================================
+
+    // Buscar el permiso de "Multimedia"
+    const permisoMultimedia = await Permiso.findOne({
+      where: {
+        permiso: "Multimedia",
+        estado: true,
+      },
+      transaction,
+    });
+
+    if (permisoMultimedia) {
+      const permisoMultimediaId = permisoMultimedia.getDataValue("id");
+
+      // Verificar si el usuario ya tiene el permiso
+      const usuarioTienePermiso = await UsuarioPermiso.findOne({
+        where: {
+          usuario_id: usuario_id,
+          permiso_id: permisoMultimediaId,
+        },
+        transaction,
+      });
+
+      // Si no tiene el permiso, agregarlo
+      if (!usuarioTienePermiso) {
+        await UsuarioPermiso.create(
+          {
+            usuario_id: usuario_id,
+            permiso_id: permisoMultimediaId,
+          },
+          { transaction }
+        );
+        console.log(
+          `Permiso Multimedia agregado al usuario ${usuario_id} (${nombreUsuario})`
+        );
+      }
+    }
+
+    // =======================================================================
     //                          Actualizar la Solicitud de Accesos
     // =======================================================================
 
     const solicitudDeAccesoActualizado = await solicitudDeAcceso.update(body, {
       new: true,
+      transaction,
     });
 
     // =======================================================================
-    //          Enviar email de extensión si tiempoAprobacion cambió
+    //          Enviar emails según el caso
     // =======================================================================
 
-    if (tiempoAprobacionCambio) {
-      const usuario = solicitudDeAcceso.get("usuario") as any;
-      const emailUsuario = usuario?.email;
-      const nombreUsuario = `${usuario?.primerNombre || ""} ${
-        usuario?.segundoNombre || ""
-      } ${usuario?.primerApellido || ""} ${
-        usuario?.segundoApellido || ""
-      }`.trim();
+    if (emailUsuario) {
+      try {
+        // Formatear la fecha
+        const fechaFormateada = tiempoAprobacionNuevo
+          ? new Date(tiempoAprobacionNuevo).toLocaleDateString("es-ES", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "";
 
-      if (emailUsuario) {
-        try {
-          // Formatear la fecha de extensión
-          const fechaExtension = new Date(
-            tiempoAprobacionNuevo
-          ).toLocaleDateString("es-ES", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
+        // CASO 1: Se crearon nuevas credenciales
+        if (credencialesCreadas) {
+          const mensajeCredenciales = `
+            <p><b>Credenciales de ingreso:</b></p>
+            <ul style="list-style: none">
+              <li><b>Link de Acceso:&nbsp;</b> <a href="${urlCmarLive}">cmar.live</a></li>
+              <li><b>Usuario:&nbsp;</b> ${emailUsuario}</li>
+              <li><b>Contraseña:&nbsp;</b> ${passwordGenerado}</li>
+              ${
+                fechaFormateada
+                  ? `<li><b>Tiempo de aprobación:&nbsp;</b> ${fechaFormateada}</li>`
+                  : ""
+              }
+            </ul>
+            <p style="color: #d9534f; font-weight: bold;">
+              ⚠️ Importante: Guarde esta contraseña en un lugar seguro. Por motivos de seguridad, no podremos recuperarla más adelante.
+            </p>
+            <p>
+              Si desea cambiar su contraseña en cualquier momento, puede hacerlo desde la plataforma seleccionando la opción <b>"Olvidé mi contraseña"</b> o contactando al administrador.
+            </p>
+          `;
 
-          // Personalizar el email
+          const emailPersonalizado = emailTemplateAccesoCmarLive
+            .replace("{{imagenEmail}}", imagenEmail)
+            .replace("{{nombre}}", nombreUsuario)
+            .replace("{{mensajeCorreo}}", mensajeCredenciales);
+
+          await enviarEmail(
+            emailUsuario,
+            "Bienvenido a CMAR LIVE - Sus nuevas credenciales de acceso",
+            emailPersonalizado
+          );
+
+          console.log(
+            `Email con credenciales nuevas enviado a ${emailUsuario} (${nombreUsuario})`
+          );
+        }
+        // CASO 2: Ya tenía credenciales pero cambió tiempoAprobacion
+        else if (tiempoAprobacionCambio) {
+          const mensajeExtension = `
+            <p><b>Su acceso ha sido extendido hasta:</b> ${fechaFormateada}</p>
+            <p>
+              En caso de necesitar cambiar su contraseña, puede restablecerla fácilmente seleccionando la opción <b>"Olvidé mi contraseña"</b> en la plataforma <a href="${urlCmarLive}">cmar.live</a>.
+            </p>
+          `;
+
           const emailPersonalizado = emailTemplateAccesoExtendido
             .replace("{{imagenEmail}}", imagenEmail)
             .replace("{{nombre}}", nombreUsuario)
-            .replace("{{fechaExtension}}", fechaExtension);
+            .replace("{{fechaExtension}}", fechaFormateada)
+            .replace("</body>", `${mensajeExtension}</body>`);
 
-          // Enviar el correo
           await enviarEmail(
             emailUsuario,
             "Su acceso a CMAR LIVE ha sido extendido",
@@ -720,19 +854,57 @@ export const actualizarSolicitudMultimedia = async (
           console.log(
             `Email de extensión enviado a ${emailUsuario} (${nombreUsuario})`
           );
-        } catch (emailError) {
-          console.error("Error al enviar email de extensión:", emailError);
-          // No detener la ejecución si falla el envío del email
         }
+        // CASO 3: Ya tenía credenciales y se actualizó la solicitud (pero no cambió tiempoAprobacion)
+        else {
+          const mensajeCredenciales = `
+            <h4>Información importante sobre sus credenciales</h4>
+            <p>
+              Nos complace informarle que sus credenciales de acceso se mantienen sin cambios, ya que ya dispone de un usuario registrado en nuestra plataforma.
+            </p>
+            <ul>
+              <li><b>Link de Acceso:&nbsp;</b> <a href="${urlCmarLive}">cmar.live</a></li>
+              <li><b>Usuario:&nbsp;</b> ${usuarioLogin}</li>
+              ${
+                fechaFormateada
+                  ? `<li><b>Tiempo de aprobación:&nbsp;</b> ${fechaFormateada}</li>`
+                  : ""
+              }
+            </ul>
+            <p>En caso de no recordar su contraseña, puede restablecerla fácilmente seleccionando la opción <b>"Olvidé mi contraseña"</b> en la plataforma.</p>
+          `;
+
+          const emailPersonalizado = emailTemplateAccesoCmarLive
+            .replace("{{imagenEmail}}", imagenEmail)
+            .replace("{{nombre}}", nombreUsuario)
+            .replace("{{mensajeCorreo}}", mensajeCredenciales);
+
+          await enviarEmail(
+            emailUsuario,
+            "Actualización de su solicitud CMAR LIVE",
+            emailPersonalizado
+          );
+
+          console.log(
+            `Email de actualización enviado a ${emailUsuario} (${nombreUsuario})`
+          );
+        }
+      } catch (emailError) {
+        console.error("Error al enviar email:", emailError);
+        // No detener la ejecución si falla el envío del email
       }
     }
+
+    await transaction.commit();
 
     res.json({
       ok: true,
       msg: "Solicitud de Acceso Actualizada",
       solicitudDeAccesoActualizado,
+      credencialesCreadas,
     });
   } catch (error) {
+    await transaction.rollback();
     console.error("Error al actualizar la solicitud de acceso:", error);
     res.status(500).json({
       ok: false,

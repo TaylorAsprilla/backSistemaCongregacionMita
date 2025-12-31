@@ -112,7 +112,7 @@ const eliminarCredenciales = async () => {
 
     if (usuarioIds.length > 0) {
       await Usuario.update(
-        { login: "", password: "" },
+        { login: "" },
         {
           where: {
             id: {
