@@ -5,6 +5,9 @@ import Campo from "../models/campo.model";
 import { Op } from "sequelize";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import Congregacion from "../models/congregacion.model";
+import agregarPermisoUsuario from "../helpers/agregarPermisoUsuario";
+import eliminarPermisoUsuario from "../helpers/eliminarPermisoUsuario";
+import { ROLES_ID } from "../enum/roles.enum";
 
 export const getCampos = async (req: Request, res: Response) => {
   try {
@@ -78,6 +81,23 @@ export const actualizarCampo = async (req: Request, res: Response) => {
   const transaction = await db.transaction();
 
   try {
+    // Obtener el campo actual para comparar los obreros previos
+    const campoActual = await Campo.findByPk(id, { transaction });
+
+    if (!campoActual) {
+      await transaction.rollback();
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un campo con el id ${id}`,
+      });
+    }
+
+    const previousIdObreroEncargado =
+      campoActual.getDataValue("idObreroEncargado");
+    const previousIdObreroEncargadoDos = campoActual.getDataValue(
+      "idObreroEncargadoDos",
+    );
+
     if (idObreroEncargado !== undefined) {
       // Anular idObreroEncargado para otras congregaciones
       await Congregacion.update(
@@ -90,7 +110,7 @@ export const actualizarCampo = async (req: Request, res: Response) => {
             },
           },
           transaction: transaction,
-        }
+        },
       );
 
       await Campo.update(
@@ -103,7 +123,7 @@ export const actualizarCampo = async (req: Request, res: Response) => {
             },
           },
           transaction: transaction,
-        }
+        },
       );
     }
 
@@ -115,7 +135,7 @@ export const actualizarCampo = async (req: Request, res: Response) => {
         idObreroEncargadoDos:
           idObreroEncargadoDos !== undefined ? idObreroEncargadoDos : null,
       },
-      { where: { id }, transaction }
+      { where: { id }, transaction },
     );
 
     // Verificar si se hizo alguna actualización
@@ -151,7 +171,54 @@ export const actualizarCampo = async (req: Request, res: Response) => {
               usuario_id: idObreroEncargado,
             },
             transaction: transaction,
-          }
+          },
+        );
+      }
+    }
+
+    // Gestionar permisos de ObreroCampo si los obreros cambiaron
+    if (
+      idObreroEncargado !== undefined &&
+      idObreroEncargado !== previousIdObreroEncargado
+    ) {
+      // Siempre eliminar permiso del obrero anterior si existía
+      if (previousIdObreroEncargado) {
+        await eliminarPermisoUsuario(
+          previousIdObreroEncargado,
+          ROLES_ID.OBRERO_CAMPO,
+          transaction,
+        );
+      }
+
+      // Agregar permiso al nuevo obrero (solo si no es null)
+      if (idObreroEncargado) {
+        await agregarPermisoUsuario(
+          idObreroEncargado,
+          ROLES_ID.OBRERO_CAMPO,
+          transaction,
+        );
+      }
+    }
+
+    if (
+      idObreroEncargadoDos !== undefined &&
+      idObreroEncargadoDos !== previousIdObreroEncargadoDos
+    ) {
+      // Siempre eliminar permiso del obrero anterior si existía
+      if (previousIdObreroEncargadoDos) {
+        await eliminarPermisoUsuario(
+          previousIdObreroEncargadoDos,
+          ROLES_ID.OBRERO_CAMPO,
+          transaction,
+        );
+      }
+
+      // Agregar permiso al nuevo obrero (solo si no es null)
+      if (idObreroEncargadoDos) {
+        await agregarPermisoUsuario(
+          idObreroEncargadoDos,
+          ROLES_ID.OBRERO_CAMPO,
+          transaction,
         );
       }
     }

@@ -10,21 +10,25 @@ import { CONGREGACIONES_ID } from "../enum/congregaciones.enum";
 import { Op, Transaction } from "sequelize";
 import Campo from "../models/campo.model";
 import Usuario from "../models/usuario.model";
+import UsuarioPermiso from "../models/usuarioPermiso.model";
 import enviarEmail from "../helpers/email";
+import agregarPermisoUsuario from "../helpers/agregarPermisoUsuario";
+import eliminarPermisoUsuario from "../helpers/eliminarPermisoUsuario";
 import config from "../config/config";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
+import { ROLES_ID } from "../enum/roles.enum";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 
 const templatePathCongregacionAsignada = path.join(
   __dirname,
-  "../templates/congregacionAsignada.html"
+  "../templates/congregacionAsignada.html",
 );
 
 const emailTemplateCongregacionAsignada = fs.readFileSync(
   templatePathCongregacionAsignada,
-  "utf8"
+  "utf8",
 );
 
 export const getCongregaciones = async (req: Request, res: Response) => {
@@ -84,7 +88,7 @@ export const crearCongregacion = async (req: Request, res: Response) => {
             {
               where: { idObreroEncargado, id: { [Op.not]: null } },
               transaction,
-            }
+            },
           )
         : Promise.resolve(),
       idObreroEncargadoDos
@@ -93,7 +97,7 @@ export const crearCongregacion = async (req: Request, res: Response) => {
             {
               where: { idObreroEncargadoDos, id: { [Op.not]: null } },
               transaction,
-            }
+            },
           )
         : Promise.resolve(),
     ]);
@@ -124,11 +128,11 @@ export const crearCongregacion = async (req: Request, res: Response) => {
 
     if (obreroEncargado) {
       const nombreObrero = `${obreroEncargado.getDataValue(
-        "primerNombre"
+        "primerNombre",
       )} ${obreroEncargado.getDataValue(
-        "segundoNombre"
+        "segundoNombre",
       )} ${obreroEncargado.getDataValue(
-        "primerApellido"
+        "primerApellido",
       )} ${obreroEncargado.getDataValue("segundoApellido")}`.trim();
       const emailObrero = obreroEncargado.getDataValue("email");
 
@@ -141,17 +145,17 @@ export const crearCongregacion = async (req: Request, res: Response) => {
       await enviarEmail(
         emailObrero,
         "Nueva Congregación Asignada",
-        personalizarEmail
+        personalizarEmail,
       );
     }
 
     if (obreroEncargadoDos) {
       const nombreObreroDos = `${obreroEncargadoDos.getDataValue(
-        "primerNombre"
+        "primerNombre",
       )} ${obreroEncargadoDos.getDataValue(
-        "segundoNombre"
+        "segundoNombre",
       )} ${obreroEncargadoDos.getDataValue(
-        "primerApellido"
+        "primerApellido",
       )} ${obreroEncargadoDos.getDataValue("segundoApellido")}`.trim();
       const emailObreroDos = obreroEncargadoDos.getDataValue("email");
 
@@ -164,7 +168,7 @@ export const crearCongregacion = async (req: Request, res: Response) => {
       await enviarEmail(
         emailObreroDos,
         "Nueva Asignación de Congregación",
-        personalizarEmail
+        personalizarEmail,
       );
     }
 
@@ -176,7 +180,7 @@ export const crearCongregacion = async (req: Request, res: Response) => {
     });
     console.info(
       "Se ha guardado la congregación exitosamente",
-      nombreCongregacion
+      nombreCongregacion,
     );
   } catch (error) {
     await transaction.rollback();
@@ -210,7 +214,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       congregacion.getDataValue("idObreroEncargado");
 
     const previousIdObreroEncargadoDos = congregacion.getDataValue(
-      "idObreroEncargadoDos"
+      "idObreroEncargadoDos",
     );
 
     // Verificar si el email ya está registrado en la tabla de usuarios o tabla congregación
@@ -258,14 +262,14 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
           {
             where: { idObreroEncargado, id: { [Op.not]: id } },
             transaction,
-          }
+          },
         ),
         Campo.update(
           { idObreroEncargado: null },
           {
             where: { idObreroEncargado, id: { [Op.not]: id } },
             transaction,
-          }
+          },
         ),
       ]);
     }
@@ -301,60 +305,96 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       idObreroEncargadoDos && Usuario.findByPk(idObreroEncargadoDos),
     ]);
 
+    // Gestionar permisos y notificaciones del obrero principal
     if (
-      idObreroEncargado &&
-      idObreroEncargado !== previousIdObreroEncargado &&
-      nuevoObreroPrincipal
+      idObreroEncargado !== undefined &&
+      idObreroEncargado !== previousIdObreroEncargado
     ) {
-      const nombreObrero = `${nuevoObreroPrincipal.getDataValue(
-        "primerNombre"
-      )} ${nuevoObreroPrincipal.getDataValue(
-        "segundoNombre"
-      )} ${nuevoObreroPrincipal.getDataValue(
-        "primerApellido"
-      )} ${nuevoObreroPrincipal.getDataValue("segundoApellido")}`.trim();
-      const emailObrero = nuevoObreroPrincipal.getDataValue("email");
-      const nombreCongregacion =
-        congregacionActualizada?.getDataValue("congregacion");
-      const personalizarEmail = emailTemplateCongregacionAsignada
-        .replace("{{imagenEmail}}", imagenEmail)
-        .replace("{{nombreObrero}}", nombreObrero)
-        .replace("{{nombreCongregacion}}", nombreCongregacion)
-        .replace("{{numeroFeligreses}}", numeroFeligreses.toString());
+      // Siempre eliminar permiso del obrero anterior si existía
+      if (previousIdObreroEncargado) {
+        await eliminarPermisoUsuario(
+          previousIdObreroEncargado,
+          ROLES_ID.OBRERO_CIUDAD,
+          transaction,
+        );
+      }
 
-      await enviarEmail(
-        emailObrero,
-        "Nueva Asignación de Congregación",
-        personalizarEmail
-      );
+      // Agregar permiso y enviar email al nuevo obrero (solo si no es null)
+      if (idObreroEncargado && nuevoObreroPrincipal) {
+        await agregarPermisoUsuario(
+          idObreroEncargado,
+          ROLES_ID.OBRERO_CIUDAD,
+          transaction,
+        );
+
+        const nombreObrero = `${nuevoObreroPrincipal.getDataValue(
+          "primerNombre",
+        )} ${nuevoObreroPrincipal.getDataValue(
+          "segundoNombre",
+        )} ${nuevoObreroPrincipal.getDataValue(
+          "primerApellido",
+        )} ${nuevoObreroPrincipal.getDataValue("segundoApellido")}`.trim();
+        const emailObrero = nuevoObreroPrincipal.getDataValue("email");
+        const nombreCongregacion =
+          congregacionActualizada?.getDataValue("congregacion");
+        const personalizarEmail = emailTemplateCongregacionAsignada
+          .replace("{{imagenEmail}}", imagenEmail)
+          .replace("{{nombreObrero}}", nombreObrero)
+          .replace("{{nombreCongregacion}}", nombreCongregacion)
+          .replace("{{numeroFeligreses}}", numeroFeligreses.toString());
+
+        await enviarEmail(
+          emailObrero,
+          "Nueva Asignación de Congregación",
+          personalizarEmail,
+        );
+      }
     }
 
+    // Gestionar permisos y notificaciones del obrero secundario
     if (
-      idObreroEncargadoDos &&
-      idObreroEncargadoDos !== previousIdObreroEncargadoDos &&
-      nuevoObreroSecundario
+      idObreroEncargadoDos !== undefined &&
+      idObreroEncargadoDos !== previousIdObreroEncargadoDos
     ) {
-      const nombreObreroDos = `${nuevoObreroSecundario.getDataValue(
-        "primerNombre"
-      )} ${nuevoObreroSecundario.getDataValue(
-        "segundoNombre"
-      )} ${nuevoObreroSecundario.getDataValue(
-        "primerApellido"
-      )} ${nuevoObreroSecundario.getDataValue("segundoApellido")}`.trim();
-      const emailObreroDos = nuevoObreroSecundario.getDataValue("email");
-      const nombreCongregacion =
-        congregacionActualizada?.getDataValue("congregacion");
-      const personalizarEmail = emailTemplateCongregacionAsignada
-        .replace("{{imagenEmail}}", imagenEmail)
-        .replace("{{nombreObrero}}", nombreObreroDos)
-        .replace("{{nombreCongregacion}}", nombreCongregacion)
-        .replace("{{numeroFeligreses}}", numeroFeligreses.toString());
+      // Siempre eliminar permiso del obrero anterior si existía
+      if (previousIdObreroEncargadoDos) {
+        await eliminarPermisoUsuario(
+          previousIdObreroEncargadoDos,
+          ROLES_ID.OBRERO_CIUDAD,
+          transaction,
+        );
+      }
 
-      await enviarEmail(
-        emailObreroDos,
-        "Nueva Asignación de Congregación",
-        personalizarEmail
-      );
+      // Agregar permiso y enviar email al nuevo obrero (solo si no es null)
+      if (idObreroEncargadoDos && nuevoObreroSecundario) {
+        await agregarPermisoUsuario(
+          idObreroEncargadoDos,
+          ROLES_ID.OBRERO_CIUDAD,
+          transaction,
+        );
+
+        const nombreObreroDos = `${nuevoObreroSecundario.getDataValue(
+          "primerNombre",
+        )} ${nuevoObreroSecundario.getDataValue(
+          "segundoNombre",
+        )} ${nuevoObreroSecundario.getDataValue(
+          "primerApellido",
+        )} ${nuevoObreroSecundario.getDataValue("segundoApellido")}`.trim();
+        const emailObreroDos = nuevoObreroSecundario.getDataValue("email");
+        const nombreCongregacion =
+          congregacionActualizada?.getDataValue("congregacion");
+        const personalizarEmail = emailTemplateCongregacionAsignada
+          .replace("{{imagenEmail}}", imagenEmail)
+          .replace("{{nombreObrero}}", nombreObreroDos)
+          .replace("{{nombreCongregacion}}", nombreCongregacion)
+          .replace("{{numeroFeligreses}}", numeroFeligreses.toString());
+
+        await enviarEmail(
+          emailObreroDos,
+          "Nueva Asignación de Congregación",
+          personalizarEmail,
+        );
+      }
     }
 
     await transaction.commit();
@@ -367,7 +407,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
 
     console.info(
       "Congregacion actualizada ",
-      congregacionActualizada?.getDataValue("congregacion")
+      congregacionActualizada?.getDataValue("congregacion"),
     );
   } catch (error) {
     await transaction.rollback();
@@ -382,7 +422,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
 
 export const eliminarCongregacion = async (
   req: CustomRequest,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const { body } = req;
@@ -416,7 +456,7 @@ export const eliminarCongregacion = async (
 
 export const activarCongregacion = async (
   req: CustomRequest,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const { body } = req;
