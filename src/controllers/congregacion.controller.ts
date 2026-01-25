@@ -406,7 +406,7 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
     });
 
     console.info(
-      "Congregacion actualizada ",
+      "Congregacion actualizada.",
       congregacionActualizada?.getDataValue("congregacion"),
     );
   } catch (error) {
