@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import AsuntoPendiente from "../models/asuntoPendiente.model";
@@ -8,6 +9,7 @@ import Logro from "../models/logro.model";
 import Meta from "../models/meta.model";
 import SituacionVisita from "../models/situacionVisita.model";
 import Visita from "../models/visita.model";
+import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 
 export const getInformes = async (req: Request, res: Response) => {
   try {
@@ -181,6 +183,45 @@ export const eliminarInforme = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({
       msg: "Hable con el administrador",
+    });
+  }
+};
+
+export const verificarInformeAbierto = async (req: Request, res: Response) => {
+  const { usuario_id, fechaInicio, fechaFin } = req.query;
+
+  console.log(usuario_id, fechaInicio, fechaFin);
+
+  try {
+    if (!usuario_id || !fechaInicio || !fechaFin) {
+      return res.status(400).json({
+        ok: false,
+        msg: "Se requiere usuario_id, fechaInicio y fechaFin",
+      });
+    }
+
+    const informeAbierto = await Informe.findOne({
+      where: {
+        usuario_id,
+        estado: ESTADO_INFORME_ENUM.ABIERTO,
+        createdAt: {
+          [Op.between]: [fechaInicio, fechaFin],
+        },
+      },
+    });
+
+    res.json({
+      ok: true,
+      tieneInformeAbierto: !!informeAbierto,
+      informe: informeAbierto || null,
+      msg: informeAbierto
+        ? "El usuario tiene un informe abierto en el rango de fechas especificado"
+        : "El usuario no tiene informes abiertos en el rango de fechas especificado",
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
     });
   }
 };

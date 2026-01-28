@@ -10,6 +10,7 @@ import {
   eliminarInforme,
   getInforme,
   getInformes,
+  verificarInformeAbierto,
 } from "../controllers/informe.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -18,15 +19,16 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getInformes);
+router.get("/verificar-abierto", validarJWT, verificarInformeAbierto);
 router.get("/:id", validarJWT, getInforme);
 router.post(
   "/",
   [
-    check("fecha", "La fecha del informe es obligatorio ").not().isEmpty(),
+    check("usuario_id", "El usuario_id es obligatorio ").not().isEmpty(),
     validarCampos,
     validarJWT,
   ],
-  crearInforme
+  crearInforme,
 );
 router.put(
   "/:id",
@@ -35,7 +37,7 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  actualizarInforme
+  actualizarInforme,
 );
 router.delete("/:id", validarJWT, eliminarInforme);
 
