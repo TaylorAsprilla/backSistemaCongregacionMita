@@ -12,6 +12,10 @@ const Visita = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    visitasHogares: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     visitaHospital: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -23,15 +27,11 @@ const Visita = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    idSeccion: {
-      type: DataTypes.INTEGER,
-      // allowNull: false,
-    },
   },
   {
     freezeTableName: true,
     tableName: "visita",
-  }
+  },
 );
 
 export default Visita;
