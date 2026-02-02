@@ -46,6 +46,11 @@ export const crearActividad = async (req: Request, res: Response) => {
     //                          Guardar Actividad
     // =======================================================================
 
+    // Convertir cadenas vacías a null para campos numéricos
+    if (body.cantidadRecaudada === "" || body.cantidadRecaudada === undefined) {
+      body.cantidadRecaudada = null;
+    }
+
     const actividad = Actividad.build(body);
     await actividad.save();
 
@@ -78,6 +83,11 @@ export const actualizarActividad = async (req: Request, res: Response) => {
     // =======================================================================
     //                          Actualizar Actividad
     // =======================================================================
+
+    // Convertir cadenas vacías a null para campos numéricos
+    if (body.cantidadRecaudada === "" || body.cantidadRecaudada === undefined) {
+      body.cantidadRecaudada = null;
+    }
 
     const actividadActualizada = await actividad.update(body, { new: true });
     res.json({ ok: true, msg: "Actividad Actualizada", actividadActualizada });

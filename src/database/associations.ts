@@ -1,10 +1,12 @@
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
+import Actividad from "../models/actividad.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import GrupoGemelos from "../models/grupoGemelos.model";
+import Informe from "../models/informe.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
 import OpcionTransporte from "../models/opcionTransporte.model";
@@ -259,4 +261,25 @@ Campo.belongsTo(Usuario, {
 Campo.belongsTo(Usuario, {
   foreignKey: "idObreroEncargadoDos",
   as: "obreroEncargadoDos",
+});
+
+// Relaciones de Informe y Actividad
+Informe.belongsTo(Usuario, {
+  foreignKey: "usuario_id",
+  as: "usuario",
+});
+
+Usuario.hasMany(Informe, {
+  foreignKey: "usuario_id",
+  as: "informes",
+});
+
+Informe.hasMany(Actividad, {
+  foreignKey: "informe_id",
+  as: "actividades",
+});
+
+Actividad.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
 });

@@ -19,15 +19,11 @@ const Logro = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    idSeccion: {
-      type: DataTypes.INTEGER,
-      // allowNull: false,
-    },
   },
   {
     freezeTableName: true,
     tableName: "logro",
-  }
+  },
 );
 
 export default Logro;

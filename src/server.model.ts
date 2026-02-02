@@ -26,7 +26,6 @@ import campoRoutes from "./routes/campo.routes";
 import estadoCivilRoutes from "./routes/estadoCivil.routes";
 import rolCasaRoutes from "./routes/rolCasa.routes";
 import situacionVisitaRoutes from "./routes/situacionVisita.routes";
-import seccionInformeRoutes from "./routes/seccionInforme.routes";
 import nacionalidadRoutes from "./routes/nacionalidad.routes";
 import gradoAcademicoRoutes from "./routes/gradoAcademico.routes";
 import tipoMiembroRoutes from "./routes/tipoMiembro.routes";
@@ -147,7 +146,7 @@ class Server {
     // this.app.use(express.static("public")); //TODO Carpeta pública
 
     this.app.get("/", (req, res, next) =>
-      res.status(200).json({ msg: "CMAR LIVE - Congregación Mita INC 2025" })
+      res.status(200).json({ msg: "CMAR LIVE - Congregación Mita INC 2025" }),
     );
   }
 
@@ -177,7 +176,6 @@ class Server {
     this.app.use(this.apiPaths.estadoCivil, estadoCivilRoutes);
     this.app.use(this.apiPaths.rolcasa, rolCasaRoutes);
     this.app.use(this.apiPaths.situacionVisita, situacionVisitaRoutes);
-    this.app.use(this.apiPaths.seccionInforme, seccionInformeRoutes);
     this.app.use(this.apiPaths.nacionalidad, nacionalidadRoutes);
     this.app.use(this.apiPaths.gradoAcademico, gradoAcademicoRoutes);
     this.app.use(this.apiPaths.tipoMiembro, tipoMiembroRoutes);
@@ -190,7 +188,7 @@ class Server {
     this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
     this.app.use(
       this.apiPaths.supervisorCongregacion,
-      supervisorCongregacionRoutes
+      supervisorCongregacionRoutes,
     );
     this.app.use(this.apiPaths.tipoEstudio, tipoEstudioRoutes);
     this.app.use(this.apiPaths.opcionTransporte, opcionTransporteRoutes);
