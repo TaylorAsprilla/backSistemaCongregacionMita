@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { Op } from "sequelize";
 import db from "../database/connection";
 import Actividad from "../models/actividad.model";
-import AsuntoPendiente from "../models/asuntoPendiente.model";
 import Diezmos from "../models/diezmos.model";
 import Informe from "../models/informe.model";
 import Logro from "../models/logro.model";
@@ -67,12 +66,6 @@ export const getInforme = async (req: Request, res: Response) => {
         },
       });
 
-      const asuntoPendiente = await AsuntoPendiente.findAll({
-        where: {
-          informe_id: id,
-        },
-      });
-
       const metas = await Meta.findAll({
         where: {
           informe_id: id,
@@ -89,7 +82,6 @@ export const getInforme = async (req: Request, res: Response) => {
           situacionVisita,
           aspectoContable,
           logros,
-          asuntoPendiente,
           metas,
         },
       });
