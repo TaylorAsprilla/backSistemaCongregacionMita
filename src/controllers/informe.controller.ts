@@ -3,7 +3,7 @@ import { Op } from "sequelize";
 import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import AsuntoPendiente from "../models/asuntoPendiente.model";
-import Contabilidad from "../models/contabilidad.model";
+import Diezmos from "../models/diezmos.model";
 import Informe from "../models/informe.model";
 import Logro from "../models/logro.model";
 import Meta from "../models/meta.model";
@@ -55,7 +55,7 @@ export const getInforme = async (req: Request, res: Response) => {
         },
       });
 
-      const aspectoContable = await Contabilidad.findAll({
+      const aspectoContable = await Diezmos.findAll({
         where: {
           informe_id: id,
         },

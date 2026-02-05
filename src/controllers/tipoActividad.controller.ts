@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
-import TipoActividad from "../models/tipoActividad.model";
+import TipoActividadEclesiastico from "../models/tipoActividadEclesiastico.model";
 
 export const getTipoActividad = async (req: Request, res: Response) => {
   try {
-    const tipoActividad = await TipoActividad.findAll({
+    const tipoActividad = await TipoActividadEclesiastico.findAll({
       order: db.col("nombre"),
     });
 
@@ -25,7 +25,7 @@ export const crearTipoActividad = async (req: Request, res: Response) => {
   const { nombre } = req.body;
 
   try {
-    const existeTipoActividad = await TipoActividad.findOne({
+    const existeTipoActividad = await TipoActividadEclesiastico.findOne({
       where: { nombre: nombre },
     });
     if (existeTipoActividad) {
@@ -34,7 +34,7 @@ export const crearTipoActividad = async (req: Request, res: Response) => {
       });
     }
 
-    const tipoActividad = await TipoActividad.build(req.body);
+    const tipoActividad = await TipoActividadEclesiastico.build(req.body);
 
     // Guardar Tipo de documento
     const tipoActividadCreado = await tipoActividad.save();
@@ -59,7 +59,7 @@ export const actualizarTipoActividad = async (req: Request, res: Response) => {
   const { nombre, ...campos } = body;
 
   try {
-    const tipoActividad = await TipoActividad.findByPk(id);
+    const tipoActividad = await TipoActividadEclesiastico.findByPk(id);
     if (!tipoActividad) {
       return res.status(404).json({
         msg: "No existe un tipo de actividad con el id " + id,
@@ -70,7 +70,7 @@ export const actualizarTipoActividad = async (req: Request, res: Response) => {
 
     // Actualizaciones
     if (getNombre !== body.nombre) {
-      const existeNombre = await TipoActividad.findOne({
+      const existeNombre = await TipoActividadEclesiastico.findOne({
         where: {
           nombre: body.nombre,
         },
@@ -105,12 +105,12 @@ export const actualizarTipoActividad = async (req: Request, res: Response) => {
 
 export const eliminarTipoActividad = async (
   req: CustomRequest,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
 
   try {
-    const tipoActividad = await TipoActividad.findByPk(id);
+    const tipoActividad = await TipoActividadEclesiastico.findByPk(id);
     if (tipoActividad) {
       const nombre = await tipoActividad.get().nombre;
 

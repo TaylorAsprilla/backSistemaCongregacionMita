@@ -1,10 +1,14 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const Contabilidad = db.define(
-  "Contabilidad",
+const Diezmos = db.define(
+  "Diezmos",
   {
-    sobres: {
+    sobresRestrictos: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    sobresNoRestrictos: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -16,6 +20,10 @@ const Contabilidad = db.define(
       type: DataTypes.BIGINT,
       allowNull: false,
     },
+    mes: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     informe_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -23,8 +31,8 @@ const Contabilidad = db.define(
   },
   {
     freezeTableName: true,
-    tableName: "contabilidad",
+    tableName: "diezmos",
   },
 );
 
-export default Contabilidad;
+export default Diezmos;

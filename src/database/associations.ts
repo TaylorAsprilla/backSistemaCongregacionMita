@@ -1,5 +1,6 @@
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import Actividad from "../models/actividad.model";
+import ActividadEconomica from "../models/actividadEconomica.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
@@ -21,6 +22,7 @@ import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import TipoMiembro from "../models/tipoMiembro.model";
+import TipoActividadEconomica from "../models/tipoActividadEconomica.model";
 import UbicacionConexion from "../models/ubicacionConexion.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
@@ -282,4 +284,26 @@ Informe.hasMany(Actividad, {
 Actividad.belongsTo(Informe, {
   foreignKey: "informe_id",
   as: "informe",
+});
+
+// Relaciones de Informe y ActividadEconomica
+Informe.hasMany(ActividadEconomica, {
+  foreignKey: "informe_id",
+  as: "actividadesEconomicas",
+});
+
+ActividadEconomica.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
+});
+
+// Relaciones de TipoActividadEconomica y ActividadEconomica
+TipoActividadEconomica.hasMany(ActividadEconomica, {
+  foreignKey: "tipoActividadEconomica_id",
+  as: "actividadesEconomicas",
+});
+
+ActividadEconomica.belongsTo(TipoActividadEconomica, {
+  foreignKey: "tipoActividadEconomica_id",
+  as: "tipoActividadEconomica",
 });

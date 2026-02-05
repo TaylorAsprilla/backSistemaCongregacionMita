@@ -1,8 +1,8 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const TipoActividad = db.define(
-  "TipoActividad",
+const TipoActividadEclesiastico = db.define(
+  "TipoActividadEclesiastico",
   {
     nombre: {
       type: DataTypes.STRING,
@@ -10,17 +10,13 @@ const TipoActividad = db.define(
     },
     estado: {
       type: DataTypes.BOOLEAN,
-      defaultValue: 1,
-    },
-    idSeccion: {
-      type: DataTypes.INTEGER,
-      // allowNull: false,
+      defaultValue: true,
     },
   },
   {
     freezeTableName: true,
-    tableName: "tipoActividad",
-  }
+    tableName: "tipoActividadEclesiastico",
+  },
 );
 
-export default TipoActividad;
+export default TipoActividadEclesiastico;

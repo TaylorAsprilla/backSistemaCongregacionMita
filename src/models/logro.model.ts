@@ -12,8 +12,16 @@ const Logro = db.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    fecha: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     comentarios: {
       type: DataTypes.TEXT,
+    },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     informe_id: {
       type: DataTypes.INTEGER,

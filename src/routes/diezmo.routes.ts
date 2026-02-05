@@ -4,24 +4,35 @@
 
 import { Router } from "express";
 import { check } from "express-validator";
-import {
-  actualizarContabilidad,
-  crearContabilidad,
-  getContabilidad,
-  getUnaContabilidad,
-} from "../controllers/contabilidad.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import {
+  actualizarDiezmo,
+  crearDiezmo,
+  getDiezmos,
+  getUnDiezmo,
+} from "../controllers/diezmoscontroller";
 
 const router = Router();
 
-router.get("/", validarJWT, getContabilidad);
-router.get("/:id", validarJWT, getUnaContabilidad);
+router.get("/", validarJWT, getDiezmos);
+router.get("/:id", validarJWT, getUnDiezmo);
 router.post(
   "/",
   [
-    check("sobres", "La cantidad de sobres es obligatorio ").not().isEmpty(),
+    check(
+      "sobresRestrictos",
+      "La cantidad de sobres restrictos es obligatorio ",
+    )
+      .not()
+      .isEmpty(),
+    check(
+      "sobresNoRestrictos",
+      "La cantidad de sobres no restrictos es obligatorio ",
+    )
+      .not()
+      .isEmpty(),
     check("restrictos", "La cantidad de diezmos restrictos es obligatorio")
       .not()
       .isEmpty(),
@@ -32,8 +43,8 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearContabilidad
+  crearDiezmo,
 );
-router.put("/:id", validarJWT, actualizarContabilidad);
+router.put("/:id", validarJWT, actualizarDiezmo);
 
 export default router;

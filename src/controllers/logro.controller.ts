@@ -73,3 +73,32 @@ export const actualizarLogro = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const eliminarLogro = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const logro = await Logro.findByPk(id);
+    if (!logro) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un logro con el id ${id}`,
+      });
+    }
+
+    // Eliminación lógica - cambiar estado a false
+    await logro.update({ estado: false });
+
+    res.json({
+      ok: true,
+      msg: "Logro eliminado",
+      id,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};

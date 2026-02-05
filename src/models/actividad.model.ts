@@ -8,9 +8,6 @@ const Actividad = db.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
-    cantidadRecaudada: {
-      type: DataTypes.DECIMAL,
-    },
     responsable: {
       type: DataTypes.STRING,
     },

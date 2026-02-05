@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import Contabilidad from "../models/contabilidad.model";
+import Diezmos from "../models/diezmos.model";
 
-export const getContabilidad = async (req: Request, res: Response) => {
+export const getDiezmos = async (req: Request, res: Response) => {
   try {
-    const contabilidad = await Contabilidad.findAll();
+    const diezmos = await Diezmos.findAll();
 
     res.json({
       ok: true,
-      contabilidad,
+      diezmos,
     });
   } catch (error) {
     res.status(500).json({
@@ -17,15 +17,15 @@ export const getContabilidad = async (req: Request, res: Response) => {
   }
 };
 
-export const getUnaContabilidad = async (req: Request, res: Response) => {
+export const getUnDiezmo = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const contabilidad = await Contabilidad.findByPk(id);
+    const diezmo = await Diezmos.findByPk(id);
 
     res.json({
       ok: true,
-      contabilidad,
+      diezmo,
     });
   } catch (error) {
     res.status(500).json({
@@ -35,21 +35,21 @@ export const getUnaContabilidad = async (req: Request, res: Response) => {
   }
 };
 
-export const crearContabilidad = async (req: Request, res: Response) => {
+export const crearDiezmo = async (req: Request, res: Response) => {
   const { body } = req;
 
   try {
     // =======================================================================
-    //                          Guardar Contabilidad
+    //                          Guardar Diezmo
     // =======================================================================
 
-    const contabilidad = Contabilidad.build(body);
-    await contabilidad.save();
+    const diezmo = Diezmos.build(body);
+    await diezmo.save();
 
     res.json({
       ok: true,
       msg: "Se ha guardado el informa contable exitosamente ",
-      contabilidad,
+      diezmo,
     });
   } catch (error) {
     res.status(500).json({
@@ -59,13 +59,13 @@ export const crearContabilidad = async (req: Request, res: Response) => {
   }
 };
 
-export const actualizarContabilidad = async (req: Request, res: Response) => {
+export const actualizarDiezmo = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
 
   try {
-    const contabilidad = await Contabilidad.findByPk(id);
-    if (!contabilidad) {
+    const diezmo = await Diezmos.findByPk(id);
+    if (!diezmo) {
       return res.status(404).json({
         ok: false,
         msg: `No existe un informa contable con el id ${id}`,
@@ -73,16 +73,16 @@ export const actualizarContabilidad = async (req: Request, res: Response) => {
     }
 
     // =======================================================================
-    //                          Actualizar Contabilidad
+    //                          Actualizar Diezmo
     // =======================================================================
 
-    const contabilidadActualizada = await contabilidad.update(body, {
+    const diezmoActualizado = await diezmo.update(body, {
       new: true,
     });
     res.json({
       ok: true,
       msg: "Informe contable actualizado",
-      contabilidadActualizada,
+      diezmoActualizado,
     });
   } catch (error) {
     res.status(500).json({
