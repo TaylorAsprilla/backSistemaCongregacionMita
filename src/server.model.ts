@@ -17,7 +17,6 @@ import actividadEconomicaRoutes from "./routes/actividadEconomica.routes";
 import informeRoutes from "./routes/informe.routes";
 import contabilidadRoutes from "./routes/diezmo.routes";
 import logroRoutes from "./routes/logro.routes";
-import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
 import tipoStatusRoutes from "./routes/tipoStatus.routes";
 import metaRoutes from "./routes/meta.routes";
 import visitaRoutes from "./routes/visita.routes";
@@ -77,7 +76,6 @@ class Server {
     informe: "/api/informe",
     diezmos: "/api/diezmos",
     logro: "/api/logro",
-    asuntoPendiente: "/api/asuntopendiente",
     tipoStatus: "/api/tipostatus",
     meta: "/api/meta",
     visita: "/api/visita",
@@ -174,7 +172,6 @@ class Server {
     this.app.use(this.apiPaths.informe, informeRoutes);
     this.app.use(this.apiPaths.diezmos, contabilidadRoutes);
     this.app.use(this.apiPaths.logro, logroRoutes);
-    this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
     this.app.use(this.apiPaths.tipoStatus, tipoStatusRoutes);
     this.app.use(this.apiPaths.meta, metaRoutes);
     this.app.use(this.apiPaths.visita, visitaRoutes);
