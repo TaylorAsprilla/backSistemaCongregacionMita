@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import QrCodigos from "../models/qrCodigos.model";
 import QRCode from "qrcode";
 import { v4 as uuidv4 } from "uuid";
-import useragent from "useragent";
+import DeviceDetector from "device-detector-js";
 import generarJWT from "../helpers/tokenJwt";
 import QrAccesos from "../models/qrAccesos";
 import Congregacion from "../models/congregacion.model";
@@ -150,7 +150,7 @@ export const generarQrCode = async (req: Request, res: Response) => {
           idCongregacion,
           activo: true,
         },
-      }
+      },
     );
 
     // 7b. Guardar en la base de datos el nuevo QR
@@ -185,7 +185,8 @@ export const loginPorQr = async (req: Request, res: Response) => {
     ""
   ).toString();
   const userAgentRaw = req.headers["user-agent"] || "";
-  const agent = useragent.parse(userAgentRaw);
+  const deviceDetector = new DeviceDetector();
+  const deviceResult = deviceDetector.parse(userAgentRaw);
 
   if (!qrCode || !nombre || !numeroMita || !tipoPuesto) {
     return res.status(400).json({ ok: false, msg: "Datos incompletos" });
@@ -204,7 +205,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
     }
 
     const congregacion = await Congregacion.findByPk(
-      qr.getDataValue("idCongregacion")
+      qr.getDataValue("idCongregacion"),
     );
 
     if (!congregacion) {
@@ -216,7 +217,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
     // Generar token JWT
     const token = await generarJWT(
       congregacion.getDataValue("id"),
-      congregacion.getDataValue("email")
+      congregacion.getDataValue("email"),
     );
 
     // Guardar el acceso
@@ -227,7 +228,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
       tipoPuesto,
       ip, // Ensure ip is a string
       userAgent: userAgentRaw,
-      dispositivo: `${agent.os.toString()} - ${agent.device.toString()}`,
+      dispositivo: `${deviceResult.os?.name || "Desconocido"} - ${deviceResult.device?.type || "Desconocido"}`,
     });
 
     // Guardar información extendida de conexión
@@ -236,15 +237,15 @@ export const loginPorQr = async (req: Request, res: Response) => {
       userAgentRaw,
       null,
       congregacion,
-      true
+      true,
     ).catch((err) =>
-      console.error("Error al guardar información de conexión:", err)
+      console.error("Error al guardar información de conexión:", err),
     );
 
     console.info(
       `Login QR exitoso: ${nombre}, Congregación: ${congregacion.getDataValue(
-        "congregacion"
-      )}, IP: ${ip}, Dispositivo: ${agent.os} - ${agent.device}`
+        "congregacion",
+      )}, IP: ${ip}, Dispositivo: ${deviceResult.os?.name || "Desconocido"} - ${deviceResult.device?.type || "Desconocido"}`,
     );
 
     res.json({
