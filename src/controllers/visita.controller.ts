@@ -18,6 +18,31 @@ export const getVisitas = async (req: Request, res: Response) => {
   }
 };
 
+export const getUnaVisita = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const visita = await Visita.findByPk(id);
+
+    if (!visita) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una visita con el id ${id}`,
+      });
+    }
+
+    res.json({
+      ok: true,
+      visita,
+    });
+  } catch (error) {
+    res.status(500).json({
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const crearVisita = async (req: Request, res: Response) => {
   const { body } = req;
 
@@ -62,8 +87,37 @@ export const actualizarVisita = async (req: Request, res: Response) => {
     const visitaActualizada = await visita.update(body, { new: true });
     res.json({
       ok: true,
-      msg: "Logro Actualizado",
+      msg: "Visita Actualizada",
       visitaActualizada,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
+export const eliminarVisita = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const visita = await Visita.findByPk(id);
+    if (!visita) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una visita con el id ${id}`,
+      });
+    }
+
+    // Eliminación lógica - cambiar estado a false
+    await visita.update({ estado: false });
+
+    res.json({
+      ok: true,
+      msg: "Visita eliminada",
+      id,
     });
   } catch (error) {
     res.status(500).json({

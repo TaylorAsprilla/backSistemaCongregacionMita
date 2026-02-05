@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   actualizarLogro,
   crearLogro,
+  eliminarLogro,
   getLogros,
 } from "../controllers/logro.controller";
 
@@ -29,8 +30,9 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearLogro
+  crearLogro,
 );
 router.put("/:id", validarJWT, actualizarLogro);
+router.delete("/:id", validarJWT, eliminarLogro);
 
 export default router;

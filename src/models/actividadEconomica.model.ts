@@ -1,39 +1,39 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const Meta = db.define(
-  "Meta",
+const ActividadEconomica = db.define(
+  "ActividadEconomica",
   {
     fecha: {
       type: DataTypes.DATE,
       allowNull: false,
     },
-    meta: {
+    cantidadRecaudada: {
+      type: DataTypes.DECIMAL,
+    },
+    responsable: {
       type: DataTypes.STRING,
     },
-    accion: {
-      type: DataTypes.TEXT,
+    asistencia: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
-    comentarios: {
+    observaciones: {
       type: DataTypes.TEXT,
-    },
-    estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
     },
     informe_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    tipoStatus_id: {
+    tipoActividadEconomica_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
   },
   {
     freezeTableName: true,
-    tableName: "meta",
+    tableName: "actividadEconomica",
   },
 );
 
-export default Meta;
+export default ActividadEconomica;

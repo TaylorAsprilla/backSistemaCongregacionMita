@@ -12,8 +12,10 @@ import ministerioRoutes from "./routes/ministerio.routes";
 import permisoRoutes from "./routes/permiso.routes";
 import tipoActividadRoutes from "./routes/tipoActividad.routes";
 import actividadRoutes from "./routes/actividad.routes";
+import tipoActividadEconomicaRoutes from "./routes/tipoActividadEconomica.routes";
+import actividadEconomicaRoutes from "./routes/actividadEconomica.routes";
 import informeRoutes from "./routes/informe.routes";
-import contabilidadRoutes from "./routes/contabilidad.routes";
+import contabilidadRoutes from "./routes/diezmo.routes";
 import logroRoutes from "./routes/logro.routes";
 import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
 import tipoStatusRoutes from "./routes/tipoStatus.routes";
@@ -70,8 +72,10 @@ class Server {
     permiso: "/api/permiso",
     tipoActividad: "/api/tipoactividad",
     actividad: "/api/actividad",
+    tipoActividadEconomica: "/api/tipoactividadeconomica",
+    actividadEconomica: "/api/actividadeconomica",
     informe: "/api/informe",
-    contabilidad: "/api/contabilidad",
+    diezmos: "/api/diezmos",
     logro: "/api/logro",
     asuntoPendiente: "/api/asuntopendiente",
     tipoStatus: "/api/tipostatus",
@@ -162,8 +166,13 @@ class Server {
     this.app.use(this.apiPaths.permiso, permisoRoutes);
     this.app.use(this.apiPaths.tipoActividad, tipoActividadRoutes);
     this.app.use(this.apiPaths.actividad, actividadRoutes);
+    this.app.use(
+      this.apiPaths.tipoActividadEconomica,
+      tipoActividadEconomicaRoutes,
+    );
+    this.app.use(this.apiPaths.actividadEconomica, actividadEconomicaRoutes);
     this.app.use(this.apiPaths.informe, informeRoutes);
-    this.app.use(this.apiPaths.contabilidad, contabilidadRoutes);
+    this.app.use(this.apiPaths.diezmos, contabilidadRoutes);
     this.app.use(this.apiPaths.logro, logroRoutes);
     this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
     this.app.use(this.apiPaths.tipoStatus, tipoStatusRoutes);

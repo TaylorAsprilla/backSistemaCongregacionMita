@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   actualizarMeta,
   crearMeta,
+  eliminarMeta,
   getMeta,
   getMetas,
 } from "../controllers/meta.controller";
@@ -30,8 +31,9 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearMeta
+  crearMeta,
 );
 router.put("/:id", validarJWT, actualizarMeta);
+router.delete("/:id", validarJWT, eliminarMeta);
 
 export default router;

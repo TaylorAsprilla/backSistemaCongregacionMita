@@ -4,8 +4,8 @@ import db from "../database/connection";
 const Visita = db.define(
   "Visita",
   {
-    fecha: {
-      type: DataTypes.DATE,
+    mes: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     referidasOots: {
@@ -22,6 +22,10 @@ const Visita = db.define(
     },
     observaciones: {
       type: DataTypes.TEXT,
+    },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     informe_id: {
       type: DataTypes.INTEGER,

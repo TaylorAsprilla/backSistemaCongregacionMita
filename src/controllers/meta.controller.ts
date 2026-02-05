@@ -91,3 +91,32 @@ export const actualizarMeta = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const eliminarMeta = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const meta = await Meta.findByPk(id);
+    if (!meta) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una meta con el id ${id}`,
+      });
+    }
+
+    // Eliminación lógica - cambiar estado a false
+    await meta.update({ estado: false });
+
+    res.json({
+      ok: true,
+      msg: "Meta eliminada",
+      id,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};

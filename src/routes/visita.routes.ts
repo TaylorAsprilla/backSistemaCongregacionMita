@@ -7,6 +7,8 @@ import { check } from "express-validator";
 import {
   actualizarVisita,
   crearVisita,
+  eliminarVisita,
+  getUnaVisita,
   getVisitas,
 } from "../controllers/visita.controller";
 
@@ -16,11 +18,15 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getVisitas);
+router.get("/:id", validarJWT, getUnaVisita);
 router.post(
   "/",
   [
-    check("fecha", "La fecha de la visita es obligatoria").not().isEmpty(),
+    check("mes", "El mes de la visita es obligatorio").not().isEmpty(),
     check("referidasOots", "Las situaciones referidas a OOTS es obligatorio")
+      .not()
+      .isEmpty(),
+    check("visitasHogares", "El número de visitas a hogares es obligatorio")
       .not()
       .isEmpty(),
     check("visitaHospital", "El número de visitas a hospitales es obligatorio")
@@ -32,8 +38,9 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearVisita
+  crearVisita,
 );
 router.put("/:id", validarJWT, actualizarVisita);
+router.delete("/:id", validarJWT, eliminarVisita);
 
 export default router;
