@@ -22,11 +22,10 @@ router.post(
     check("nombre", "El nombre de la actividad es obligatorio ")
       .not()
       .isEmpty(),
-    check("idSeccion", "El id de la seción es obligatorio").not().isEmpty(),
     validarCampos,
     validarJWT,
   ],
-  crearTipoActividad
+  crearTipoActividad,
 );
 router.delete("/:id", validarJWT, eliminarTipoActividad);
 
