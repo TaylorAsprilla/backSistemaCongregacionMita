@@ -86,7 +86,6 @@ class Server {
     estadoCivil: "/api/estadocivil",
     rolcasa: "/api/rolcasa",
     situacionVisita: "/api/situacionvisita",
-    seccionInforme: "/api/seccioninforme",
     nacionalidad: "/api/nacionalidad",
     direccion: "/api/direccion",
     tipoDireccion: "/api/tipodireccion",
