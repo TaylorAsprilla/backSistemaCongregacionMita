@@ -496,3 +496,83 @@ export const activarCongregacion = async (
     });
   }
 };
+
+/**
+ * GET /api/v1/congregaciones
+ * Endpoint REST para listar TODAS las congregaciones de un país
+ * Requiere autenticación por API Key (header X-API-KEY)
+ */
+export const getCongregacionesPorPais = async (req: Request, res: Response) => {
+  try {
+    // =======================================================================
+    //                  VALIDACIÓN DE PARÁMETROS
+    // =======================================================================
+
+    const idPaisRaw = req.query.id_pais as string;
+
+    if (!idPaisRaw) {
+      return res.status(400).json({
+        error: {
+          code: "MISSING_REQUIRED_PARAM",
+          message: "El parámetro id_pais es obligatorio",
+          details: { param: "id_pais" },
+        },
+      });
+    }
+
+    const id_pais = parseInt(idPaisRaw, 10);
+
+    if (isNaN(id_pais) || id_pais <= 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_PARAM",
+          message: "El parámetro id_pais debe ser un número positivo válido",
+          details: { param: "id_pais", value: idPaisRaw },
+        },
+      });
+    }
+
+    // =======================================================================
+    //                  CONSULTA A BASE DE DATOS
+    // =======================================================================
+
+    const { count, rows } = await Congregacion.findAndCountAll({
+      where: {
+        pais_id: id_pais,
+        estado: true,
+      },
+      order: [["congregacion", "ASC"]],
+      attributes: [
+        "id",
+        "congregacion",
+        "pais_id",
+        "estado",
+        "email",
+        "idObreroEncargado",
+        "idObreroEncargadoDos",
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    // =======================================================================
+    //                  RESPUESTA
+    // =======================================================================
+
+    return res.status(200).json({
+      data: rows,
+      meta: {
+        total: count,
+      },
+    });
+  } catch (error) {
+    console.error("Error en getCongregacionesPorPais:", error);
+    return res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Error al obtener las congregaciones",
+        details: process.env.NODE_ENV === "development" ? error : undefined,
+      },
+    });
+  }
+};

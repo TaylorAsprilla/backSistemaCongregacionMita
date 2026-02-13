@@ -32,7 +32,7 @@ const config: any = {
     ip: "92.214.55.43",
     loginPorQr:
       process.env.LOGIN_POR_QR_DEV || "http://localhost:4200/#/login?ticket=",
-    whiteList: ["http://localhost:4200", "http://localhost:56046"],
+    whiteList: ["http://localhost:4200", "http://localhost:5173"],
   },
   docker: {
     database: {
@@ -141,6 +141,7 @@ const config: any = {
       "http://www.cmar.live",
       "https://www.cmar.live",
       "https://taylorasprilla.dev/",
+      "https://backend-diezmos-rd.onrender.com/",
     ],
   },
 };
