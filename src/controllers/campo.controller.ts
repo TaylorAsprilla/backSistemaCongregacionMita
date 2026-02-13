@@ -311,3 +311,83 @@ export const activarCampo = async (req: CustomRequest, res: Response) => {
     });
   }
 };
+
+/**
+ * GET /api/v1/campos
+ * Endpoint REST para listar TODOS los campos de una congregación específica
+ * Requiere autenticación por API Key (header X-API-KEY)
+ */
+export const getCamposPorCongregacion = async (req: Request, res: Response) => {
+  try {
+    // =======================================================================
+    //                  VALIDACIÓN DE PARÁMETROS
+    // =======================================================================
+
+    const congregacionIdRaw = req.query.congregacion_id as string;
+
+    if (!congregacionIdRaw) {
+      return res.status(400).json({
+        error: {
+          code: "MISSING_REQUIRED_PARAM",
+          message: "El parámetro congregacion_id es obligatorio",
+          details: { param: "congregacion_id" },
+        },
+      });
+    }
+
+    const congregacion_id = parseInt(congregacionIdRaw, 10);
+
+    if (isNaN(congregacion_id) || congregacion_id <= 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_PARAM",
+          message:
+            "El parámetro congregacion_id debe ser un número positivo válido",
+          details: { param: "congregacion_id", value: congregacionIdRaw },
+        },
+      });
+    }
+
+    // =======================================================================
+    //                  CONSULTA A BASE DE DATOS
+    // =======================================================================
+
+    const { count, rows } = await Campo.findAndCountAll({
+      where: {
+        congregacion_id: congregacion_id,
+        estado: true,
+      },
+      order: [["campo", "ASC"]],
+      attributes: [
+        "id",
+        "campo",
+        "congregacion_id",
+        "estado",
+        "idObreroEncargado",
+        "idObreroEncargadoDos",
+        "createdAt",
+        "updatedAt",
+      ],
+    });
+
+    // =======================================================================
+    //                  RESPUESTA
+    // =======================================================================
+
+    return res.status(200).json({
+      data: rows,
+      meta: {
+        total: count,
+      },
+    });
+  } catch (error) {
+    console.error("Error en getCamposPorCongregacion:", error);
+    return res.status(500).json({
+      error: {
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Error al obtener los campos",
+        details: process.env.NODE_ENV === "development" ? error : undefined,
+      },
+    });
+  }
+};
