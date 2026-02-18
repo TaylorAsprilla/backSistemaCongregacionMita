@@ -142,6 +142,7 @@ const config: any = {
       "https://www.cmar.live",
       "https://taylorasprilla.dev/",
       "https://backend-diezmos-rd.onrender.com/",
+      "https://aportesrd.com",
     ],
   },
 };
