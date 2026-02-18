@@ -91,13 +91,18 @@ export const crearPais = async (req: Request, res: Response) => {
     const paisId = pais.getDataValue("id");
 
     // =======================================================================
-    //                  Asignar Permiso al Obrero Encargado
+    //                  Asignar Permisos al Obrero Encargado
     // =======================================================================
 
     if (idObreroEncargado) {
       await agregarPermisoUsuario(
         idObreroEncargado,
         ROLES_ID.OBRERO_PAIS,
+        transaction,
+      );
+      await agregarPermisoUsuario(
+        idObreroEncargado,
+        ROLES_ID.APROBADOR_MULTIMEDIA,
         transaction,
       );
     }
@@ -203,20 +208,30 @@ export const actualizarPais = async (req: Request, res: Response) => {
       idObreroEncargado !== undefined &&
       idObreroEncargado !== previousIdObreroEncargado
     ) {
-      // Eliminar permiso del obrero anterior si existía
+      // Eliminar permisos del obrero anterior si existía
       if (previousIdObreroEncargado) {
         await eliminarPermisoUsuario(
           previousIdObreroEncargado,
           ROLES_ID.OBRERO_PAIS,
           transaction,
         );
+        await eliminarPermisoUsuario(
+          previousIdObreroEncargado,
+          ROLES_ID.APROBADOR_MULTIMEDIA,
+          transaction,
+        );
       }
 
-      // Agregar permiso al nuevo obrero (solo si no es null)
+      // Agregar permisos al nuevo obrero (solo si no es null)
       if (idObreroEncargado) {
         await agregarPermisoUsuario(
           idObreroEncargado,
           ROLES_ID.OBRERO_PAIS,
+          transaction,
+        );
+        await agregarPermisoUsuario(
+          idObreroEncargado,
+          ROLES_ID.APROBADOR_MULTIMEDIA,
           transaction,
         );
       }
