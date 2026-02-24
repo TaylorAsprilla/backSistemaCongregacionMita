@@ -78,31 +78,6 @@ export const crearCongregacion = async (req: Request, res: Response) => {
 
   try {
     // =======================================================================
-    //                  Verificar y Eliminar Obreros de Congregaciones Anteriores
-    // =======================================================================
-
-    await Promise.all([
-      idObreroEncargado
-        ? Congregacion.update(
-            { idObreroEncargado: null },
-            {
-              where: { idObreroEncargado, id: { [Op.not]: null } },
-              transaction,
-            },
-          )
-        : Promise.resolve(),
-      idObreroEncargadoDos
-        ? Congregacion.update(
-            { idObreroEncargadoDos: null },
-            {
-              where: { idObreroEncargadoDos, id: { [Op.not]: null } },
-              transaction,
-            },
-          )
-        : Promise.resolve(),
-    ]);
-
-    // =======================================================================
     //                          Guardar Congregación
     // =======================================================================
 
@@ -254,26 +229,6 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       updateFields.password = passwordHashed;
     }
 
-    // Verificar si idObreroEncargado está definido antes de actualizar
-    if (idObreroEncargado) {
-      await Promise.all([
-        Congregacion.update(
-          { idObreroEncargado: null },
-          {
-            where: { idObreroEncargado, id: { [Op.not]: id } },
-            transaction,
-          },
-        ),
-        Campo.update(
-          { idObreroEncargado: null },
-          {
-            where: { idObreroEncargado, id: { [Op.not]: id } },
-            transaction,
-          },
-        ),
-      ]);
-    }
-
     // Actualizar la congregación específica
     const [numUpdated] = await Congregacion.update(updateFields, {
       where: { id },
@@ -310,13 +265,27 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       idObreroEncargado !== undefined &&
       idObreroEncargado !== previousIdObreroEncargado
     ) {
-      // Siempre eliminar permiso del obrero anterior si existía
+      // Eliminar permiso del obrero anterior solo si no está en otras congregaciones
       if (previousIdObreroEncargado) {
-        await eliminarPermisoUsuario(
-          previousIdObreroEncargado,
-          ROLES_ID.OBRERO_CIUDAD,
+        const congregacionesConObrero = await Congregacion.count({
+          where: {
+            [Op.or]: [
+              { idObreroEncargado: previousIdObreroEncargado },
+              { idObreroEncargadoDos: previousIdObreroEncargado },
+            ],
+            id: { [Op.not]: id },
+          },
           transaction,
-        );
+        });
+
+        // Solo eliminar permiso si no está asignado a ninguna otra congregación
+        if (congregacionesConObrero === 0) {
+          await eliminarPermisoUsuario(
+            previousIdObreroEncargado,
+            ROLES_ID.OBRERO_CIUDAD,
+            transaction,
+          );
+        }
       }
 
       // Agregar permiso y enviar email al nuevo obrero (solo si no es null)
@@ -356,13 +325,27 @@ export const actualizarCongregacion = async (req: Request, res: Response) => {
       idObreroEncargadoDos !== undefined &&
       idObreroEncargadoDos !== previousIdObreroEncargadoDos
     ) {
-      // Siempre eliminar permiso del obrero anterior si existía
+      // Eliminar permiso del obrero anterior solo si no está en otras congregaciones
       if (previousIdObreroEncargadoDos) {
-        await eliminarPermisoUsuario(
-          previousIdObreroEncargadoDos,
-          ROLES_ID.OBRERO_CIUDAD,
+        const congregacionesConObrero = await Congregacion.count({
+          where: {
+            [Op.or]: [
+              { idObreroEncargado: previousIdObreroEncargadoDos },
+              { idObreroEncargadoDos: previousIdObreroEncargadoDos },
+            ],
+            id: { [Op.not]: id },
+          },
           transaction,
-        );
+        });
+
+        // Solo eliminar permiso si no está asignado a ninguna otra congregación
+        if (congregacionesConObrero === 0) {
+          await eliminarPermisoUsuario(
+            previousIdObreroEncargadoDos,
+            ROLES_ID.OBRERO_CIUDAD,
+            transaction,
+          );
+        }
       }
 
       // Agregar permiso y enviar email al nuevo obrero (solo si no es null)
