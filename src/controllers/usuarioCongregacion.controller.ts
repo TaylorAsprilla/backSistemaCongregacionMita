@@ -6,6 +6,7 @@ import Usuario from "../models/usuario.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
 import EstadoCivil from "../models/estadoCivil.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
@@ -19,13 +20,48 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
       });
     }
 
-    const pais = await Pais.findOne({
+    // Buscar todos los países donde el obrero es encargado
+    const paises = await Pais.findAll({
       where: { idObreroEncargado: idUsuario },
+      attributes: ["id"],
     });
 
-    const paisId = pais ? pais.getDataValue("id") : null;
+    const paisIds = paises.map((p) => p.getDataValue("id"));
 
-    // Obtener todos los usuarios asociados a esta congregación
+    // Si el obrero no tiene países asignados, retornar vacío
+    if (paisIds.length === 0) {
+      return res.json({
+        ok: true,
+        usuarios: [],
+        totalUsuarios: 0,
+        msg: `El obrero no tiene países asignados`,
+      });
+    }
+
+    // Primero obtener los IDs de usuarios desde UsuarioCongregacion
+    const usuariosCongregacion = await UsuarioCongregacion.findAll({
+      where: {
+        pais_id: { [Op.in]: paisIds },
+      },
+      attributes: ["usuario_id"],
+    });
+
+    const usuarioIds = [
+      ...new Set(
+        usuariosCongregacion.map((uc) => uc.getDataValue("usuario_id")),
+      ),
+    ];
+
+    if (usuarioIds.length === 0) {
+      return res.json({
+        ok: true,
+        usuarios: [],
+        totalUsuarios: 0,
+        msg: `No se encontraron usuarios en los países asignados`,
+      });
+    }
+
+    // Obtener todos los usuarios con sus relaciones
     const { count, rows } = await Usuario.findAndCountAll({
       attributes: [
         "id",
@@ -71,16 +107,17 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         },
       ],
       where: {
+        id: { [Op.in]: usuarioIds },
         estado: ESTADO_USUARIO_ENUM.ACTIVO,
-        [Op.or]: [{ "$usuarioCongregacionPais.id$": paisId }],
       },
+      order: [["id", "ASC"]],
     });
 
     return res.json({
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Feligreses del pais`,
+      msg: `Feligreses de los países asignados`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
@@ -94,7 +131,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
 
 export const getUsuariosPorCongregacion = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   try {
     const idUsuario = Number(req.query.idUsuario);
@@ -107,12 +144,13 @@ export const getUsuariosPorCongregacion = async (
       });
     }
 
-    // Buscar todas las congregaciones y campos del obrero encargado y/o obrero auxiliar con el ID proporcionado
-    const [pais, congregaciones, campos] = await Promise.all([
-      Pais.findOne({
+    // Buscar todos los países, congregaciones y campos del obrero encargado y/o obrero auxiliar con el ID proporcionado
+    const [paises, congregaciones, campos] = await Promise.all([
+      Pais.findAll({
         where: {
           idObreroEncargado: idUsuario,
         },
+        attributes: ["id"],
       }),
       Congregacion.findAll({
         where: {
@@ -121,6 +159,7 @@ export const getUsuariosPorCongregacion = async (
             { idObreroEncargadoDos: idUsuario },
           ],
         },
+        attributes: ["id"],
       }),
       Campo.findAll({
         where: {
@@ -129,24 +168,60 @@ export const getUsuariosPorCongregacion = async (
             { idObreroEncargadoDos: idUsuario },
           ],
         },
+        attributes: ["id"],
       }),
     ]);
 
-    // Verificar si el obrero encargado tiene asignada una congregación o campo
-    if (!pais && congregaciones.length === 0 && campos.length === 0) {
+    // Verificar si el obrero encargado tiene asignado algún país, congregación o campo
+    if (
+      paises.length === 0 &&
+      congregaciones.length === 0 &&
+      campos.length === 0
+    ) {
       return res.status(404).json({
-        message: "El obrero no tiene asignada una congregación o campo.",
+        ok: false,
+        message:
+          "El obrero no tiene asignado ningún país, congregación o campo.",
       });
     }
 
-    // Obtener los IDs del país, congregaciones y campos
-    const paisId = pais ? pais.getDataValue("id") : null;
+    // Obtener los IDs de países, congregaciones y campos
+    const paisIds = paises.map((pais) => pais.getDataValue("id"));
     const congregacionIds = congregaciones.map((congregacion) =>
-      congregacion.getDataValue("id")
+      congregacion.getDataValue("id"),
     );
     const campoIds = campos.map((campo) => campo.getDataValue("id"));
 
-    // Obtener todos los usuarios asociados a estas congregaciones y campos
+    // Primero obtener los IDs de usuarios desde UsuarioCongregacion
+    const usuariosCongregacion = await UsuarioCongregacion.findAll({
+      where: {
+        [Op.or]: [
+          ...(paisIds.length > 0 ? [{ pais_id: { [Op.in]: paisIds } }] : []),
+          ...(congregacionIds.length > 0
+            ? [{ congregacion_id: { [Op.in]: congregacionIds } }]
+            : []),
+          ...(campoIds.length > 0 ? [{ campo_id: { [Op.in]: campoIds } }] : []),
+        ],
+      },
+      attributes: ["usuario_id"],
+    });
+
+    const usuarioIds = [
+      ...new Set(
+        usuariosCongregacion.map((uc) => uc.getDataValue("usuario_id")),
+      ),
+    ];
+
+    if (usuarioIds.length === 0) {
+      return res.json({
+        ok: true,
+        usuarios: [],
+        totalUsuarios: 0,
+        msg: `No se encontraron usuarios en los países, congregaciones y campos asignados`,
+      });
+    }
+
+    // Obtener todos los usuarios con sus relaciones
     const { count, rows } = await Usuario.findAndCountAll({
       attributes: [
         "id",
@@ -205,20 +280,17 @@ export const getUsuariosPorCongregacion = async (
         },
       ],
       where: {
+        id: { [Op.in]: usuarioIds },
         estado: ESTADO_USUARIO_ENUM.ACTIVO,
-        [Op.or]: [
-          { "$usuarioCongregacionPais.id$": paisId },
-          { "$usuarioCongregacionCongregacion.id$": congregacionIds },
-          { "$usuarioCongregacionCampo.id$": campoIds },
-        ],
       },
+      order: [["id", "ASC"]],
     });
 
     return res.json({
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Usuarios de la congregación`,
+      msg: `Usuarios de países, congregaciones y campos asignados`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
@@ -267,7 +339,7 @@ export const getUsuariosPorCampo = async (req: Request, res: Response) => {
         {
           replacements: { idCampo },
           type: QueryTypes.SELECT,
-        }
+        },
       ),
       db.query(
         `
@@ -278,7 +350,7 @@ export const getUsuariosPorCampo = async (req: Request, res: Response) => {
         {
           replacements: { idCampo },
           type: QueryTypes.SELECT,
-        }
+        },
       ),
     ]);
 

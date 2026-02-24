@@ -23,6 +23,19 @@ import path from "path";
 import fs from "fs";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 import EstadoCivil from "../models/estadoCivil.model";
+import Genero from "../models/genero.model";
+import RolCasa from "../models/rolCasa.model";
+import Nacionalidad from "../models/nacionalidad.model";
+import GradoAcademico from "../models/gradoAcademico.model";
+import TipoDocumento from "../models/tipoDocumento.model";
+import TipoMiembro from "../models/tipoMiembro.model";
+import SolicitudMultimedia from "../models/solicitudMultimedia.model";
+import UbicacionConexion from "../models/ubicacionConexion.model";
+import Informe from "../models/informe.model";
+import Ministerio from "../models/ministerio.model";
+import Permiso from "../models/permiso.model";
+import Voluntariado from "../models/voluntariado.model";
+import GrupoGemelos from "../models/grupoGemelos.model";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -127,6 +140,328 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
     totalUsuarios,
     msg: "Todos los usuarios Registrados",
   });
+};
+
+/**
+ * GET /api/usuarios/completo
+ * Endpoint para obtener TODA la información de los usuarios con TODAS sus relaciones
+ * Incluye: datos personales, congregación, ministerios, permisos, voluntariados,
+ * solicitudes multimedia, informes, grupos gemelos, ubicaciones, etc.
+ *
+ * Query params opcionales:
+ * - page: número de página (default: 1)
+ * - limit: registros por página (si no se envía, retorna todos los registros sin límite)
+ * - obreroId: ID del obrero para filtrar usuarios de sus países, congregaciones y campos asignados
+ */
+export const getUsuariosCompleto = async (req: Request, res: Response) => {
+  try {
+    // Parámetros de paginación opcionales
+    const page = req.query.page ? parseInt(req.query.page as string) : 1;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
+    const offset = limit ? (page - 1) * limit : 0;
+    const obreroId = req.query.obreroId
+      ? parseInt(req.query.obreroId as string)
+      : null;
+
+    // Si se proporciona obreroId, filtrar por sus congregaciones y campos
+    let whereCondition: any = {
+      estado: ESTADO_USUARIO_ENUM.ACTIVO,
+    };
+
+    if (obreroId) {
+      // ✅ OPTIMIZACIÓN 1: Ejecutar consultas en paralelo
+      const [paisesObrero, congregacionesObrero, camposObrero] =
+        await Promise.all([
+          Pais.findAll({
+            where: { idObreroEncargado: obreroId },
+            attributes: ["id"],
+          }),
+          Congregacion.findAll({
+            where: {
+              [Op.or]: [
+                { idObreroEncargado: obreroId },
+                { idObreroEncargadoDos: obreroId },
+              ],
+            },
+            attributes: ["id"],
+          }),
+          Campo.findAll({
+            where: {
+              [Op.or]: [
+                { idObreroEncargado: obreroId },
+                { idObreroEncargadoDos: obreroId },
+              ],
+            },
+            attributes: ["id"],
+          }),
+        ]);
+
+      const paisIds = paisesObrero.map((p) => p.getDataValue("id"));
+      const congregacionIds = congregacionesObrero.map((c) =>
+        c.getDataValue("id"),
+      );
+      const campoIds = camposObrero.map((c) => c.getDataValue("id"));
+
+      // Si el obrero no tiene países, congregaciones ni campos asignados, retornar vacío
+      if (
+        paisIds.length === 0 &&
+        congregacionIds.length === 0 &&
+        campoIds.length === 0
+      ) {
+        return res.json({
+          ok: true,
+          data: [],
+          meta: {
+            total: 0,
+            ...(limit ? { page, limit, totalPages: 0 } : {}),
+          },
+          msg: "El obrero no tiene países, congregaciones ni campos asignados",
+        });
+      }
+
+      // Buscar usuarios que pertenezcan a esos países, congregaciones o campos
+      const usuariosCongregacion = await UsuarioCongregacion.findAll({
+        where: {
+          [Op.or]: [
+            ...(paisIds.length > 0 ? [{ pais_id: { [Op.in]: paisIds } }] : []),
+            ...(congregacionIds.length > 0
+              ? [{ congregacion_id: { [Op.in]: congregacionIds } }]
+              : []),
+            ...(campoIds.length > 0
+              ? [{ campo_id: { [Op.in]: campoIds } }]
+              : []),
+          ],
+        },
+        attributes: ["usuario_id"],
+      });
+
+      const usuarioIds = [
+        ...new Set(
+          usuariosCongregacion.map((uc) => uc.getDataValue("usuario_id")),
+        ),
+      ];
+
+      // Si no hay usuarios en esos países, congregaciones o campos, retornar vacío
+      if (usuarioIds.length === 0) {
+        return res.json({
+          ok: true,
+          data: [],
+          meta: {
+            total: 0,
+            ...(limit ? { page, limit, totalPages: 0 } : {}),
+          },
+          msg: "No se encontraron usuarios en los países, congregaciones y campos del obrero",
+        });
+      }
+
+      // Agregar filtro de IDs de usuarios
+      whereCondition.id = { [Op.in]: usuarioIds };
+    }
+
+    // ✅ OPTIMIZACIÓN 2: Count separado más eficiente
+    // Cuando ya filtrado por IDs, usar la cantidad directa en lugar de COUNT DISTINCT
+    let totalCount: number;
+
+    if (obreroId && whereCondition.id) {
+      // Si hay filtro de obrero, el total es el tamaño del array de IDs
+      totalCount = (whereCondition.id[Op.in] as number[]).length;
+    } else {
+      // Si no hay filtro, hacer count simple sin includes
+      totalCount = await Usuario.count({
+        where: whereCondition,
+      });
+    }
+
+    // Consultar usuarios con TODAS las relaciones (sin distinct)
+    const rows = await Usuario.findAll({
+      // Excluir campos sensibles
+      attributes: { exclude: ["password", "resetToken"] },
+      // Incluir todas las asociaciones del modelo Usuario
+      include: [
+        // =================================================================
+        // RELACIONES HASONE - Datos básicos del usuario
+        // =================================================================
+        {
+          model: Usuario,
+          as: "usuarioQueRegistra",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "email",
+            "numeroCelular",
+          ],
+          required: false,
+        },
+        {
+          model: Genero,
+          as: "genero",
+          attributes: ["id", "genero"],
+          required: false,
+        },
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["id", "estadoCivil"],
+          required: false,
+        },
+        {
+          model: RolCasa,
+          as: "rolCasa",
+          attributes: ["id", "rolCasa"],
+          required: false,
+        },
+        {
+          model: Nacionalidad,
+          as: "nacionalidad",
+          attributes: ["id", "nombre", "iso2", "iso3"],
+          required: false,
+        },
+        {
+          model: GradoAcademico,
+          as: "gradoAcademico",
+          attributes: ["id", "gradoAcademico"],
+          required: false,
+        },
+        {
+          model: TipoDocumento,
+          as: "tipoDocumento",
+          attributes: ["id", "documento", "pais_id"],
+          required: false,
+        },
+        {
+          model: TipoMiembro,
+          as: "tipoMiembro",
+          attributes: ["id", "miembro"],
+          required: false,
+        },
+        {
+          model: UsuarioCongregacion,
+          as: "usuarioCongregacion",
+          required: false,
+        },
+        // =================================================================
+        // RELACIONES HASMANY - Colecciones del usuario
+        // =================================================================
+        {
+          model: SolicitudMultimedia,
+          as: "solicitudes",
+          required: false,
+          attributes: [
+            "id",
+            "createdAt",
+            "tiempoAprobacion",
+            "estado",
+            "razonSolicitud_id",
+            "tipoDeEstudio_id",
+            "parentesco_id",
+            "opcionTransporte_id",
+          ],
+        },
+        {
+          model: UbicacionConexion,
+          as: "ubicaciones",
+          required: false,
+          attributes: [
+            "id",
+            "ip",
+            "ciudad",
+            "pais",
+            "latitud",
+            "longitud",
+            "createdAt",
+          ],
+        },
+        {
+          model: Informe,
+          as: "informes",
+          required: false,
+          attributes: ["id", "usuario_id", "estado", "createdAt", "updatedAt"],
+        },
+        // =================================================================
+        // RELACIONES BELONGSTOMANY - Muchos a muchos
+        // =================================================================
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          attributes: ["id", "congregacion", "pais_id", "estado"],
+          through: { attributes: [] }, // No incluir campos de la tabla intermedia
+          required: false,
+        },
+        {
+          model: Campo,
+          as: "usuarioCongregacionCampo",
+          attributes: ["id", "campo", "congregacion_id"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["id", "pais"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: Ministerio,
+          as: "usuarioMinisterio",
+          attributes: ["id", "ministerio", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: Permiso,
+          as: "usuarioPermiso",
+          attributes: ["id", "permiso", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: Voluntariado,
+          as: "usuarioVoluntariado",
+          attributes: ["id", "nombreVoluntariado", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: GrupoGemelos,
+          as: "gruposGemelos",
+          attributes: ["id", "tipo", "descripcion", "fechaNacimientoComun"],
+          through: { attributes: [] },
+          required: false,
+        },
+      ],
+      where: whereCondition,
+      ...(limit ? { limit, offset } : {}),
+      order: [["id", "ASC"]],
+    });
+
+    // Respuesta con metadatos de paginación
+    res.json({
+      ok: true,
+      data: rows,
+      meta: {
+        total: totalCount,
+        ...(limit
+          ? {
+              page,
+              limit,
+              totalPages: Math.ceil(totalCount / limit),
+            }
+          : {}),
+      },
+      msg: "Usuarios con información completa obtenidos exitosamente",
+    });
+  } catch (error) {
+    console.error("Error al obtener usuarios completos:", error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error al obtener usuarios completos. Por favor contacta al administrador.",
+      error: process.env.NODE_ENV === "development" ? error : undefined,
+    });
+  }
 };
 
 export const getUsuario = async (req: Request, res: Response) => {
@@ -380,7 +715,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     const validarExistencia = async (
       campo: string,
       valor: string,
-      modelo: any
+      modelo: any,
     ) => {
       if (valor) {
         const existe = await modelo.findOne({
@@ -429,14 +764,14 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       pais_id,
       congregacion_id,
       campo_id,
-      transaction
+      transaction,
     );
 
     await auditoriaUsuario(
       id,
       Number(idUsuarioActual),
       AUDITORIAUSUARIO_ENUM.CREACION,
-      transaction
+      transaction,
     );
 
     await transaction.commit();
@@ -448,7 +783,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
 
       const templatePath = path.join(
         __dirname,
-        "../templates/bienvenidoCmarLive.html"
+        "../templates/bienvenidoCmarLive.html",
       );
 
       const emailTemplate = fs.readFileSync(templatePath, "utf8");
@@ -463,7 +798,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
       await enviarEmail(
         email,
         "Bienvenido al censo de la Congregación Mita",
-        personalizarEmail
+        personalizarEmail,
       );
     }
 
@@ -474,7 +809,7 @@ export const crearUsuario = async (req: CustomRequest, res: Response) => {
     });
 
     console.info(
-      `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`
+      `Se creó el usuario correctamente, ${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}, con el número Mita ${id}`,
     );
   } catch (error) {
     await transaction.rollback();
@@ -604,7 +939,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
         ministerios,
         voluntariados,
 
-        transaction
+        transaction,
       );
 
       await actualizarCongregacion(
@@ -612,14 +947,14 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
         congregacion.pais_id,
         congregacion.congregacion_id,
         congregacion.campo_id,
-        transaction
+        transaction,
       );
 
       await auditoriaUsuario(
         Number(id),
         Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -693,14 +1028,14 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       pais_id,
       congregacion_id,
       campo_id,
-      transaction
+      transaction,
     );
 
     await auditoriaUsuario(
       Number(id),
       Number(idUsuarioActual),
       AUDITORIAUSUARIO_ENUM.TRANSFERENCIA,
-      transaction
+      transaction,
     );
 
     // =======================================================================
@@ -736,7 +1071,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     // Helper para renderizar plantillas de email
     function renderTemplate(
       template: string,
-      variables: Record<string, string>
+      variables: Record<string, string>,
     ) {
       let result = template;
       for (const key in variables) {
@@ -764,16 +1099,16 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     console.log("Validación de cambios:");
     console.log(`País: ${paisAnterior} -> ${pais_id} (cambió: ${paisCambio})`);
     console.log(
-      `Congregación: ${congregacionAnteriorId} -> ${congregacion_id} (cambió: ${congregacionCambio})`
+      `Congregación: ${congregacionAnteriorId} -> ${congregacion_id} (cambió: ${congregacionCambio})`,
     );
     console.log(
-      `Campo: ${campoAnterior} -> ${campo_id} (cambió: ${campoCambio})`
+      `Campo: ${campoAnterior} -> ${campo_id} (cambió: ${campoCambio})`,
     );
 
     // Cargar template de email
     const templatePath = path.join(
       __dirname,
-      "../templates/nuevoFeligresTransferido.html"
+      "../templates/nuevoFeligresTransferido.html",
     );
     const emailTemplate = fs.readFileSync(templatePath, "utf8");
 
@@ -799,7 +1134,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       nuevoPais.getDataValue("idObreroEncargado")
     ) {
       const obreroPromise = Usuario.findByPk(
-        nuevoPais.getDataValue("idObreroEncargado")
+        nuevoPais.getDataValue("idObreroEncargado"),
       )
         .then(async (obreroPais) => {
           if (obreroPais && obreroPais.getDataValue("email")) {
@@ -820,13 +1155,13 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
             await enviarEmail(
               obreroPais.getDataValue("email"),
               "Nuevo Feligrés Transferido - País",
-              emailPersonalizado
+              emailPersonalizado,
             );
             console.log(`Email enviado al Obrero País: ${nombreObrero}`);
           }
         })
         .catch((error) =>
-          console.error("Error enviando email al Obrero País:", error)
+          console.error("Error enviando email al Obrero País:", error),
         );
 
       emailPromises.push(obreroPromise);
@@ -839,7 +1174,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       // Obrero Encargado Principal
       if (nuevaCongregacion.getDataValue("idObreroEncargado")) {
         const obreroPromise = Usuario.findByPk(
-          nuevaCongregacion.getDataValue("idObreroEncargado")
+          nuevaCongregacion.getDataValue("idObreroEncargado"),
         )
           .then(async (obreroCongregacion) => {
             if (
@@ -863,18 +1198,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
               await enviarEmail(
                 obreroCongregacion.getDataValue("email"),
                 "Nuevo Feligrés Transferido - Congregación",
-                emailPersonalizado
+                emailPersonalizado,
               );
               console.log(
-                `Email enviado al Obrero Congregación Principal: ${nombreObrero}`
+                `Email enviado al Obrero Congregación Principal: ${nombreObrero}`,
               );
             }
           })
           .catch((error) =>
             console.error(
               "Error enviando email al Obrero Congregación Principal:",
-              error
-            )
+              error,
+            ),
           );
 
         emailPromises.push(obreroPromise);
@@ -883,7 +1218,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       // Obrero Encargado Secundario
       if (nuevaCongregacion.getDataValue("idObreroEncargadoDos")) {
         const obreroPromise = Usuario.findByPk(
-          nuevaCongregacion.getDataValue("idObreroEncargadoDos")
+          nuevaCongregacion.getDataValue("idObreroEncargadoDos"),
         )
           .then(async (obreroCongregacionDos) => {
             if (
@@ -907,18 +1242,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
               await enviarEmail(
                 obreroCongregacionDos.getDataValue("email"),
                 "Nuevo Feligrés Transferido - Congregación",
-                emailPersonalizado
+                emailPersonalizado,
               );
               console.log(
-                `Email enviado al Obrero Congregación Secundario: ${nombreObrero}`
+                `Email enviado al Obrero Congregación Secundario: ${nombreObrero}`,
               );
             }
           })
           .catch((error) =>
             console.error(
               "Error enviando email al Obrero Congregación Secundario:",
-              error
-            )
+              error,
+            ),
           );
 
         emailPromises.push(obreroPromise);
@@ -932,7 +1267,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       // Obrero Encargado Principal
       if (nuevoCampo.getDataValue("idObreroEncargado")) {
         const obreroPromise = Usuario.findByPk(
-          nuevoCampo.getDataValue("idObreroEncargado")
+          nuevoCampo.getDataValue("idObreroEncargado"),
         )
           .then(async (obreroCampo) => {
             if (obreroCampo && obreroCampo.getDataValue("email")) {
@@ -953,18 +1288,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
               await enviarEmail(
                 obreroCampo.getDataValue("email"),
                 "Nuevo Feligrés Transferido - Campo",
-                emailPersonalizado
+                emailPersonalizado,
               );
               console.log(
-                `Email enviado al Obrero Campo Principal: ${nombreObrero}`
+                `Email enviado al Obrero Campo Principal: ${nombreObrero}`,
               );
             }
           })
           .catch((error) =>
             console.error(
               "Error enviando email al Obrero Campo Principal:",
-              error
-            )
+              error,
+            ),
           );
 
         emailPromises.push(obreroPromise);
@@ -973,7 +1308,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
       // Obrero Encargado Secundario
       if (nuevoCampo.getDataValue("idObreroEncargadoDos")) {
         const obreroPromise = Usuario.findByPk(
-          nuevoCampo.getDataValue("idObreroEncargadoDos")
+          nuevoCampo.getDataValue("idObreroEncargadoDos"),
         )
           .then(async (obreroCampoDos) => {
             if (obreroCampoDos && obreroCampoDos.getDataValue("email")) {
@@ -994,18 +1329,18 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
               await enviarEmail(
                 obreroCampoDos.getDataValue("email"),
                 "Nuevo Feligrés Transferido - Campo",
-                emailPersonalizado
+                emailPersonalizado,
               );
               console.log(
-                `Email enviado al Obrero Campo Secundario: ${nombreObrero}`
+                `Email enviado al Obrero Campo Secundario: ${nombreObrero}`,
               );
             }
           })
           .catch((error) =>
             console.error(
               "Error enviando email al Obrero Campo Secundario:",
-              error
-            )
+              error,
+            ),
           );
 
         emailPromises.push(obreroPromise);
@@ -1034,7 +1369,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     }
 
     console.log(
-      `Usuario transferido: ${datosUsuario.nombre}. ${mensajeEmails}`
+      `Usuario transferido: ${datosUsuario.nombre}. ${mensajeEmails}`,
     );
 
     res.json({
@@ -1073,7 +1408,7 @@ export const transferirUsuario = async (req: CustomRequest, res: Response) => {
     } catch (rollbackError) {
       console.log(
         "Error durante rollback (posiblemente ya committed):",
-        rollbackError
+        rollbackError,
       );
     }
 
@@ -1097,14 +1432,14 @@ export const transcendioUsuario = async (req: CustomRequest, res: Response) => {
     if (usuario) {
       await usuario.update(
         { estado: ESTADO_USUARIO_ENUM.TRANSCENDIO },
-        { transaction }
+        { transaction },
       );
 
       await auditoriaUsuario(
         Number(id),
         Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.TRANSCENDIO,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -1141,14 +1476,14 @@ export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
     if (usuario) {
       await usuario.update(
         { estado: ESTADO_USUARIO_ENUM.ELIMINADO },
-        { transaction }
+        { transaction },
       );
 
       await auditoriaUsuario(
         Number(id),
         Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.DESACTIVACION,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -1198,7 +1533,7 @@ export const actualizarPermisos = async (req: CustomRequest, res: Response) => {
         Number(id),
         Number(idUsuarioActual),
         AUDITORIAUSUARIO_ENUM.ACTUALIZACION_DE_PERMISOS,
-        transaction
+        transaction,
       );
 
       await transaction.commit();
@@ -1234,14 +1569,14 @@ export const activarUsuario = async (req: CustomRequest, res: Response) => {
       if (usuario.get().estado === ESTADO_USUARIO_ENUM.ELIMINADO) {
         await usuario.update(
           { estado: ESTADO_USUARIO_ENUM.ACTIVO },
-          { transaction }
+          { transaction },
         );
 
         await auditoriaUsuario(
           Number(id),
           Number(idUsuarioActual),
           AUDITORIAUSUARIO_ENUM.ACTIVACION,
-          transaction
+          transaction,
         );
 
         await transaction.commit();

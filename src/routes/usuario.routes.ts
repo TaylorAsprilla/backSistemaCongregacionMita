@@ -9,6 +9,7 @@ import {
   getTodosLosUsuarios,
   getUsuario,
   getUsuarios,
+  getUsuariosCompleto,
   eliminarUsuario,
   transcendioUsuario,
   buscarNumerosMitas,
@@ -25,6 +26,9 @@ const router = Router();
 // ==========================================
 router.get("/", validarJWT, getUsuarios);
 router.get("/todos", validarJWT, getTodosLosUsuarios);
+
+// Ruta para obtener usuarios con TODA la información completa y todas las relaciones
+router.get("/completo", validarJWT, getUsuariosCompleto);
 
 // Búsqueda por número de documento (query params)
 router.get(
@@ -48,7 +52,7 @@ router.get(
     }),
   ],
   validarCampos,
-  buscarPorNumeroDocumento
+  buscarPorNumeroDocumento,
 );
 
 router.get("/buscarnumeromita", buscarPorNumeroMita);
@@ -77,13 +81,13 @@ router.post(
       .isEmpty(),
     check(
       "ciudadDireccion",
-      "La ciudad de la dirección de residencia es obligatoria"
+      "La ciudad de la dirección de residencia es obligatoria",
     )
       .not()
       .isEmpty(),
     check(
       "paisDireccion",
-      "El país de la dirección de residencia es obligatorio"
+      "El país de la dirección de residencia es obligatorio",
     )
       .not()
       .isEmpty(),
@@ -102,7 +106,7 @@ router.post(
       .isEmpty(),
     validarCampos,
   ],
-  crearUsuario
+  crearUsuario,
 );
 
 // ==========================================
