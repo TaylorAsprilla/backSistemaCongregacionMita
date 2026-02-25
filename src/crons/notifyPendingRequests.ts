@@ -23,7 +23,7 @@ let emailTemplateSolicitudesPendientes: string;
 const loadEmailTemplate = () => {
   const templatePath = path.join(
     __dirname,
-    "../templates/solicitudesPendientesAprobador.html"
+    "../templates/solicitudesPendientesAprobador.html",
   );
   emailTemplateSolicitudesPendientes = fs.readFileSync(templatePath, "utf8");
 };
@@ -41,7 +41,7 @@ function renderTemplate(template: string, variables: Record<string, string>) {
 // Función para obtener las solicitudes pendientes por jurisdicción
 const obtenerSolicitudesPendientesPorCongregacion = async (
   tipoCongregacion: "pais" | "congregacion" | "campo",
-  congregacionId: number
+  congregacionId: number,
 ) => {
   try {
     const whereCondition: any = {
@@ -153,14 +153,14 @@ const generarListaSolicitudes = (solicitudes: any[]) => {
     const solicitud = usuario.getDataValue("solicitudes")?.[0];
     const fechaSolicitud = solicitud
       ? new Date(solicitud.getDataValue("createdAt")).toLocaleDateString(
-          "es-ES"
+          "es-ES",
         )
       : "N/A";
 
     listaHtml += `
       <tr>
         <td style="padding: 8px; border: 1px solid #dee2e6;">${usuario.getDataValue(
-          "id"
+          "id",
         )}</td>
         <td style="padding: 8px; border: 1px solid #dee2e6;">${nombre}</td>
         <td style="padding: 8px; border: 1px solid #dee2e6;">${
@@ -351,7 +351,7 @@ const notificarAprobadoresMultimedia = async () => {
         const solicitudesPendientes =
           await obtenerSolicitudesPendientesPorCongregacion(
             "pais",
-            pais.getDataValue("id")
+            pais.getDataValue("id"),
           );
 
         if (solicitudesPendientes.length > 0) {
@@ -373,17 +373,17 @@ const notificarAprobadoresMultimedia = async () => {
               totalSolicitudes: solicitudesPendientes.length.toString(),
               fechaReporte,
               listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-            }
+            },
           );
 
           await enviarEmail(
             obrero.getDataValue("email"),
             `Solicitudes Multimedia Pendientes - ${pais.getDataValue("pais")}`,
-            emailPersonalizado
+            emailPersonalizado,
           );
 
           console.log(
-            `Email enviado al Obrero País: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`
+            `Email enviado al Obrero País: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
           );
         }
       }
@@ -397,7 +397,7 @@ const notificarAprobadoresMultimedia = async () => {
         await procesarObreroCongregacion(
           obreroPrincipal,
           congregacion,
-          fechaReporte
+          fechaReporte,
         );
       }
 
@@ -407,7 +407,7 @@ const notificarAprobadoresMultimedia = async () => {
         await procesarObreroCongregacion(
           obreroSecundario,
           congregacion,
-          fechaReporte
+          fechaReporte,
         );
       }
     }
@@ -437,12 +437,12 @@ const notificarAprobadoresMultimedia = async () => {
 const procesarObreroCongregacion = async (
   obrero: any,
   congregacion: any,
-  fechaReporte: string
+  fechaReporte: string,
 ) => {
   const solicitudesPendientes =
     await obtenerSolicitudesPendientesPorCongregacion(
       "congregacion",
-      congregacion.getDataValue("id")
+      congregacion.getDataValue("id"),
     );
 
   if (solicitudesPendientes.length > 0) {
@@ -464,19 +464,19 @@ const procesarObreroCongregacion = async (
         totalSolicitudes: solicitudesPendientes.length.toString(),
         fechaReporte,
         listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-      }
+      },
     );
 
     await enviarEmail(
       obrero.getDataValue("email"),
       `Solicitudes Multimedia Pendientes - ${congregacion.getDataValue(
-        "congregacion"
+        "congregacion",
       )}`,
-      emailPersonalizado
+      emailPersonalizado,
     );
 
     console.log(
-      `Email enviado al Obrero Congregación: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`
+      `Email enviado al Obrero Congregación: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
     );
   }
 };
@@ -485,12 +485,12 @@ const procesarObreroCongregacion = async (
 const procesarObreroCampo = async (
   obrero: any,
   campo: any,
-  fechaReporte: string
+  fechaReporte: string,
 ) => {
   const solicitudesPendientes =
     await obtenerSolicitudesPendientesPorCongregacion(
       "campo",
-      campo.getDataValue("id")
+      campo.getDataValue("id"),
     );
 
   if (solicitudesPendientes.length > 0) {
@@ -512,17 +512,17 @@ const procesarObreroCampo = async (
         totalSolicitudes: solicitudesPendientes.length.toString(),
         fechaReporte,
         listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-      }
+      },
     );
 
     await enviarEmail(
       obrero.getDataValue("email"),
       `Solicitudes Multimedia Pendientes - ${campo.getDataValue("campo")}`,
-      emailPersonalizado
+      emailPersonalizado,
     );
 
     console.log(
-      `Email enviado al Obrero Campo: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`
+      `Email enviado al Obrero Campo: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
     );
   }
 };
@@ -530,23 +530,31 @@ const procesarObreroCampo = async (
 // Cargar plantilla al inicio
 loadEmailTemplate();
 
-// Programar cron job para ejecutarse todos los lunes a las 9:00 AM
-// 0 9 * * 1 = minuto 0, hora 9, cualquier día del mes, cualquier mes, lunes (1)
-cron.schedule("0 9 * * 1", async () => {
-  console.log(
-    "Ejecutando notificación semanal de solicitudes multimedia pendientes..."
+const nodeEnv = process.env.NODE_ENV || "development";
+
+if (nodeEnv === "production") {
+  // Programar cron job para ejecutarse todos los lunes a las 9:00 AM
+  // 0 9 * * 1 = minuto 0, hora 9, cualquier día del mes, cualquier mes, lunes (1)
+  cron.schedule("0 9 * * 1", async () => {
+    console.log(
+      "Ejecutando notificación semanal de solicitudes multimedia pendientes...",
+    );
+    await notificarAprobadoresMultimedia();
+  });
+
+  // Para pruebas, descomenta la siguiente línea (ejecuta cada minuto):
+  // cron.schedule("* * * * *", async () => {
+  //   console.log("🧪 [PRUEBA] Ejecutando notificación de solicitudes multimedia pendientes...");
+  //   await notificarAprobadoresMultimedia();
+  // });
+
+  console.info(
+    "Cron job de notificación semanal configurado para ejecutarse todos los lunes a las 9:00 AM",
   );
-  await notificarAprobadoresMultimedia();
-});
-
-// Para pruebas, descomenta la siguiente línea (ejecuta cada minuto):
-// cron.schedule("* * * * *", async () => {
-//   console.log("🧪 [PRUEBA] Ejecutando notificación de solicitudes multimedia pendientes...");
-//   await notificarAprobadoresMultimedia();
-// });
-
-console.info(
-  "Cron job de notificación semanal configurado para ejecutarse todos los lunes a las 9:00 AM"
-);
+} else {
+  console.info(
+    `Cron job de notificación semanal desactivado en entorno: ${nodeEnv}`,
+  );
+}
 
 export { notificarAprobadoresMultimedia };

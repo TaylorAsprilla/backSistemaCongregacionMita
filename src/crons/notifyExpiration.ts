@@ -20,11 +20,11 @@ let emailAccesoCaducado: string;
 const loadEmailTemplates = () => {
   const templatePathAccesoCaducado = path.join(
     __dirname,
-    "../templates/accesoCaducado.html"
+    "../templates/accesoCaducado.html",
   );
   const templatePathNotificacion = path.join(
     __dirname,
-    "../templates/notificacionCaducidad.html"
+    "../templates/notificacionCaducidad.html",
   );
 
   emailAccesoCaducado = fs.readFileSync(templatePathAccesoCaducado, "utf8");
@@ -49,7 +49,7 @@ const verificarFechasYEnviarCorreos = async () => {
     const tiempoAprobacion = solicitud.getDataValue("tiempoAprobacion");
     const diferenciaDias = Math.ceil(
       (new Date(tiempoAprobacion).getTime() - hoy.getTime()) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     );
 
     if (dias.includes(diferenciaDias)) {
@@ -67,19 +67,19 @@ const verificarFechasYEnviarCorreos = async () => {
           .replace("{{fechaCaducidad}}", fechaCaducidad);
 
         console.log(
-          `Enviando correo a: ${usuario.email} por caducidad en ${diferenciaDias} día(s)`
+          `Enviando correo a: ${usuario.email} por caducidad en ${diferenciaDias} día(s)`,
         );
 
         await enviarEmail(
           usuario.email,
           "Aviso de caducidad de Acceso a CMAR LIVE",
-          personalizarEmail
+          personalizarEmail,
         );
 
         console.log(
           `Correo enviado a ${
             usuario.email
-          } el ${hoy.toISOString()} para informar de la caducidad en ${diferenciaDias} día(s).`
+          } el ${hoy.toISOString()} para informar de la caducidad en ${diferenciaDias} día(s).`,
         );
       }
     }
@@ -120,7 +120,7 @@ const eliminarCredenciales = async () => {
             },
           },
           transaction,
-        }
+        },
       );
 
       await UsuarioPermiso.destroy({
@@ -137,11 +137,11 @@ const eliminarCredenciales = async () => {
         if (usuario) {
           const nombre = `${usuario.primerNombre} ${usuario.segundoNombre} ${usuario.primerApellido} ${usuario.segundoApellido}`;
           const fechaCaducidad = new Date(
-            solicitud.getDataValue("tiempoAprobacion")
+            solicitud.getDataValue("tiempoAprobacion"),
           ).toLocaleDateString();
 
           console.info(
-            `Credenciales eliminadas a, ${usuario.id}, ${nombre}, ${usuario.email}`
+            `Credenciales eliminadas a, ${usuario.id}, ${nombre}, ${usuario.email}`,
           );
 
           const personalizarEmail = emailAccesoCaducado
@@ -154,12 +154,12 @@ const eliminarCredenciales = async () => {
           await enviarEmail(
             usuario.email,
             "Notificación de Caducidad de Acceso a CMAR LIVE",
-            personalizarEmail
+            personalizarEmail,
           );
 
           await SolicitudMultimedia.update(
             { estado: SOLICITUD_MULTIMEDIA_ENUM.CADUCADA },
-            { where: { id: solicitud.getDataValue("id") }, transaction }
+            { where: { id: solicitud.getDataValue("id") }, transaction },
           );
         }
       }
@@ -182,16 +182,24 @@ loadEmailTemplates();
 // *: El cuarto campo indica el mes (todos los meses).
 // *: El quinto campo indica el día de la semana (todos los días de la semana).
 
-cron.schedule("0 15 * * *", async () => {
-  console.log("Ejecutando tarea cron...");
-  await verificarFechasYEnviarCorreos();
-  await eliminarCredenciales();
-});
+const nodeEnv = process.env.NODE_ENV || "development";
 
-// cron.schedule("* * * * *", async () => {
-//   console.log("Ejecutando tarea cron...");
-//   await verificarFechasYEnviarCorreos();
-//   await eliminarCredenciales();
-// });
+if (nodeEnv === "production") {
+  cron.schedule("0 15 * * *", async () => {
+    console.log("Ejecutando tarea cron...");
+    await verificarFechasYEnviarCorreos();
+    await eliminarCredenciales();
+  });
 
-console.info("Cron job configurado para ejecutarse.");
+  // cron.schedule("* * * * *", async () => {
+  //   console.log("Ejecutando tarea cron...");
+  //   await verificarFechasYEnviarCorreos();
+  //   await eliminarCredenciales();
+  // });
+
+  console.info("Cron job configurado para ejecutarse.");
+} else {
+  console.info(
+    `Cron job de notificación de expiración desactivado en entorno: ${nodeEnv}`,
+  );
+}
