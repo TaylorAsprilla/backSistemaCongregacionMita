@@ -614,6 +614,12 @@ export const buscarPorNumeroDocumento = async (req: Request, res: Response) => {
           attributes: ["id", "campo"],
           required: false,
         },
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["id", "estadoCivil"],
+          required: false,
+        },
       ],
       where: {
         numeroDocumento: numeroDocumento as string,
