@@ -2,6 +2,7 @@ import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import Campo from "../models/campo.model";
+import CategoriaProfesion from "../models/categoriaProfesion.model";
 import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import Genero from "../models/genero.model";
@@ -78,6 +79,12 @@ Usuario.hasOne(TipoDocumento, {
 Usuario.hasOne(TipoMiembro, {
   as: "tipoMiembro",
   sourceKey: "tipoMiembro_id",
+  foreignKey: "id",
+});
+
+Usuario.hasOne(CategoriaProfesion, {
+  as: "categoriaProfesion",
+  sourceKey: "categoriaProfesion_id",
   foreignKey: "id",
 });
 

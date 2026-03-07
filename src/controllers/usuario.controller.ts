@@ -22,6 +22,7 @@ import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import path from "path";
 import fs from "fs";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
+import CategoriaProfesion from "../models/categoriaProfesion.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import Genero from "../models/genero.model";
 import RolCasa from "../models/rolCasa.model";
@@ -511,6 +512,12 @@ export const getUsuario = async (req: Request, res: Response) => {
           model: TipoMiembro,
           as: "tipoMiembro",
           attributes: ["id", "miembro"],
+          required: false,
+        },
+        {
+          model: CategoriaProfesion,
+          as: "categoriaProfesion",
+          attributes: ["id", "nombre", "descripcion"],
           required: false,
         },
         {

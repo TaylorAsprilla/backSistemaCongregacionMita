@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
+import CategoriaProfesion from "../models/categoriaProfesion.model";
 import Usuario from "../models/usuario.model";
 import generarJWT from "../helpers/tokenJwt";
 import { CustomRequest } from "../middlewares/validar-jwt";
@@ -59,7 +60,7 @@ export const login = async (req: Request, res: Response) => {
     // Verificamos la contraseña
     const isValidPassword = await verificarPassword(
       password,
-      entidad.getDataValue("password")
+      entidad.getDataValue("password"),
     );
 
     if (!isValidPassword) {
@@ -77,7 +78,7 @@ export const login = async (req: Request, res: Response) => {
         ipAddress,
         userAgent,
         entidadTipo === "usuario" ? entidad : null,
-        entidadTipo === "congregacion" ? entidad : null
+        entidadTipo === "congregacion" ? entidad : null,
       );
     } catch (error) {
       console.error("Error al guardar información de conexión:", error);
@@ -93,8 +94,8 @@ export const login = async (req: Request, res: Response) => {
 
     console.info(
       `Login exitoso: Tipo de entidad: ${entidadTipo}, ID: ${entidad.getDataValue(
-        "id"
-      )}, Login: ${login}`
+        "id",
+      )}, Login: ${login}`,
     );
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
@@ -159,6 +160,12 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
           model: TipoDocumento,
           as: "tipoDocumento",
           attributes: ["id", "documento", "estado"],
+          required: false,
+        },
+        {
+          model: CategoriaProfesion,
+          as: "categoriaProfesion",
+          attributes: ["id", "nombre", "descripcion"],
           required: false,
         },
         {
@@ -272,7 +279,7 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
       if (buscarCongregacion) {
         token = await generarJWT(
           idUsuario,
-          buscarCongregacion.getDataValue("email")
+          buscarCongregacion.getDataValue("email"),
         );
         res.json({
           ok: true,
@@ -468,19 +475,19 @@ export const forgotPassword = async (req: Request, res: Response) => {
       usuario.getDataValue("id"),
       login,
       "10m",
-      jwtSecretReset
+      jwtSecretReset,
     );
 
     // Actualizar el token de restablecimiento en la base de datos
     if (isUsuario) {
       await Usuario.update(
         { resetToken: token },
-        { where: { id: usuario.id } }
+        { where: { id: usuario.id } },
       );
     } else {
       await Congregacion.update(
         { resetToken: token },
-        { where: { id: usuario.id } }
+        { where: { id: usuario.id } },
       );
     }
 
@@ -738,7 +745,7 @@ export const cambiarPassword = async (req: Request, res: Response) => {
   try {
     const validarPassword = bcrypt.compareSync(
       passwordAntiguo,
-      entidad.getDataValue("password")
+      entidad.getDataValue("password"),
     );
 
     if (!validarPassword) {
@@ -997,6 +1004,97 @@ async function verificarUsuario(login: string) {
     where: {
       login: login,
     },
+    include: [
+      {
+        model: Genero,
+        as: "genero",
+        attributes: ["id", "genero"],
+        required: false,
+      },
+      {
+        model: EstadoCivil,
+        as: "estadoCivil",
+        attributes: ["id", "estadoCivil"],
+        required: false,
+      },
+      {
+        model: Nacionalidad,
+        as: "nacionalidad",
+        attributes: ["nombre"],
+        required: false,
+      },
+      {
+        model: RolCasa,
+        as: "rolCasa",
+        attributes: ["id", "rolCasa"],
+        required: false,
+      },
+      {
+        model: TipoMiembro,
+        as: "tipoMiembro",
+        attributes: ["id", "miembro"],
+        required: false,
+      },
+      {
+        model: GradoAcademico,
+        as: "gradoAcademico",
+        attributes: ["id", "gradoAcademico"],
+        required: false,
+      },
+      {
+        model: TipoDocumento,
+        as: "tipoDocumento",
+        attributes: ["id", "documento"],
+        required: false,
+      },
+      {
+        model: CategoriaProfesion,
+        as: "categoriaProfesion",
+        attributes: ["id", "nombre", "descripcion"],
+        required: false,
+      },
+      {
+        model: UsuarioCongregacion,
+        as: "usuarioCongregacion",
+        attributes: ["usuario_id", "pais_id", "congregacion_id", "campo_id"],
+        required: false,
+      },
+      {
+        model: Ministerio,
+        as: "usuarioMinisterio",
+        attributes: ["id", "ministerio"],
+        required: false,
+      },
+      {
+        model: Permiso,
+        as: "usuarioPermiso",
+        attributes: ["id", "permiso"],
+        required: false,
+      },
+      {
+        model: Voluntariado,
+        as: "usuarioVoluntariado",
+        attributes: ["id", "nombreVoluntariado"],
+        required: false,
+      },
+      {
+        model: Pais,
+        as: "usuarioCongregacionPais",
+        attributes: ["id", "pais", "idDivisa", "idObreroEncargado"],
+        required: false,
+      },
+      {
+        model: Congregacion,
+        as: "usuarioCongregacionCongregacion",
+        attributes: [
+          "id",
+          "congregacion",
+          "idObreroEncargado",
+          "idObreroEncargadoDos",
+        ],
+        required: false,
+      },
+    ],
   });
 }
 

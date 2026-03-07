@@ -66,7 +66,7 @@ const Usuario = db.define(
       type: DataTypes.ENUM(
         ESTADO_USUARIO_ENUM.ACTIVO,
         ESTADO_USUARIO_ENUM.ELIMINADO,
-        ESTADO_USUARIO_ENUM.TRANSCENDIO
+        ESTADO_USUARIO_ENUM.TRANSCENDIO,
       ),
       defaultValue: ESTADO_USUARIO_ENUM.ACTIVO,
     },
@@ -140,6 +140,10 @@ const Usuario = db.define(
     },
     ocupacion: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    categoriaProfesion_id: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     idUsuarioQueRegistra: {
@@ -150,7 +154,7 @@ const Usuario = db.define(
   {
     freezeTableName: true,
     tableName: "usuario",
-  }
+  },
 );
 
 export default Usuario;
