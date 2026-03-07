@@ -57,7 +57,7 @@ router.get(
 
 router.get("/buscarnumeromita", buscarPorNumeroMita);
 
-router.get("/:id", getUsuario);
+router.get("/:id", validarJWT, getUsuario);
 
 // ==========================================
 // RUTAS POST - Creación y búsquedas complejas
