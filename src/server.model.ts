@@ -5,6 +5,7 @@ import express, { Application } from "express";
 import usuarioRoutes from "./routes/usuario.routes";
 import loginRoutes from "./routes/login.routes";
 import generoRoutes from "./routes/genero.routes";
+import categoriaProfesionRoutes from "./routes/categoriaProfesion.routes";
 import busquedasRoutes from "./routes/busqueda.routes";
 import tipoDocumentoRoutes from "./routes/tipoDocumento.routes";
 import tipoUsuarioRoutes from "./routes/tipoUsuario.routes";
@@ -66,6 +67,7 @@ class Server {
     busquedas: "/api/busquedas",
     tipoDocumento: "/api/tipodocumento",
     genero: "/api/genero",
+    categoriaProfesion: "/api/categorias-profesion",
     tipoUsuario: "/api/tipoUsuario",
     ministerio: "/api/ministerio",
     permiso: "/api/permiso",
@@ -158,6 +160,7 @@ class Server {
     this.app.use(this.apiPaths.busquedas, busquedasRoutes);
     this.app.use(this.apiPaths.tipoDocumento, tipoDocumentoRoutes);
     this.app.use(this.apiPaths.genero, generoRoutes);
+    this.app.use(this.apiPaths.categoriaProfesion, categoriaProfesionRoutes);
     this.app.use(this.apiPaths.tipoUsuario, tipoUsuarioRoutes);
     this.app.use(this.apiPaths.ministerio, ministerioRoutes);
     this.app.use(this.apiPaths.permiso, permisoRoutes);

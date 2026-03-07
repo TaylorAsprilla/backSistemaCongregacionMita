@@ -22,6 +22,7 @@ import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import path from "path";
 import fs from "fs";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
+import CategoriaProfesion from "../models/categoriaProfesion.model";
 import EstadoCivil from "../models/estadoCivil.model";
 import Genero from "../models/genero.model";
 import RolCasa from "../models/rolCasa.model";
@@ -467,25 +468,118 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
 export const getUsuario = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const usuario = await Usuario.findByPk(id, {
-    include: [
-      {
-        all: true,
-        required: false,
-      },
-    ],
-  });
-
-  if (usuario) {
-    res.json({
-      ok: true,
-      usuario,
-      msg: "getUsuarios",
-      id,
+  try {
+    const usuario = await Usuario.findByPk(id, {
+      attributes: { exclude: ["password", "resetToken"] },
+      include: [
+        {
+          model: EstadoCivil,
+          as: "estadoCivil",
+          attributes: ["id", "estadoCivil"],
+          required: false,
+        },
+        {
+          model: Genero,
+          as: "genero",
+          attributes: ["id", "genero"],
+          required: false,
+        },
+        {
+          model: RolCasa,
+          as: "rolCasa",
+          attributes: ["id", "rolCasa"],
+          required: false,
+        },
+        {
+          model: Nacionalidad,
+          as: "nacionalidad",
+          attributes: ["id", "nombre", "iso2", "iso3"],
+          required: false,
+        },
+        {
+          model: GradoAcademico,
+          as: "gradoAcademico",
+          attributes: ["id", "gradoAcademico"],
+          required: false,
+        },
+        {
+          model: TipoDocumento,
+          as: "tipoDocumento",
+          attributes: ["id", "documento"],
+          required: false,
+        },
+        {
+          model: TipoMiembro,
+          as: "tipoMiembro",
+          attributes: ["id", "miembro"],
+          required: false,
+        },
+        {
+          model: CategoriaProfesion,
+          as: "categoriaProfesion",
+          attributes: ["id", "nombre", "descripcion"],
+          required: false,
+        },
+        {
+          model: Pais,
+          as: "usuarioCongregacionPais",
+          attributes: ["id", "pais"],
+          required: false,
+        },
+        {
+          model: Congregacion,
+          as: "usuarioCongregacionCongregacion",
+          attributes: ["id", "congregacion"],
+          required: false,
+        },
+        {
+          model: Campo,
+          as: "usuarioCongregacionCampo",
+          attributes: ["id", "campo"],
+          required: false,
+        },
+        {
+          model: Usuario,
+          as: "usuarioQueRegistra",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "email",
+            "numeroCelular",
+          ],
+          required: false,
+        },
+        {
+          model: Permiso,
+          as: "usuarioPermiso",
+          attributes: ["id", "permiso", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
+      ],
     });
-  } else {
-    res.status(404).json({
-      msg: `No se encuentra el número Mita <b>${id}</b>`,
+
+    if (usuario) {
+      res.json({
+        ok: true,
+        usuario,
+        msg: "Usuario encontrado",
+      });
+    } else {
+      res.status(404).json({
+        ok: false,
+        msg: `No se encuentra el usuario con número Mita ${id}`,
+      });
+    }
+  } catch (error) {
+    console.error("Error al obtener usuario:", error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error al obtener usuario, contacte al administrador",
+      error,
     });
   }
 };
