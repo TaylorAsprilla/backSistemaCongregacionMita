@@ -470,7 +470,7 @@ export const getUsuario = async (req: Request, res: Response) => {
 
   try {
     const usuario = await Usuario.findByPk(id, {
-      attributes: { exclude: ["password", "resetToken"] },
+      attributes: { exclude: ["resetToken"] },
       include: [
         {
           model: EstadoCivil,
