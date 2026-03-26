@@ -559,6 +559,20 @@ export const getUsuario = async (req: Request, res: Response) => {
           through: { attributes: [] },
           required: false,
         },
+        {
+          model: Ministerio,
+          as: "usuarioMinisterio",
+          attributes: ["id", "ministerio", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
+        {
+          model: Voluntariado,
+          as: "usuarioVoluntariado",
+          attributes: ["id", "nombreVoluntariado", "estado"],
+          through: { attributes: [] },
+          required: false,
+        },
       ],
     });
 
