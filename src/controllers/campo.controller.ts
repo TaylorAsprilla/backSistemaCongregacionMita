@@ -98,33 +98,26 @@ export const actualizarCampo = async (req: Request, res: Response) => {
       "idObreroEncargadoDos",
     );
 
-    if (idObreroEncargado !== undefined) {
-      // Anular idObreroEncargado para otras congregaciones
-      await Congregacion.update(
-        { idObreroEncargado: null },
-        {
-          where: {
-            idObreroEncargado: idObreroEncargado,
-            id: {
-              [Op.not]: id, // Excluir la congregación actual
-            },
-          },
-          transaction: transaction,
+    if (idObreroEncargado !== undefined && idObreroEncargado !== null) {
+      // Verificar que el obrero no tenga ya 2 campos a cargo
+      const camposDeObreroCount = await Campo.count({
+        where: {
+          [Op.or]: [
+            { idObreroEncargado: idObreroEncargado },
+            { idObreroEncargadoDos: idObreroEncargado },
+          ],
+          id: { [Op.not]: id },
         },
-      );
+        transaction,
+      });
 
-      await Campo.update(
-        { idObreroEncargado: null },
-        {
-          where: {
-            idObreroEncargado: idObreroEncargado,
-            id: {
-              [Op.not]: id,
-            },
-          },
-          transaction: transaction,
-        },
-      );
+      if (camposDeObreroCount >= 2) {
+        await transaction.rollback();
+        return res.status(400).json({
+          ok: false,
+          msg: "El obrero ya tiene 2 campos a cargo",
+        });
+      }
     }
 
     const [numUpdated] = await Campo.update(
