@@ -24,7 +24,7 @@ const UsuarioCongregacion = db.define(
   {
     freezeTableName: true,
     tableName: "usuarioCongregacion",
-  }
+  },
 );
 
 export default UsuarioCongregacion;

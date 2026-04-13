@@ -26,6 +26,12 @@ import Nacionalidad from "../models/nacionalidad.model";
 import RolCasa from "../models/rolCasa.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import TipoDocumento from "../models/tipoDocumento.model";
+import UserSession from "../models/userSession.model";
+import {
+  createUserSession,
+  getActiveSessionsWithUserInfo,
+} from "../helpers/session.service";
+import { v4 as uuidv4 } from "uuid";
 
 const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
   config[process.env.NODE_ENV || "development"];
@@ -70,9 +76,39 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Generamos el token
-    token = await generarJWT(entidad.getDataValue("id"), login);
+    const idEntidad = entidad.getDataValue("id");
+    const emailEntidad = entidad.getDataValue("email") || "";
 
+    // ========================================
+    // NUEVA LÓGICA: Sistema de sesión única
+    // ========================================
+
+    // 1. Calcular fecha de expiración del token (12 horas por defecto)
+    const expirationHours = 12;
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + expirationHours);
+
+    // 2. Crear sesión (esto invalida automáticamente sesiones anteriores del usuario)
+    const { sessionId, session } = await createUserSession({
+      idUsuario: idEntidad,
+      ip: ipAddress,
+      userAgent: userAgent,
+      expiresAt: expiresAt,
+      // refreshToken: null, // Para futuras implementaciones
+    });
+
+    // 3. Generar JWT con sessionId incluido en el payload
+    token = await generarJWT(
+      idEntidad,
+      login,
+      sessionId,
+      emailEntidad,
+      `${expirationHours}h`,
+    );
+
+    // ========================================
+    // Mantener auditoría existente
+    // ========================================
     try {
       await guardarInformacionConexion(
         ipAddress,
@@ -82,6 +118,7 @@ export const login = async (req: Request, res: Response) => {
       );
     } catch (error) {
       console.error("Error al guardar información de conexión:", error);
+      // No bloqueamos el login si falla la auditoría
     }
 
     // Devolvemos la respuesta
@@ -90,12 +127,22 @@ export const login = async (req: Request, res: Response) => {
       token: token,
       entidadTipo,
       usuario: entidad,
+      sessionInfo: {
+        sessionId: sessionId,
+        expiresAt: expiresAt,
+        device: session.getDataValue("dispositivo"),
+        browser: session.getDataValue("navegador"),
+        location: {
+          pais: session.getDataValue("pais"),
+          ciudad: session.getDataValue("ciudad"),
+          region: session.getDataValue("region"),
+        },
+        ip: ipAddress,
+      },
     });
 
     console.info(
-      `Login exitoso: Tipo de entidad: ${entidadTipo}, ID: ${entidad.getDataValue(
-        "id",
-      )}, Login: ${login}`,
+      `Login exitoso: Tipo de entidad: ${entidadTipo}, ID: ${idEntidad}, Login: ${login}, SessionId: ${sessionId}, Ubicación: ${session.getDataValue("ciudad")}, ${session.getDataValue("pais")}`,
     );
   } catch (error) {
     console.error("Error al realizar el inicio de sesión:", error);
@@ -262,7 +309,16 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
     });
 
     if (buscarUsuario) {
-      token = await generarJWT(idUsuario, buscarUsuario.getDataValue("login"));
+      // Reutilizar sessionId existente del token actual
+      const sessionId = req.sessionId || "";
+      const email = buscarUsuario.getDataValue("email") || "";
+
+      token = await generarJWT(
+        idUsuario,
+        buscarUsuario.getDataValue("login"),
+        sessionId,
+        email,
+      );
 
       res.json({
         ok: true,
@@ -277,10 +333,11 @@ export const renewToken = async (req: CustomRequest, res: Response) => {
       });
 
       if (buscarCongregacion) {
-        token = await generarJWT(
-          idUsuario,
-          buscarCongregacion.getDataValue("email"),
-        );
+        // Reutilizar sessionId existente del token actual
+        const sessionId = req.sessionId || "";
+        const email = buscarCongregacion.getDataValue("email") || "";
+
+        token = await generarJWT(idUsuario, email, sessionId, email);
         res.json({
           ok: true,
           token,
@@ -471,9 +528,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
       }
     }
 
+    // Generar token de reset con sessionId temporal
+    const sessionId = uuidv4();
+    const email = usuario.getDataValue("email") || "";
+
     token = await generarJWT(
       usuario.getDataValue("id"),
       login,
+      sessionId,
+      email,
       "10m",
       jwtSecretReset,
     );
@@ -492,7 +555,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
     }
 
     usuario.getDataValue("resetToken");
-    email = await usuario.getDataValue("email");
 
     linkVerificarToken = verificarLink + token;
 
@@ -997,6 +1059,203 @@ export const envioDeCredenciales = async (req: Request, res: Response) => {
     msg: "Credenciales creadas",
     usuarios,
   });
+};
+
+/**
+ * Endpoint de Logout
+ *
+ * Invalida la sesión actual del usuario, evitando que el token
+ * pueda ser usado nuevamente en futuras peticiones.
+ *
+ * Requiere autenticación JWT (validarJWT middleware)
+ *
+ * Respuesta exitosa:
+ * {
+ *   success: true,
+ *   message: "Sesión cerrada correctamente"
+ * }
+ *
+ * Respuesta de error:
+ * {
+ *   success: false,
+ *   code: "LOGOUT_ERROR",
+ *   message: "Error al cerrar sesión"
+ * }
+ */
+export const logout = async (req: CustomRequest, res: Response) => {
+  try {
+    const sessionId = req.sessionId;
+    const idUsuario = req.id;
+
+    // Validar que tenemos sessionId (debería estar presente por el middleware)
+    if (!sessionId || !idUsuario) {
+      return res.status(400).json({
+        success: false,
+        code: "INVALID_REQUEST",
+        message: "Sesión no válida",
+      });
+    }
+
+    // Importar el servicio de sesiones
+    const { invalidateSession } = require("../helpers/session.service");
+
+    // Invalidar la sesión actual
+    const wasInvalidated = await invalidateSession(sessionId, idUsuario);
+
+    if (!wasInvalidated) {
+      return res.status(404).json({
+        success: false,
+        code: "SESSION_NOT_FOUND",
+        message: "No se encontró la sesión activa",
+      });
+    }
+
+    console.info(
+      `Logout exitoso: Usuario ${idUsuario}, SessionId: ${sessionId}`,
+    );
+
+    res.json({
+      success: true,
+      message: "Sesión cerrada correctamente",
+    });
+  } catch (error) {
+    console.error("Error en logout:", error);
+    res.status(500).json({
+      success: false,
+      code: "LOGOUT_ERROR",
+      message: "Error al cerrar sesión",
+      error: error instanceof Error ? error.message : "Error desconocido",
+    });
+  }
+};
+
+/**
+ * Endpoint para verificar el estado de la sesión actual
+ *
+ * Permite al frontend verificar periódicamente si la sesión sigue activa.
+ * Útil para implementar polling y detectar cuando la sesión fue invalidada.
+ *
+ * Requiere autenticación JWT (validarJWT middleware)
+ *
+ * Respuesta exitosa:
+ * {
+ *   ok: true,
+ *   sessionActive: true,
+ *   message: "Sesión activa",
+ *   sessionInfo: {
+ *     sessionId: string,
+ *     location: { pais, ciudad, region },
+ *     device: { navegador, so, dispositivo },
+ *     ip: string,
+ *     createdAt: Date,
+ *     lastActivityAt: Date
+ *   }
+ * }
+ *
+ * Si la sesión fue invalidada, el middleware validarJWT retornará 401
+ */
+export const checkSession = async (req: CustomRequest, res: Response) => {
+  try {
+    const sessionId = req.sessionId;
+    const idUsuario = req.id;
+
+    // Si llegamos aquí, es porque el middleware validarJWT ya validó la sesión
+    // y confirmó que está activa. Ahora obtenemos los detalles completos.
+
+    const session = await UserSession.findOne({
+      where: {
+        sessionId,
+        idUsuario,
+        isActive: true,
+      },
+      attributes: [
+        "sessionId",
+        "navegador",
+        "so",
+        "dispositivo",
+        "tipoDispositivo",
+        "pais",
+        "ciudad",
+        "region",
+        "ip",
+        "isp",
+        "createdAt",
+        "lastActivityAt",
+        "expiresAt",
+      ],
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        ok: false,
+        sessionActive: false,
+        message: "Sesión no encontrada",
+      });
+    }
+
+    res.json({
+      ok: true,
+      sessionActive: true,
+      message: "Sesión activa",
+      sessionInfo: {
+        sessionId: session.getDataValue("sessionId"),
+        location: {
+          pais: session.getDataValue("pais"),
+          ciudad: session.getDataValue("ciudad"),
+          region: session.getDataValue("region"),
+        },
+        device: {
+          navegador: session.getDataValue("navegador"),
+          so: session.getDataValue("so"),
+          dispositivo: session.getDataValue("dispositivo"),
+          tipoDispositivo: session.getDataValue("tipoDispositivo"),
+        },
+        ip: session.getDataValue("ip"),
+        isp: session.getDataValue("isp"),
+        createdAt: session.getDataValue("createdAt"),
+        lastActivityAt: session.getDataValue("lastActivityAt"),
+        expiresAt: session.getDataValue("expiresAt"),
+      },
+    });
+  } catch (error) {
+    console.error("Error en checkSession:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al verificar la sesión",
+    });
+  }
+};
+
+/**
+ * Obtiene todas las sesiones activas con información de usuario y congregación
+ *
+ * Endpoint para administradores que muestra:
+ * - Total de sesiones activas
+ * - Nombre completo del usuario
+ * - Congregación (país, ciudad/congregación, campo)
+ * - Ubicación del login (país, ciudad, región)
+ * - Dispositivo (navegador, SO, tipo)
+ * - Red (IP, ISP)
+ * - Fechas (creación, última actividad, expiración)
+ *
+ * GET /api/login/active-sessions
+ */
+export const getActiveSessions = async (req: Request, res: Response) => {
+  try {
+    const stats = await getActiveSessionsWithUserInfo();
+
+    return res.json({
+      ok: true,
+      totalActiveSessions: stats.totalActiveSessions,
+      sessions: stats.sessions,
+    });
+  } catch (error) {
+    console.error("Error al obtener sesiones activas:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al obtener sesiones activas",
+    });
+  }
 };
 
 async function verificarUsuario(login: string) {
