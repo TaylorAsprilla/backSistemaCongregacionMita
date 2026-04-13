@@ -214,10 +214,17 @@ export const loginPorQr = async (req: Request, res: Response) => {
         .json({ ok: false, msg: "Congregación no encontrada" });
     }
 
-    // Generar token JWT
+    // Generar token JWT con sessionId temporal para acceso QR
+    // Nota: Para congregaciones por QR se usa un sessionId temporal
+    // En el futuro se puede implementar sistema de sesiones para congregaciones
+    const sessionId = uuidv4();
+    const email = congregacion.getDataValue("email") || "";
+
     const token = await generarJWT(
       congregacion.getDataValue("id"),
-      congregacion.getDataValue("email"),
+      email,
+      sessionId,
+      email,
     );
 
     // Guardar el acceso

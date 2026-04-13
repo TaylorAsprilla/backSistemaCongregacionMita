@@ -61,6 +61,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.6",
     "@types/qrcode": "^1.5.5",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",

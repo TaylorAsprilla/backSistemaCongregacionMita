@@ -11,8 +11,10 @@ import {
   envioDeCredenciales,
   forgotPassword,
   login,
+  logout,
   renewToken,
   resetPassword,
+  checkSession,
 } from "../controllers/login.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -21,8 +23,13 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 // Renew Token
-
 router.get("/renew", validarJWT, renewToken);
+
+// Check Session - Verificar estado de sesión
+router.get("/check-session", validarJWT, checkSession);
+
+// Logout - Cerrar sesión
+router.post("/logout", validarJWT, logout);
 
 // Login
 router.post(
@@ -32,7 +39,7 @@ router.post(
     check("password", "El password es obligatorio").not().isEmpty(),
     validarCampos,
   ],
-  login
+  login,
 );
 
 // Se olvidó la contraseña
@@ -42,7 +49,7 @@ router.put(
     check("login", "Se requiere la cuenta de usuario").not().isEmpty(),
     validarCampos,
   ],
-  forgotPassword
+  forgotPassword,
 );
 
 // Crear una nueva contraseña
@@ -52,7 +59,7 @@ router.put(
     check("nuevoPassword", "Se requiere la nueva contraseña").not().isEmpty(),
     validarCampos,
   ],
-  crearNuevoPassword
+  crearNuevoPassword,
 );
 
 //El usuario cambia su contraseña
@@ -64,7 +71,7 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  cambiarPassword
+  cambiarPassword,
 );
 
 // Envío de credenciales
@@ -79,7 +86,7 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  resetPassword
+  resetPassword,
 );
 
 router.put(
@@ -93,7 +100,7 @@ router.put(
     validarCampos,
     validarJWT,
   ],
-  crearLogin
+  crearLogin,
 );
 
 export default router;
