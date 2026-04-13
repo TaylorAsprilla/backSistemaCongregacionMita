@@ -15,6 +15,7 @@ import {
   renewToken,
   resetPassword,
   checkSession,
+  getActiveSessions,
 } from "../controllers/login.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -27,6 +28,9 @@ router.get("/renew", validarJWT, renewToken);
 
 // Check Session - Verificar estado de sesión
 router.get("/check-session", validarJWT, checkSession);
+
+// Get Active Sessions - Obtener todas las sesiones activas
+router.get("/active-sessions", getActiveSessions);
 
 // Logout - Cerrar sesión
 router.post("/logout", validarJWT, logout);

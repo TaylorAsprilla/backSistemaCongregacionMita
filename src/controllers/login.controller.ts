@@ -27,7 +27,10 @@ import RolCasa from "../models/rolCasa.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import TipoDocumento from "../models/tipoDocumento.model";
 import UserSession from "../models/userSession.model";
-import { createUserSession } from "../helpers/session.service";
+import {
+  createUserSession,
+  getActiveSessionsWithUserInfo,
+} from "../helpers/session.service";
 import { v4 as uuidv4 } from "uuid";
 
 const { verificarLink, jwtSecretReset, imagenEmail, urlCmarLive, ip } =
@@ -1219,6 +1222,38 @@ export const checkSession = async (req: CustomRequest, res: Response) => {
     return res.status(500).json({
       ok: false,
       message: "Error al verificar la sesión",
+    });
+  }
+};
+
+/**
+ * Obtiene todas las sesiones activas con información de usuario y congregación
+ *
+ * Endpoint para administradores que muestra:
+ * - Total de sesiones activas
+ * - Nombre completo del usuario
+ * - Congregación (país, ciudad/congregación, campo)
+ * - Ubicación del login (país, ciudad, región)
+ * - Dispositivo (navegador, SO, tipo)
+ * - Red (IP, ISP)
+ * - Fechas (creación, última actividad, expiración)
+ *
+ * GET /api/login/active-sessions
+ */
+export const getActiveSessions = async (req: Request, res: Response) => {
+  try {
+    const stats = await getActiveSessionsWithUserInfo();
+
+    return res.json({
+      ok: true,
+      totalActiveSessions: stats.totalActiveSessions,
+      sessions: stats.sessions,
+    });
+  } catch (error) {
+    console.error("Error al obtener sesiones activas:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al obtener sesiones activas",
     });
   }
 };

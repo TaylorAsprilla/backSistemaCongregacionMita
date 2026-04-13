@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
+import Usuario from "./usuario.model";
 
 /**
  * Modelo UserSession
@@ -160,5 +161,11 @@ const UserSession = db.define(
     ],
   },
 );
+
+// Asociación con Usuario
+UserSession.belongsTo(Usuario, {
+  foreignKey: "idUsuario",
+  as: "usuario",
+});
 
 export default UserSession;

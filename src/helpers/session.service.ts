@@ -2,6 +2,11 @@ import { v4 as uuidv4 } from "uuid";
 import DeviceDetector from "device-detector-js";
 import { BrowserResult } from "device-detector-js/dist/parsers/client/browser";
 import UserSession from "../models/userSession.model";
+import Usuario from "../models/usuario.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
+import Congregacion from "../models/congregacion.model";
+import Pais from "../models/pais.model";
+import Campo from "../models/campo.model";
 import db from "../database/connection";
 import { Op } from "sequelize";
 import axios from "axios";
@@ -524,6 +529,169 @@ export const cleanExpiredSessions = async (
   }
 };
 
+/**
+ * Obtiene todas las sesiones activas con información del usuario y congregación
+ *
+ * Retorna:
+ * - Total de sesiones activas
+ * - Lista de sesiones con datos del usuario (nombre, apellidos)
+ * - Información de congregación (país, ciudad, campo)
+ * - Detalles de sesión (ubicación del login, dispositivo, IP)
+ *
+ * @returns Objeto con estadísticas y lista de sesiones activas
+ */
+export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
+  try {
+    const activeSessions = await UserSession.findAll({
+      where: {
+        isActive: true,
+      },
+      attributes: [
+        "id",
+        "sessionId",
+        "idUsuario",
+        "navegador",
+        "so",
+        "dispositivo",
+        "tipoDispositivo",
+        "pais",
+        "ciudad",
+        "region",
+        "ip",
+        "isp",
+        "createdAt",
+        "lastActivityAt",
+        "expiresAt",
+      ],
+      include: [
+        {
+          model: Usuario,
+          as: "usuario",
+          attributes: [
+            "id",
+            "primerNombre",
+            "segundoNombre",
+            "primerApellido",
+            "segundoApellido",
+            "login",
+            "email",
+          ],
+          required: false,
+          include: [
+            {
+              model: UsuarioCongregacion,
+              as: "usuarioCongregacion",
+              attributes: [
+                "usuario_id",
+                "pais_id",
+                "congregacion_id",
+                "campo_id",
+              ],
+              required: false,
+              include: [
+                {
+                  model: Pais,
+                  as: "pais",
+                  attributes: ["id", "pais"],
+                  required: false,
+                },
+                {
+                  model: Congregacion,
+                  as: "congregacion",
+                  attributes: ["id", "congregacion"],
+                  required: false,
+                },
+                {
+                  model: Campo,
+                  as: "campo",
+                  attributes: ["id", "campo"],
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const totalActiveSessions = activeSessions.length;
+
+    const sessionsWithUserInfo = activeSessions.map((session) => {
+      const sessionData = session.toJSON();
+      const usuario = sessionData.usuario;
+
+      // Construir nombre completo desde los campos correctos
+      const primerNombre = usuario?.primerNombre || "";
+      const segundoNombre = usuario?.segundoNombre || "";
+      const primerApellido = usuario?.primerApellido || "";
+      const segundoApellido = usuario?.segundoApellido || "";
+
+      const nombreCompleto = usuario
+        ? `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`
+            .replace(/\s+/g, " ")
+            .trim()
+        : "N/A";
+
+      // Obtener información de congregación desde usuarioCongregacion
+      const usuarioCongregacion = usuario?.usuarioCongregacion;
+      const paisObj = usuarioCongregacion?.pais;
+      const congregacionObj = usuarioCongregacion?.congregacion;
+      const campoObj = usuarioCongregacion?.campo;
+
+      return {
+        sessionId: sessionData.sessionId,
+        user: {
+          id: usuario?.id || null,
+          primerNombre: primerNombre || "N/A",
+          segundoNombre: segundoNombre || "N/A",
+          primerApellido: primerApellido || "N/A",
+          segundoApellido: segundoApellido || "N/A",
+          nombreCompleto: nombreCompleto,
+          login: usuario?.login || "N/A",
+          email: usuario?.email || "N/A",
+        },
+        congregacion: {
+          pais: paisObj?.pais || "N/A",
+          ciudad: congregacionObj?.congregacion || "N/A",
+          campo: campoObj?.campo || "N/A",
+        },
+        sessionLocation: {
+          pais: sessionData.pais || "N/A",
+          ciudad: sessionData.ciudad || "N/A",
+          region: sessionData.region || "N/A",
+        },
+        device: {
+          navegador: sessionData.navegador || "N/A",
+          so: sessionData.so || "N/A",
+          dispositivo: sessionData.dispositivo || "N/A",
+          tipoDispositivo: sessionData.tipoDispositivo || "desktop",
+        },
+        network: {
+          ip: sessionData.ip || "N/A",
+          isp: sessionData.isp || "N/A",
+        },
+        timestamps: {
+          createdAt: sessionData.createdAt,
+          lastActivityAt: sessionData.lastActivityAt,
+          expiresAt: sessionData.expiresAt,
+        },
+      };
+    });
+
+    return {
+      totalActiveSessions,
+      sessions: sessionsWithUserInfo,
+    };
+  } catch (error) {
+    console.error(
+      "Error al obtener sesiones activas con información de usuario:",
+      error,
+    );
+    throw new Error("Error al obtener sesiones activas");
+  }
+};
+
 export default {
   createUserSession,
   validateUserSession,
@@ -532,4 +700,5 @@ export default {
   getUserSessions,
   parseDeviceInfo,
   cleanExpiredSessions,
+  getActiveSessionsWithUserInfo,
 };
