@@ -314,23 +314,22 @@ export const createUserSession = async (
  * Verifica:
  * - Que la sesión exista
  * - Que esté marcada como activa
- * - Que pertenezca al usuario indicado
+ * - Que pertenezca a la entidad indicada (usuario o congregación)
  * - Que no haya expirado
  *
  * @param sessionId - Identificador único de sesión (del JWT)
- * @param idUsuario - ID del usuario (del JWT)
+ * @param idEntidad - ID del usuario o congregación (del JWT)
  * @returns Resultado de validación con detalles
  */
 export const validateUserSession = async (
   sessionId: string,
-  idUsuario: number,
+  idEntidad: number,
 ): Promise<SessionValidationResult> => {
   try {
-    // Buscar la sesión en base de datos
+    // Buscar la sesión en base de datos solo por sessionId primero
     const session = await UserSession.findOne({
       where: {
         sessionId,
-        idUsuario,
       },
     });
 
@@ -343,18 +342,41 @@ export const validateUserSession = async (
       };
     }
 
+    // Caso 1.5: Verificar que la sesión pertenece a la entidad correcta
+    const sessionUserId = session.getDataValue("idUsuario");
+    const sessionCongregacionId = session.getDataValue("idCongregacion");
+    const belongsToEntity =
+      sessionUserId === idEntidad || sessionCongregacionId === idEntidad;
+
+    if (!belongsToEntity) {
+      return {
+        isValid: false,
+        error: "La sesión no pertenece a esta entidad",
+        code: "SESSION_NOT_FOUND",
+      };
+    }
+
     // Caso 2: Sesión invalidada (posiblemente por nuevo login)
     if (!session.getDataValue("isActive")) {
       const reason = session.getDataValue("invalidationReason");
+      const tipoEntidad = session.getDataValue("tipoEntidad");
 
       // Si la sesión fue reemplazada por un nuevo login, obtener información de la nueva sesión
       if (reason === "NEW_LOGIN") {
         try {
+          const whereClause: any = {
+            isActive: true,
+          };
+
+          // Buscar la nueva sesión de la misma entidad
+          if (tipoEntidad === "usuario") {
+            whereClause.idUsuario = idEntidad;
+          } else {
+            whereClause.idCongregacion = idEntidad;
+          }
+
           const newSession = await UserSession.findOne({
-            where: {
-              idUsuario,
-              isActive: true,
-            },
+            where: whereClause,
             attributes: [
               "navegador",
               "so",
@@ -469,14 +491,37 @@ export const validateUserSession = async (
  * Invalida una sesión específica (para logout)
  *
  * @param sessionId - Identificador de la sesión a invalidar
- * @param idUsuario - ID del usuario (para validación)
+ * @param idEntidad - ID del usuario o congregación (para validación)
  * @returns true si se invalidó correctamente
  */
 export const invalidateSession = async (
   sessionId: string,
-  idUsuario: number,
+  idEntidad: number,
 ): Promise<boolean> => {
   try {
+    // Primero buscar la sesión para verificar que pertenece a la entidad
+    const session = await UserSession.findOne({
+      where: {
+        sessionId,
+        isActive: true,
+      },
+    });
+
+    if (!session) {
+      return false;
+    }
+
+    // Verificar que pertenece a la entidad correcta
+    const sessionUserId = session.getDataValue("idUsuario");
+    const sessionCongregacionId = session.getDataValue("idCongregacion");
+    const belongsToEntity =
+      sessionUserId === idEntidad || sessionCongregacionId === idEntidad;
+
+    if (!belongsToEntity) {
+      return false;
+    }
+
+    // Invalidar la sesión
     const result = await UserSession.update(
       {
         isActive: false,
@@ -486,7 +531,6 @@ export const invalidateSession = async (
       {
         where: {
           sessionId,
-          idUsuario,
           isActive: true,
         },
       },
@@ -496,7 +540,7 @@ export const invalidateSession = async (
 
     if (rowsAffected > 0) {
       console.info(
-        `Sesión ${sessionId} invalidada por logout del usuario ${idUsuario}`,
+        `Sesión ${sessionId} invalidada por logout de la entidad ${idEntidad}`,
       );
       return true;
     }
@@ -572,25 +616,37 @@ export const cleanExpiredSessions = async (
  * Obtiene todas las sesiones activas con información del usuario y congregación
  *
  * Retorna:
- * - Total de sesiones activas de las últimas 48 horas
- * - Lista de sesiones con datos del usuario (nombre, apellidos)
- * - Información de congregación (país, ciudad, campo)
- * - Detalles de sesión (ubicación del login, dispositivo, IP)
+ * - Todas las sesiones activas (isActive = true y no expiradas)
+ * - Sesiones inactivas de las últimas 48 horas (para historial reciente)
  *
  * @returns Objeto con estadísticas y lista de sesiones activas
  */
 export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
   try {
+    const now = new Date();
+
     // Calcular fecha límite: hace 48 horas
     const fortyEightHoursAgo = new Date();
     fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
 
     const activeSessions = await UserSession.findAll({
       where: {
-        isActive: true,
-        createdAt: {
-          [Op.gte]: fortyEightHoursAgo, // Solo sesiones de las últimas 48 horas
-        },
+        [Op.or]: [
+          // Condición 1: Sesiones activas (sin importar cuándo se crearon)
+          {
+            isActive: true,
+            expiresAt: {
+              [Op.gt]: now,
+            },
+          },
+          // Condición 2: Sesiones inactivas de las últimas 48 horas
+          {
+            isActive: false,
+            createdAt: {
+              [Op.gte]: fortyEightHoursAgo,
+            },
+          },
+        ],
       },
       attributes: [
         "id",
@@ -598,6 +654,7 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
         "tipoEntidad",
         "idUsuario",
         "idCongregacion",
+        "isActive",
         "navegador",
         "so",
         "dispositivo",
@@ -610,6 +667,8 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
         "createdAt",
         "lastActivityAt",
         "expiresAt",
+        "invalidationReason",
+        "invalidatedAt",
       ],
       include: [
         {
@@ -685,6 +744,11 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
       const usuario = sessionData.usuario;
       const congregacion = sessionData.congregacion;
 
+      // Determinar el estado de la sesión
+      const now = new Date();
+      const isExpired = new Date(sessionData.expiresAt) <= now;
+      const isCurrentlyActive = sessionData.isActive && !isExpired;
+
       // Información base de la entidad
       let entidadInfo: any = {};
 
@@ -748,6 +812,10 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
 
       return {
         sessionId: sessionData.sessionId,
+        isActive: sessionData.isActive,
+        isCurrentlyActive: isCurrentlyActive, // true solo si isActive=true y no expirada
+        isExpired: isExpired,
+        invalidationReason: sessionData.invalidationReason || null,
         entidad: entidadInfo,
         sessionLocation: {
           pais: sessionData.pais || "N/A",
@@ -768,12 +836,20 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
           createdAt: sessionData.createdAt,
           lastActivityAt: sessionData.lastActivityAt,
           expiresAt: sessionData.expiresAt,
+          invalidatedAt: sessionData.invalidatedAt || null,
         },
       };
     });
 
+    // Contar sesiones realmente activas
+    const currentlyActiveSessions = sessionsWithUserInfo.filter(
+      (s) => s.isCurrentlyActive,
+    ).length;
+
     return {
-      totalActiveSessions,
+      totalSessions: totalActiveSessions,
+      currentlyActiveSessions: currentlyActiveSessions,
+      inactiveSessions: totalActiveSessions - currentlyActiveSessions,
       sessions: sessionsWithUserInfo,
     };
   } catch (error) {
