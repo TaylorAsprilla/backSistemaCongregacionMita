@@ -262,6 +262,12 @@ Congregacion.belongsTo(Usuario, {
   as: "obreroEncargadoDos",
 });
 
+// Asociación de Congregación con País
+Congregacion.belongsTo(Pais, {
+  foreignKey: "pais_id",
+  as: "pais",
+});
+
 Campo.belongsTo(Usuario, {
   foreignKey: "idObreroEncargado",
   as: "obreroEncargado",

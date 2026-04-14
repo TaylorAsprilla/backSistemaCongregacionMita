@@ -16,6 +16,8 @@ import {
   resetPassword,
   checkSession,
   getActiveSessions,
+  checkSessionsBeforeLogin,
+  closeOtherSessions,
 } from "../controllers/login.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -31,6 +33,20 @@ router.get("/check-session", validarJWT, checkSession);
 
 // Get Active Sessions - Obtener todas las sesiones activas
 router.get("/active-sessions", getActiveSessions);
+
+// Check Sessions Before Login - Verificar sesiones antes de hacer login
+router.post(
+  "/check-sessions-before-login",
+  [
+    check("login", "El nombre de usuario es obligatorio").not().isEmpty(),
+    check("password", "El password es obligatorio").not().isEmpty(),
+    validarCampos,
+  ],
+  checkSessionsBeforeLogin,
+);
+
+// Close Other Sessions - Cerrar otras sesiones del usuario actual
+router.post("/close-other-sessions", validarJWT, closeOtherSessions);
 
 // Logout - Cerrar sesión
 router.post("/logout", validarJWT, logout);

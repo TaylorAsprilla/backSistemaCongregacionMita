@@ -36,7 +36,9 @@ interface LocationInfo {
 }
 
 interface CreateSessionParams {
-  idUsuario: number;
+  idUsuario?: number;
+  idCongregacion?: number;
+  tipoEntidad: "usuario" | "congregacion";
   ip: string;
   userAgent: string;
   expiresAt: Date;
@@ -154,18 +156,32 @@ export const getLocationFromIP = async (ip: string): Promise<LocationInfo> => {
 };
 
 /**
- * Invalida todas las sesiones activas de un usuario
+ * Invalida todas las sesiones activas de un usuario o congregación
  *
  * @param idUsuario - ID del usuario cuyas sesiones se invalidarán
+ * @param idCongregacion - ID de la congregación cuyas sesiones se invalidarán
  * @param reason - Razón de invalidación (opcional)
  * @param transaction - Transacción de Sequelize para atomicidad
  */
 export const invalidateAllUserSessions = async (
-  idUsuario: number,
+  idUsuario?: number,
+  idCongregacion?: number,
   reason: string = "NEW_LOGIN",
   transaction?: any,
 ): Promise<void> => {
   try {
+    const whereClause: any = {
+      isActive: true,
+    };
+
+    if (idUsuario) {
+      whereClause.idUsuario = idUsuario;
+    } else if (idCongregacion) {
+      whereClause.idCongregacion = idCongregacion;
+    } else {
+      throw new Error("Se debe proporcionar idUsuario o idCongregacion");
+    }
+
     await UserSession.update(
       {
         isActive: false,
@@ -173,16 +189,13 @@ export const invalidateAllUserSessions = async (
         invalidatedAt: new Date(),
       },
       {
-        where: {
-          idUsuario,
-          isActive: true,
-        },
+        where: whereClause,
         transaction,
       },
     );
   } catch (error) {
     console.error(
-      `Error al invalidar sesiones del usuario ${idUsuario}:`,
+      `Error al invalidar sesiones ${idUsuario ? `del usuario ${idUsuario}` : `de la congregación ${idCongregacion}`}:`,
       error,
     );
     throw new Error("Error al invalidar sesiones anteriores");
@@ -190,10 +203,10 @@ export const invalidateAllUserSessions = async (
 };
 
 /**
- * Crea una nueva sesión para un usuario
+ * Crea una nueva sesión para un usuario o congregación
  *
  * IMPORTANTE: Esta función invalida automáticamente todas las sesiones
- * activas anteriores del usuario antes de crear la nueva sesión.
+ * activas anteriores de la entidad antes de crear la nueva sesión.
  *
  * @param params - Parámetros para crear la sesión
  * @returns Objeto con sessionId generado y datos de la sesión
@@ -201,14 +214,37 @@ export const invalidateAllUserSessions = async (
 export const createUserSession = async (
   params: CreateSessionParams,
 ): Promise<{ sessionId: string; session: any }> => {
-  const { idUsuario, ip, userAgent, expiresAt, refreshToken } = params;
+  const {
+    idUsuario,
+    idCongregacion,
+    tipoEntidad,
+    ip,
+    userAgent,
+    expiresAt,
+    refreshToken,
+  } = params;
+
+  // Validar que se proporcione el ID correcto según el tipo de entidad
+  if (tipoEntidad === "usuario" && !idUsuario) {
+    throw new Error("Se debe proporcionar idUsuario para sesiones de usuario");
+  }
+  if (tipoEntidad === "congregacion" && !idCongregacion) {
+    throw new Error(
+      "Se debe proporcionar idCongregacion para sesiones de congregación",
+    );
+  }
 
   // Usar transacción para garantizar atomicidad
   const transaction = await db.transaction();
 
   try {
-    // 1. Invalidar todas las sesiones activas anteriores del usuario
-    await invalidateAllUserSessions(idUsuario, "NEW_LOGIN", transaction);
+    // 1. Invalidar todas las sesiones activas anteriores de la entidad
+    await invalidateAllUserSessions(
+      idUsuario,
+      idCongregacion,
+      "NEW_LOGIN",
+      transaction,
+    );
 
     // 2. Generar nuevo sessionId único
     const sessionId = uuidv4();
@@ -227,7 +263,9 @@ export const createUserSession = async (
     // 5. Crear nueva sesión activa
     const newSession = await UserSession.create(
       {
-        idUsuario,
+        tipoEntidad,
+        idUsuario: tipoEntidad === "usuario" ? idUsuario : null,
+        idCongregacion: tipoEntidad === "congregacion" ? idCongregacion : null,
         sessionId,
         refreshToken,
         ip,
@@ -253,8 +291,9 @@ export const createUserSession = async (
     // 6. Commit de la transacción
     await transaction.commit();
 
+    const entidadId = idUsuario || idCongregacion;
     console.info(
-      `Nueva sesión creada para usuario ${idUsuario}. SessionId: ${sessionId}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
+      `Nueva sesión creada para ${tipoEntidad} ${entidadId}. SessionId: ${sessionId}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
     );
 
     return {
@@ -533,7 +572,7 @@ export const cleanExpiredSessions = async (
  * Obtiene todas las sesiones activas con información del usuario y congregación
  *
  * Retorna:
- * - Total de sesiones activas
+ * - Total de sesiones activas de las últimas 48 horas
  * - Lista de sesiones con datos del usuario (nombre, apellidos)
  * - Información de congregación (país, ciudad, campo)
  * - Detalles de sesión (ubicación del login, dispositivo, IP)
@@ -542,14 +581,23 @@ export const cleanExpiredSessions = async (
  */
 export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
   try {
+    // Calcular fecha límite: hace 48 horas
+    const fortyEightHoursAgo = new Date();
+    fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
+
     const activeSessions = await UserSession.findAll({
       where: {
         isActive: true,
+        createdAt: {
+          [Op.gte]: fortyEightHoursAgo, // Solo sesiones de las últimas 48 horas
+        },
       },
       attributes: [
         "id",
         "sessionId",
+        "tipoEntidad",
         "idUsuario",
+        "idCongregacion",
         "navegador",
         "so",
         "dispositivo",
@@ -611,6 +659,20 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
             },
           ],
         },
+        {
+          model: Congregacion,
+          as: "congregacion",
+          attributes: ["id", "congregacion", "email", "pais_id"],
+          required: false,
+          include: [
+            {
+              model: Pais,
+              as: "pais",
+              attributes: ["id", "pais"],
+              required: false,
+            },
+          ],
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -619,43 +681,74 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
 
     const sessionsWithUserInfo = activeSessions.map((session) => {
       const sessionData = session.toJSON();
+      const tipoEntidad = sessionData.tipoEntidad;
       const usuario = sessionData.usuario;
+      const congregacion = sessionData.congregacion;
 
-      // Construir nombre completo desde los campos correctos
-      const primerNombre = usuario?.primerNombre || "";
-      const segundoNombre = usuario?.segundoNombre || "";
-      const primerApellido = usuario?.primerApellido || "";
-      const segundoApellido = usuario?.segundoApellido || "";
+      // Información base de la entidad
+      let entidadInfo: any = {};
 
-      const nombreCompleto = usuario
-        ? `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`
+      if (tipoEntidad === "usuario" && usuario) {
+        // Construir nombre completo desde los campos correctos
+        const primerNombre = usuario.primerNombre || "";
+        const segundoNombre = usuario.segundoNombre || "";
+        const primerApellido = usuario.primerApellido || "";
+        const segundoApellido = usuario.segundoApellido || "";
+
+        const nombreCompleto =
+          `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`
             .replace(/\s+/g, " ")
-            .trim()
-        : "N/A";
+            .trim();
 
-      // Obtener información de congregación desde usuarioCongregacion
-      const usuarioCongregacion = usuario?.usuarioCongregacion;
-      const paisObj = usuarioCongregacion?.pais;
-      const congregacionObj = usuarioCongregacion?.congregacion;
-      const campoObj = usuarioCongregacion?.campo;
+        // Obtener información de congregación del usuario
+        const usuarioCongregacion = usuario.usuarioCongregacion;
+        const paisObj = usuarioCongregacion?.pais;
+        const congregacionObj = usuarioCongregacion?.congregacion;
+        const campoObj = usuarioCongregacion?.campo;
 
-      return {
-        sessionId: sessionData.sessionId,
-        user: {
-          id: usuario?.id || null,
+        entidadInfo = {
+          tipo: "usuario",
+          id: usuario.id,
           primerNombre: primerNombre || "N/A",
           segundoNombre: segundoNombre || "N/A",
           primerApellido: primerApellido || "N/A",
           segundoApellido: segundoApellido || "N/A",
-          nombreCompleto: nombreCompleto,
-          login: usuario?.login || "N/A",
-          email: usuario?.email || "N/A",
-        },
-        congregacion: {
+          nombreCompleto: nombreCompleto || "N/A",
+          login: usuario.login || "N/A",
+          email: usuario.email || "N/A",
+          congregacion: {
+            pais: paisObj?.pais || "N/A",
+            nombre: congregacionObj?.congregacion || "N/A",
+            campo: campoObj?.campo || "N/A",
+          },
+        };
+      } else if (tipoEntidad === "congregacion" && congregacion) {
+        // Información de la congregación
+        // En congregaciones, el email funciona como login
+        const paisObj = congregacion.pais;
+
+        entidadInfo = {
+          tipo: "congregacion",
+          id: congregacion.id,
+          nombre: congregacion.congregacion || "N/A",
+          login: congregacion.email || "N/A", // El email es el login
+          email: congregacion.email || "N/A",
           pais: paisObj?.pais || "N/A",
-          ciudad: congregacionObj?.congregacion || "N/A",
-          campo: campoObj?.campo || "N/A",
-        },
+        };
+      } else {
+        // Entidad no encontrada o tipo desconocido
+        entidadInfo = {
+          tipo: tipoEntidad || "desconocido",
+          id: null,
+          nombre: "N/A",
+          login: "N/A",
+          email: "N/A",
+        };
+      }
+
+      return {
+        sessionId: sessionData.sessionId,
+        entidad: entidadInfo,
         sessionLocation: {
           pais: sessionData.pais || "N/A",
           ciudad: sessionData.ciudad || "N/A",
@@ -692,6 +785,82 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
   }
 };
 
+/**
+ * Obtiene las sesiones activas de una entidad específica (usuario o congregación)
+ *
+ * @param idUsuario - ID del usuario (opcional)
+ * @param idCongregacion - ID de la congregación (opcional)
+ * @returns Array de sesiones activas con información detallada
+ */
+export const getActiveSessionsByEntity = async (
+  idUsuario?: number,
+  idCongregacion?: number,
+): Promise<any[]> => {
+  try {
+    const whereClause: any = {
+      isActive: true,
+    };
+
+    if (idUsuario) {
+      whereClause.idUsuario = idUsuario;
+    } else if (idCongregacion) {
+      whereClause.idCongregacion = idCongregacion;
+    } else {
+      throw new Error("Se debe proporcionar idUsuario o idCongregacion");
+    }
+
+    const sessions = await UserSession.findAll({
+      where: whereClause,
+      attributes: [
+        "sessionId",
+        "navegador",
+        "so",
+        "dispositivo",
+        "tipoDispositivo",
+        "pais",
+        "ciudad",
+        "region",
+        "ip",
+        "isp",
+        "createdAt",
+        "lastActivityAt",
+        "expiresAt",
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return sessions.map((session) => {
+      const data = session.toJSON();
+      return {
+        sessionId: data.sessionId,
+        device: {
+          tipoDispositivo: data.tipoDispositivo || "desktop",
+          navegador: data.navegador || "Desconocido",
+          so: data.so || "Desconocido",
+          dispositivo: data.dispositivo || "Desconocido",
+        },
+        sessionLocation: {
+          ciudad: data.ciudad || "Desconocida",
+          pais: data.pais || "Desconocido",
+          region: data.region,
+        },
+        network: {
+          ip: data.ip,
+          isp: data.isp,
+        },
+        timestamps: {
+          createdAt: data.createdAt,
+          lastActivityAt: data.lastActivityAt,
+          expiresAt: data.expiresAt,
+        },
+      };
+    });
+  } catch (error) {
+    console.error("Error al obtener sesiones activas de la entidad:", error);
+    throw new Error("Error al obtener sesiones activas");
+  }
+};
+
 export default {
   createUserSession,
   validateUserSession,
@@ -701,4 +870,6 @@ export default {
   parseDeviceInfo,
   cleanExpiredSessions,
   getActiveSessionsWithUserInfo,
+  getLocationFromIP,
+  getActiveSessionsByEntity,
 };
