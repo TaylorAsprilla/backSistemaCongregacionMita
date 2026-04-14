@@ -275,8 +275,10 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
 
     // Consultar usuarios con TODAS las relaciones (sin distinct)
     const rows = await Usuario.findAll({
-      // Excluir campos sensibles
-      attributes: { exclude: ["password", "resetToken"] },
+      // Incluir todos los campos excepto los sensibles, asegurando que estado esté presente
+      attributes: {
+        exclude: ["password", "resetToken"],
+      },
       // Incluir todas las asociaciones del modelo Usuario
       include: [
         // =================================================================
@@ -439,10 +441,19 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
       order: [["id", "ASC"]],
     });
 
+    // Mapear los datos para asegurar que el estado esté presente
+    const dataWithEstado = rows.map((usuario) => {
+      const usuarioData = usuario.toJSON();
+      return {
+        ...usuarioData,
+        estado: usuario.getDataValue("estado"), // Explícitamente incluir estado
+      };
+    });
+
     // Respuesta con metadatos de paginación
     res.json({
       ok: true,
-      data: rows,
+      data: dataWithEstado,
       meta: {
         total: totalCount,
         ...(limit
