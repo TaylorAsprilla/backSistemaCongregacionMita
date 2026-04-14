@@ -1,15 +1,16 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 import Usuario from "./usuario.model";
+import Congregacion from "./congregacion.model";
 
 /**
  * Modelo UserSession
  *
- * Gestiona las sesiones activas de usuarios para implementar
- * una política de sesión única por usuario.
+ * Gestiona las sesiones activas de usuarios y congregaciones para implementar
+ * una política de sesión única por entidad.
  *
- * Solo puede haber una sesión activa por usuario a la vez.
- * Cuando un usuario inicia sesión desde un nuevo dispositivo,
+ * Solo puede haber una sesión activa por usuario/congregación a la vez.
+ * Cuando una entidad inicia sesión desde un nuevo dispositivo,
  * todas las sesiones anteriores son invalidadas automáticamente.
  */
 const UserSession = db.define(
@@ -20,15 +21,32 @@ const UserSession = db.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    // ID del usuario al que pertenece la sesión
+    // Tipo de entidad: 'usuario' o 'congregacion'
+    tipoEntidad: {
+      type: DataTypes.ENUM("usuario", "congregacion"),
+      allowNull: false,
+      defaultValue: "usuario",
+      field: "tipoEntidad",
+    },
+    // ID del usuario al que pertenece la sesión (nullable para congregaciones)
     idUsuario: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: "usuario",
         key: "id",
       },
       field: "idUsuario",
+    },
+    // ID de la congregación al que pertenece la sesión (nullable para usuarios)
+    idCongregacion: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "congregacion",
+        key: "id",
+      },
+      field: "idCongregacion",
     },
     // Identificador único de la sesión (JWT ID - jti claim)
     // Se incluye en el payload del JWT para validación
@@ -150,13 +168,25 @@ const UserSession = db.define(
         fields: ["idUsuario"],
       },
       {
+        name: "idx_user_session_congregacionId",
+        fields: ["idCongregacion"],
+      },
+      {
         name: "idx_user_session_sessionId",
         unique: true,
         fields: ["sessionId"],
       },
       {
-        name: "idx_user_session_active",
+        name: "idx_user_session_active_usuario",
         fields: ["idUsuario", "isActive"],
+      },
+      {
+        name: "idx_user_session_active_congregacion",
+        fields: ["idCongregacion", "isActive"],
+      },
+      {
+        name: "idx_user_session_tipo_entidad",
+        fields: ["tipoEntidad", "isActive"],
       },
     ],
   },
@@ -166,6 +196,12 @@ const UserSession = db.define(
 UserSession.belongsTo(Usuario, {
   foreignKey: "idUsuario",
   as: "usuario",
+});
+
+// Asociación con Congregación
+UserSession.belongsTo(Congregacion, {
+  foreignKey: "idCongregacion",
+  as: "congregacion",
 });
 
 export default UserSession;

@@ -30,6 +30,9 @@ import UserSession from "../models/userSession.model";
 import {
   createUserSession,
   getActiveSessionsWithUserInfo,
+  getLocationFromIP,
+  getActiveSessionsByEntity,
+  invalidateAllUserSessions,
 } from "../helpers/session.service";
 import { v4 as uuidv4 } from "uuid";
 
@@ -88,14 +91,23 @@ export const login = async (req: Request, res: Response) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expirationHours);
 
-    // 2. Crear sesión (esto invalida automáticamente sesiones anteriores del usuario)
-    const { sessionId, session } = await createUserSession({
-      idUsuario: idEntidad,
+    // 2. Crear sesión (esto invalida automáticamente sesiones anteriores de la entidad)
+    const sessionParams: any = {
+      tipoEntidad: entidadTipo,
       ip: ipAddress,
       userAgent: userAgent,
       expiresAt: expiresAt,
       // refreshToken: null, // Para futuras implementaciones
-    });
+    };
+
+    // Asignar el ID correcto según el tipo de entidad
+    if (entidadTipo === "usuario") {
+      sessionParams.idUsuario = idEntidad;
+    } else {
+      sessionParams.idCongregacion = idEntidad;
+    }
+
+    const { sessionId, session } = await createUserSession(sessionParams);
 
     // 3. Generar JWT con sessionId incluido en el payload
     token = await generarJWT(
@@ -1254,6 +1266,205 @@ export const getActiveSessions = async (req: Request, res: Response) => {
     return res.status(500).json({
       ok: false,
       message: "Error al obtener sesiones activas",
+    });
+  }
+};
+
+/**
+ * Verifica si hay sesiones activas antes de hacer login
+ *
+ * Este endpoint valida las credenciales del usuario/congregación
+ * y retorna información sobre sesiones activas existentes sin cerrarlas.
+ * Permite al frontend mostrar una modal de confirmación.
+ *
+ * POST /api/login/check-sessions-before-login
+ *
+ * Body:
+ * {
+ *   login: string,
+ *   password: string
+ * }
+ *
+ * Response con sesiones activas:
+ * {
+ *   ok: true,
+ *   hasActiveSessions: true,
+ *   activeSessions: [
+ *     {
+ *       sessionId: "uuid",
+ *       device: { tipoDispositivo, navegador, so },
+ *       sessionLocation: { ciudad, pais, region }
+ *     }
+ *   ],
+ *   newLocation: { ciudad, pais }
+ * }
+ *
+ * Response sin sesiones activas:
+ * {
+ *   ok: true,
+ *   hasActiveSessions: false
+ * }
+ */
+export const checkSessionsBeforeLogin = async (req: Request, res: Response) => {
+  const { login, password } = req.body;
+  const ipAddress = ip || req.ip;
+
+  try {
+    let entidad;
+    let entidadTipo = "usuario";
+
+    // Verificar usuario
+    entidad = await verificarUsuario(login);
+
+    // Si no es un usuario, verificar si es una congregación
+    if (!entidad) {
+      entidad = await verificarCongregacion(login);
+      entidadTipo = "congregacion";
+    }
+
+    // Si no se encontró ni usuario ni congregación
+    if (!entidad) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no válido",
+      });
+    }
+
+    // Verificar la contraseña
+    const isValidPassword = await verificarPassword(
+      password,
+      entidad.getDataValue("password"),
+    );
+
+    if (!isValidPassword) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Contraseña no válida",
+      });
+    }
+
+    const idEntidad = entidad.getDataValue("id");
+
+    // Obtener sesiones activas de la entidad
+    const activeSessions = await getActiveSessionsByEntity(
+      entidadTipo === "usuario" ? idEntidad : undefined,
+      entidadTipo === "congregacion" ? idEntidad : undefined,
+    );
+
+    // Obtener ubicación del nuevo login
+    const newLocation = await getLocationFromIP(ipAddress);
+
+    if (activeSessions.length > 0) {
+      return res.json({
+        ok: true,
+        hasActiveSessions: true,
+        activeSessions: activeSessions.map((session) => ({
+          sessionId: session.sessionId,
+          device: session.device,
+          sessionLocation: session.sessionLocation,
+          timestamps: session.timestamps,
+        })),
+        newLocation: {
+          ciudad: newLocation.ciudad || "Desconocida",
+          pais: newLocation.pais || "Desconocido",
+          region: newLocation.region,
+        },
+      });
+    } else {
+      return res.json({
+        ok: true,
+        hasActiveSessions: false,
+        newLocation: {
+          ciudad: newLocation.ciudad || "Desconocida",
+          pais: newLocation.pais || "Desconocido",
+          region: newLocation.region,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error al verificar sesiones antes del login:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Error al verificar sesiones",
+    });
+  }
+};
+
+/**
+ * Cierra todas las sesiones activas del usuario actual excepto la sesión actual
+ *
+ * Este endpoint permite al usuario cerrar todas sus otras sesiones activas,
+ * útil cuando se detecta que hay sesiones no reconocidas.
+ *
+ * POST /api/login/close-other-sessions
+ *
+ * Headers:
+ * x-token: JWT token
+ *
+ * Response:
+ * {
+ *   ok: true,
+ *   closedSessions: 2,
+ *   message: "Sesiones cerradas exitosamente"
+ * }
+ */
+export const closeOtherSessions = async (req: CustomRequest, res: Response) => {
+  try {
+    const sessionId = req.sessionId;
+    const idUsuario = req.id;
+
+    if (!sessionId || !idUsuario) {
+      return res.status(400).json({
+        ok: false,
+        message: "Sesión no válida",
+      });
+    }
+
+    // Contar sesiones activas antes de cerrar
+    const sessionsBeforeClose = await UserSession.count({
+      where: {
+        idUsuario,
+        isActive: true,
+      },
+    });
+
+    // Cerrar todas las sesiones excepto la actual
+    const result = await UserSession.update(
+      {
+        isActive: false,
+        invalidationReason: "CLOSED_BY_USER",
+        invalidatedAt: new Date(),
+      },
+      {
+        where: {
+          idUsuario,
+          isActive: true,
+          sessionId: {
+            [Op.ne]: sessionId, // No cerrar la sesión actual
+          },
+        },
+      },
+    );
+
+    const closedSessions = result[0];
+
+    console.info(
+      `Usuario ${idUsuario} cerró ${closedSessions} sesiones remotas. Sesión actual: ${sessionId}`,
+    );
+
+    return res.json({
+      ok: true,
+      closedSessions,
+      message:
+        closedSessions > 0
+          ? `${closedSessions} sesión(es) cerrada(s) exitosamente`
+          : "No había otras sesiones activas",
+    });
+  } catch (error) {
+    console.error("Error al cerrar otras sesiones:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al cerrar sesiones",
     });
   }
 };
