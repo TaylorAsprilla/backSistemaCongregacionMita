@@ -1243,6 +1243,7 @@ export const checkSession = async (req: CustomRequest, res: Response) => {
  *
  * Endpoint para administradores que muestra:
  * - Total de sesiones activas
+ * - Sesiones inactivas de las últimas 48 horas
  * - Nombre completo del usuario
  * - Congregación (país, ciudad/congregación, campo)
  * - Ubicación del login (país, ciudad, región)
@@ -1258,7 +1259,9 @@ export const getActiveSessions = async (req: Request, res: Response) => {
 
     return res.json({
       ok: true,
-      totalActiveSessions: stats.totalActiveSessions,
+      totalSessions: stats.totalSessions,
+      currentlyActiveSessions: stats.currentlyActiveSessions,
+      inactiveSessions: stats.inactiveSessions,
       sessions: stats.sessions,
     });
   } catch (error) {
@@ -1391,9 +1394,9 @@ export const checkSessionsBeforeLogin = async (req: Request, res: Response) => {
 };
 
 /**
- * Cierra todas las sesiones activas del usuario actual excepto la sesión actual
+ * Cierra todas las sesiones activas de la entidad actual excepto la sesión actual
  *
- * Este endpoint permite al usuario cerrar todas sus otras sesiones activas,
+ * Este endpoint permite al usuario/congregación cerrar todas sus otras sesiones activas,
  * útil cuando se detecta que hay sesiones no reconocidas.
  *
  * POST /api/login/close-other-sessions
@@ -1411,22 +1414,47 @@ export const checkSessionsBeforeLogin = async (req: Request, res: Response) => {
 export const closeOtherSessions = async (req: CustomRequest, res: Response) => {
   try {
     const sessionId = req.sessionId;
-    const idUsuario = req.id;
+    const idEntidad = req.id;
 
-    if (!sessionId || !idUsuario) {
+    if (!sessionId || !idEntidad) {
       return res.status(400).json({
         ok: false,
         message: "Sesión no válida",
       });
     }
 
-    // Contar sesiones activas antes de cerrar
-    const sessionsBeforeClose = await UserSession.count({
+    // Buscar la sesión actual para determinar el tipo de entidad
+    const currentSession = await UserSession.findOne({
       where: {
-        idUsuario,
+        sessionId,
         isActive: true,
       },
     });
+
+    if (!currentSession) {
+      return res.status(404).json({
+        ok: false,
+        message: "Sesión actual no encontrada",
+      });
+    }
+
+    const tipoEntidad = currentSession.getDataValue("tipoEntidad");
+    const idUsuario = currentSession.getDataValue("idUsuario");
+    const idCongregacion = currentSession.getDataValue("idCongregacion");
+
+    // Construir la condición where según el tipo de entidad
+    const whereClause: any = {
+      isActive: true,
+      sessionId: {
+        [Op.ne]: sessionId, // No cerrar la sesión actual
+      },
+    };
+
+    if (tipoEntidad === "usuario") {
+      whereClause.idUsuario = idUsuario;
+    } else {
+      whereClause.idCongregacion = idCongregacion;
+    }
 
     // Cerrar todas las sesiones excepto la actual
     const result = await UserSession.update(
@@ -1436,20 +1464,14 @@ export const closeOtherSessions = async (req: CustomRequest, res: Response) => {
         invalidatedAt: new Date(),
       },
       {
-        where: {
-          idUsuario,
-          isActive: true,
-          sessionId: {
-            [Op.ne]: sessionId, // No cerrar la sesión actual
-          },
-        },
+        where: whereClause,
       },
     );
 
     const closedSessions = result[0];
 
     console.info(
-      `Usuario ${idUsuario} cerró ${closedSessions} sesiones remotas. Sesión actual: ${sessionId}`,
+      `${tipoEntidad} ${idEntidad} cerró ${closedSessions} sesiones remotas. Sesión actual: ${sessionId}`,
     );
 
     return res.json({
