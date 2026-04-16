@@ -32,20 +32,20 @@ const urlCmarLive = environment.urlCmarLive;
 
 const templatePathAccesoExtendido = path.join(
   __dirname,
-  "../templates/accesoExtendido.html"
+  "../templates/accesoExtendido.html",
 );
 const emailTemplateAccesoExtendido = fs.readFileSync(
   templatePathAccesoExtendido,
-  "utf8"
+  "utf8",
 );
 
 const templatePathAccesoCmarLive = path.join(
   __dirname,
-  "../templates/accesoCmarLive.html"
+  "../templates/accesoCmarLive.html",
 );
 const emailTemplateAccesoCmarLive = fs.readFileSync(
   templatePathAccesoCmarLive,
-  "utf8"
+  "utf8",
 );
 
 export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
@@ -230,7 +230,7 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
 
 export const getUnaSolicitudMultimedia = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
 
@@ -254,7 +254,7 @@ export const getUnaSolicitudMultimedia = async (
 
 export const obtenerSolicitudPorUsuario = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { usuario_id } = req.query;
 
@@ -302,7 +302,7 @@ export const obtenerSolicitudPorUsuario = async (
 
 export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { usuario_id } = req.query;
 
@@ -500,7 +500,7 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   } catch (error) {
     console.error(
       "Error al obtener usuarios con solicitudes pendientes:",
-      error
+      error,
     );
     return res.status(500).json({
       ok: false,
@@ -520,6 +520,13 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
 
     const solicitudDeAcceso = SolicitudMultimedia.build(body);
     await solicitudDeAcceso.save();
+
+    await auditoriaUsuario(
+      usuario_id,
+      usuario_id,
+      AUDITORIAUSUARIO_ENUM.CREACION_SOLICITUD_MULTIMEDIA,
+      null,
+    );
 
     const idUsuario = solicitudDeAcceso.getDataValue("id");
     const usuario = await Usuario.findByPk(usuario_id);
@@ -646,7 +653,7 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
 
 export const actualizarSolicitudMultimedia = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const { body } = req;
@@ -720,12 +727,12 @@ export const actualizarSolicitudMultimedia = async (
 
       await Usuario.update(
         { login: nuevoLogin, password: hashedPassword },
-        { where: { id: usuario_id }, transaction }
+        { where: { id: usuario_id }, transaction },
       );
 
       credencialesCreadas = true;
       console.log(
-        `Nuevas credenciales creadas para el usuario ${usuario_id}: ${nuevoLogin}`
+        `Nuevas credenciales creadas para el usuario ${usuario_id}: ${nuevoLogin}`,
       );
     }
 
@@ -761,10 +768,10 @@ export const actualizarSolicitudMultimedia = async (
             usuario_id: usuario_id,
             permiso_id: permisoMultimediaId,
           },
-          { transaction }
+          { transaction },
         );
         console.log(
-          `Permiso Multimedia agregado al usuario ${usuario_id} (${nombreUsuario})`
+          `Permiso Multimedia agregado al usuario ${usuario_id} (${nombreUsuario})`,
         );
       }
     }
@@ -823,11 +830,11 @@ export const actualizarSolicitudMultimedia = async (
           await enviarEmail(
             emailUsuario,
             "Bienvenido a CMAR LIVE - Sus nuevas credenciales de acceso",
-            emailPersonalizado
+            emailPersonalizado,
           );
 
           console.log(
-            `Email con credenciales nuevas enviado a ${emailUsuario} (${nombreUsuario})`
+            `Email con credenciales nuevas enviado a ${emailUsuario} (${nombreUsuario})`,
           );
         }
         // CASO 2: Ya tenía credenciales pero cambió tiempoAprobacion
@@ -848,11 +855,11 @@ export const actualizarSolicitudMultimedia = async (
           await enviarEmail(
             emailUsuario,
             "Su acceso a CMAR LIVE ha sido extendido",
-            emailPersonalizado
+            emailPersonalizado,
           );
 
           console.log(
-            `Email de extensión enviado a ${emailUsuario} (${nombreUsuario})`
+            `Email de extensión enviado a ${emailUsuario} (${nombreUsuario})`,
           );
         }
         // CASO 3: Ya tenía credenciales y se actualizó la solicitud (pero no cambió tiempoAprobacion)
@@ -882,11 +889,11 @@ export const actualizarSolicitudMultimedia = async (
           await enviarEmail(
             emailUsuario,
             "Actualización de su solicitud CMAR LIVE",
-            emailPersonalizado
+            emailPersonalizado,
           );
 
           console.log(
-            `Email de actualización enviado a ${emailUsuario} (${nombreUsuario})`
+            `Email de actualización enviado a ${emailUsuario} (${nombreUsuario})`,
           );
         }
       } catch (emailError) {
@@ -916,7 +923,7 @@ export const actualizarSolicitudMultimedia = async (
 
 export const activarSolicitudMultimedia = async (
   req: CustomRequest,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const { body } = req;
@@ -958,7 +965,7 @@ export const activarSolicitudMultimedia = async (
 
 export const eliminarSolicitudMultimediaDeUnUsuario = async (
   req: CustomRequest,
-  res: Response
+  res: Response,
 ) => {
   const { usuario_id } = req.query;
 
@@ -998,7 +1005,7 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
           estado: SOLICITUD_MULTIMEDIA_ENUM.ELIMINADA,
           usuarioQueAprobo_id: req.id,
         },
-        { transaction }
+        { transaction },
       );
 
       // Registrar en la auditoría
@@ -1006,7 +1013,7 @@ export const eliminarSolicitudMultimediaDeUnUsuario = async (
         Number(usuario_id),
         Number(req.id),
         AUDITORIAUSUARIO_ENUM.ELIMINAR_SOLICITUD,
-        transaction
+        transaction,
       );
     }
 
