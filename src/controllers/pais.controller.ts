@@ -5,11 +5,13 @@ import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import Pais from "../models/pais.model";
 import Usuario from "../models/usuario.model";
+import UsuarioCongregacion from "../models/usuarioCongregacion.model";
 import agregarPermisoUsuario from "../helpers/agregarPermisoUsuario";
 import eliminarPermisoUsuario from "../helpers/eliminarPermisoUsuario";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
 import { ROLES_ID } from "../enum/roles.enum";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 import { Op } from "sequelize";
 
 const environment = config[process.env.NODE_ENV || "development"];
@@ -25,9 +27,31 @@ const emailTemplatePaisAsignado = fs.readFileSync(
   "utf8",
 );
 
+const templatePathPaisAdministradorAsignado = path.join(
+  __dirname,
+  "../templates/paisAdministradorAsignado.html",
+);
+
+const emailTemplatePaisAdministradorAsignado = fs.readFileSync(
+  templatePathPaisAdministradorAsignado,
+  "utf8",
+);
+
 export const getPaises = async (req: Request, res: Response) => {
   try {
     const pais = await Pais.findAll({
+      include: [
+        {
+          model: Usuario,
+          as: "obreroEncargado",
+          attributes: ["id", "primerNombre", "primerApellido"],
+        },
+        {
+          model: Usuario,
+          as: "administrador",
+          attributes: ["id", "primerNombre", "primerApellido"],
+        },
+      ],
       order: db.col("pais"),
     });
 
@@ -46,7 +70,20 @@ export const getPaises = async (req: Request, res: Response) => {
 export const getPais = async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const pais = await Pais.findByPk(id);
+  const pais = await Pais.findByPk(id, {
+    include: [
+      {
+        model: Usuario,
+        as: "obreroEncargado",
+        attributes: ["id", "primerNombre", "primerApellido"],
+      },
+      {
+        model: Usuario,
+        as: "administrador",
+        attributes: ["id", "primerNombre", "primerApellido"],
+      },
+    ],
+  });
 
   if (pais) {
     res.json({
@@ -63,7 +100,7 @@ export const getPais = async (req: Request, res: Response) => {
 
 export const crearPais = async (req: Request, res: Response) => {
   const { body } = req;
-  const { idObreroEncargado } = body;
+  const { idObreroEncargado, idAdministrador } = body;
 
   const transaction = await db.transaction();
 
@@ -77,6 +114,20 @@ export const crearPais = async (req: Request, res: Response) => {
         { idObreroEncargado: null },
         {
           where: { idObreroEncargado, id: { [Op.not]: null } },
+          transaction,
+        },
+      );
+    }
+
+    // =======================================================================
+    //                  Verificar y Remover Administrador de Otros Países
+    // =======================================================================
+
+    if (idAdministrador) {
+      await Pais.update(
+        { idAdministrador: null },
+        {
+          where: { idAdministrador, id: { [Op.not]: null } },
           transaction,
         },
       );
@@ -103,6 +154,18 @@ export const crearPais = async (req: Request, res: Response) => {
       await agregarPermisoUsuario(
         idObreroEncargado,
         ROLES_ID.APROBADOR_MULTIMEDIA,
+        transaction,
+      );
+    }
+
+    // =======================================================================
+    //                  Asignar Permisos al Administrador del País
+    // =======================================================================
+
+    if (idAdministrador) {
+      await agregarPermisoUsuario(
+        idAdministrador,
+        ROLES_ID.ADMINISTRADOR_PAIS,
         transaction,
       );
     }
@@ -141,6 +204,53 @@ export const crearPais = async (req: Request, res: Response) => {
       }
     }
 
+    // =======================================================================
+    //                  Enviar Correo al Administrador Asignado
+    // =======================================================================
+
+    if (idAdministrador) {
+      const administrador = await Usuario.findByPk(idAdministrador);
+
+      if (administrador && administrador.getDataValue("email")) {
+        const nombreAdministrador =
+          `${administrador.getDataValue("primerNombre") || ""} ${
+            administrador.getDataValue("segundoNombre") || ""
+          } ${administrador.getDataValue("primerApellido") || ""} ${
+            administrador.getDataValue("segundoApellido") || ""
+          }`.trim();
+
+        const emailAdministrador = administrador.getDataValue("email");
+        const nombrePais = pais.getDataValue("pais");
+
+        const totalFeligreses = await UsuarioCongregacion.count({
+          where: { pais_id: paisId },
+          include: [
+            {
+              model: Usuario,
+              where: { estado: ESTADO_USUARIO_ENUM.ACTIVO },
+              required: true,
+            },
+          ],
+        });
+
+        const personalizarEmail = emailTemplatePaisAdministradorAsignado
+          .replace("{{imagenEmail}}", imagenEmail)
+          .replace("{{nombreAdministrador}}", nombreAdministrador)
+          .replace("{{nombrePais}}", nombrePais)
+          .replace("{{totalFeligreses}}", String(totalFeligreses));
+
+        await enviarEmail(
+          emailAdministrador,
+          "Nueva Asignación de País",
+          personalizarEmail,
+        );
+
+        console.info(
+          `Email enviado al administrador de país: ${nombreAdministrador}`,
+        );
+      }
+    }
+
     res.json({
       ok: true,
       msg: "Se ha guardado el país exitosamente",
@@ -164,7 +274,7 @@ export const crearPais = async (req: Request, res: Response) => {
 export const actualizarPais = async (req: Request, res: Response) => {
   const { id } = req.params;
   const { body } = req;
-  const { idObreroEncargado } = body;
+  const { idObreroEncargado, idAdministrador } = body;
 
   const transaction = await db.transaction();
 
@@ -179,6 +289,7 @@ export const actualizarPais = async (req: Request, res: Response) => {
     }
 
     const previousIdObreroEncargado = pais.getDataValue("idObreroEncargado");
+    const previousIdAdministrador = pais.getDataValue("idAdministrador");
 
     // =======================================================================
     //                  Remover obrero de otros países si aplica
@@ -189,6 +300,20 @@ export const actualizarPais = async (req: Request, res: Response) => {
         { idObreroEncargado: null },
         {
           where: { idObreroEncargado, id: { [Op.not]: id } },
+          transaction,
+        },
+      );
+    }
+
+    // =======================================================================
+    //                  Remover administrador de otros países si aplica
+    // =======================================================================
+
+    if (idAdministrador) {
+      await Pais.update(
+        { idAdministrador: null },
+        {
+          where: { idAdministrador, id: { [Op.not]: id } },
           transaction,
         },
       );
@@ -208,7 +333,6 @@ export const actualizarPais = async (req: Request, res: Response) => {
       idObreroEncargado !== undefined &&
       idObreroEncargado !== previousIdObreroEncargado
     ) {
-      // Eliminar permisos del obrero anterior si existía
       if (previousIdObreroEncargado) {
         await eliminarPermisoUsuario(
           previousIdObreroEncargado,
@@ -222,7 +346,6 @@ export const actualizarPais = async (req: Request, res: Response) => {
         );
       }
 
-      // Agregar permisos al nuevo obrero (solo si no es null)
       if (idObreroEncargado) {
         await agregarPermisoUsuario(
           idObreroEncargado,
@@ -232,6 +355,31 @@ export const actualizarPais = async (req: Request, res: Response) => {
         await agregarPermisoUsuario(
           idObreroEncargado,
           ROLES_ID.APROBADOR_MULTIMEDIA,
+          transaction,
+        );
+      }
+    }
+
+    // =======================================================================
+    //                  Gestionar permisos del administrador del país
+    // =======================================================================
+
+    if (
+      idAdministrador !== undefined &&
+      idAdministrador !== previousIdAdministrador
+    ) {
+      if (previousIdAdministrador) {
+        await eliminarPermisoUsuario(
+          previousIdAdministrador,
+          ROLES_ID.ADMINISTRADOR_PAIS,
+          transaction,
+        );
+      }
+
+      if (idAdministrador) {
+        await agregarPermisoUsuario(
+          idAdministrador,
+          ROLES_ID.ADMINISTRADOR_PAIS,
           transaction,
         );
       }
@@ -272,6 +420,57 @@ export const actualizarPais = async (req: Request, res: Response) => {
         );
 
         console.info(`Email enviado al nuevo obrero de país: ${nombreObrero}`);
+      }
+    }
+
+    // =======================================================================
+    //                  Enviar Correo al Nuevo Administrador Asignado
+    // =======================================================================
+
+    if (
+      idAdministrador !== undefined &&
+      idAdministrador !== previousIdAdministrador &&
+      idAdministrador
+    ) {
+      const nuevoAdministrador = await Usuario.findByPk(idAdministrador);
+
+      if (nuevoAdministrador && nuevoAdministrador.getDataValue("email")) {
+        const nombreAdministrador = `${
+          nuevoAdministrador.getDataValue("primerNombre") || ""
+        } ${nuevoAdministrador.getDataValue("segundoNombre") || ""} ${
+          nuevoAdministrador.getDataValue("primerApellido") || ""
+        } ${nuevoAdministrador.getDataValue("segundoApellido") || ""}`.trim();
+
+        const emailAdministrador = nuevoAdministrador.getDataValue("email");
+        const nombrePais = paisActualizado?.getDataValue("pais");
+        const paisIdNum = parseInt(id, 10);
+
+        const totalFeligreses = await UsuarioCongregacion.count({
+          where: { pais_id: paisIdNum },
+          include: [
+            {
+              model: Usuario,
+              where: { estado: ESTADO_USUARIO_ENUM.ACTIVO },
+              required: true,
+            },
+          ],
+        });
+
+        const personalizarEmail = emailTemplatePaisAdministradorAsignado
+          .replace("{{imagenEmail}}", imagenEmail)
+          .replace("{{nombreAdministrador}}", nombreAdministrador)
+          .replace("{{nombrePais}}", nombrePais)
+          .replace("{{totalFeligreses}}", String(totalFeligreses));
+
+        await enviarEmail(
+          emailAdministrador,
+          "Nueva Asignación de País",
+          personalizarEmail,
+        );
+
+        console.info(
+          `Email enviado al nuevo administrador de país: ${nombreAdministrador}`,
+        );
       }
     }
 

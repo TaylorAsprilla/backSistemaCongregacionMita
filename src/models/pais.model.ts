@@ -20,11 +20,19 @@ const Pais = db.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    idAdministrador: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "usuario",
+        key: "id",
+      },
+    },
   },
   {
     freezeTableName: true,
     tableName: "pais",
-  }
+  },
 );
 
 export default Pais;
