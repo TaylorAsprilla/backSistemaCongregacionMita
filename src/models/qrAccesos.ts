@@ -10,7 +10,11 @@ const QrAccesos = db.define(
     },
     idUsuario: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
+      references: {
+        model: "usuario",
+        key: "id",
+      },
     },
     nombre: {
       type: DataTypes.STRING,
@@ -18,7 +22,7 @@ const QrAccesos = db.define(
     },
     tipoPuesto: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     ip: {
       type: DataTypes.STRING,
@@ -36,7 +40,7 @@ const QrAccesos = db.define(
   {
     tableName: "qrAccesos",
     timestamps: true,
-  }
+  },
 );
 
 export default QrAccesos;

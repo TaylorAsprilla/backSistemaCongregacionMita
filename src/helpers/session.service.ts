@@ -8,7 +8,7 @@ import Congregacion from "../models/congregacion.model";
 import Pais from "../models/pais.model";
 import Campo from "../models/campo.model";
 import db from "../database/connection";
-import { Op } from "sequelize";
+import { Op, Transaction, UniqueConstraintError } from "sequelize";
 import axios from "axios";
 
 /**
@@ -39,6 +39,9 @@ interface CreateSessionParams {
   idUsuario?: number;
   idCongregacion?: number;
   tipoEntidad: "usuario" | "congregacion";
+  sessionType?: "NORMAL" | "QR";
+  isLoginCodeQr?: boolean;
+  qrCode?: string;
   ip: string;
   userAgent: string;
   expiresAt: Date;
@@ -48,6 +51,8 @@ interface CreateSessionParams {
 interface SessionValidationResult {
   isValid: boolean;
   session?: any;
+  sessionType?: "NORMAL" | "QR";
+  isLoginCodeQr?: boolean;
   error?: string;
   code?: string;
   newSessionInfo?: {
@@ -172,6 +177,8 @@ export const invalidateAllUserSessions = async (
   try {
     const whereClause: any = {
       isActive: true,
+      // Solo invalidar sesiones NORMALES; las sesiones QR se gestionan de forma independiente
+      sessionType: "NORMAL",
     };
 
     if (idUsuario) {
@@ -205,8 +212,15 @@ export const invalidateAllUserSessions = async (
 /**
  * Crea una nueva sesión para un usuario o congregación
  *
- * IMPORTANTE: Esta función invalida automáticamente todas las sesiones
- * activas anteriores de la entidad antes de crear la nueva sesión.
+ * IMPORTANTE: Esta función invalida automáticamente las sesiones NORMAL
+ * activas anteriores antes de crear la nueva sesión.
+ *
+ * Garantías multi-instancia:
+ *   1. Transacción con aislamiento SERIALIZABLE.
+ *   2. SELECT FOR UPDATE bloquea las filas de la entidad hasta el commit,
+ *      serializando requests concurrentes en el mismo usuario.
+ *   3. El unique index en la columna generada `_normalUserGuard` /
+ *      `_normalCongGuard` actúa como última línea de defensa a nivel DB.
  *
  * @param params - Parámetros para crear la sesión
  * @returns Objeto con sessionId generado y datos de la sesión
@@ -218,13 +232,15 @@ export const createUserSession = async (
     idUsuario,
     idCongregacion,
     tipoEntidad,
+    sessionType = "NORMAL",
+    isLoginCodeQr = false,
+    qrCode,
     ip,
     userAgent,
     expiresAt,
     refreshToken,
   } = params;
 
-  // Validar que se proporcione el ID correcto según el tipo de entidad
   if (tipoEntidad === "usuario" && !idUsuario) {
     throw new Error("Se debe proporcionar idUsuario para sesiones de usuario");
   }
@@ -234,11 +250,36 @@ export const createUserSession = async (
     );
   }
 
-  // Usar transacción para garantizar atomicidad
-  const transaction = await db.transaction();
+  // Preparar datos de dispositivo y ubicación ANTES de abrir la transacción
+  // para no mantener el lock mientras esperamos respuestas de red externas.
+  const deviceInfo = parseDeviceInfo(userAgent);
+  const locationInfo = await getLocationFromIP(ip);
+
+  // Transacción SERIALIZABLE: garantiza que dos logins concurrentes del mismo
+  // usuario no generen dos sesiones NORMAL activas en entornos multi-instancia.
+  const transaction = await db.transaction({
+    isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+  });
 
   try {
-    // 1. Invalidar todas las sesiones activas anteriores de la entidad
+    // 1. Bloquear filas NORMAL activas de la entidad (SELECT FOR UPDATE).
+    //    Si otra transacción concurrente ya las bloqueó, esta espera hasta
+    //    que aquella haga commit/rollback, serializando el acceso.
+    const lockWhere: any = {
+      isActive: true,
+      sessionType: "NORMAL",
+    };
+    if (idUsuario) lockWhere.idUsuario = idUsuario;
+    else lockWhere.idCongregacion = idCongregacion;
+
+    await UserSession.findAll({
+      where: lockWhere,
+      attributes: ["id", "sessionId"],
+      lock: transaction.LOCK.UPDATE,
+      transaction,
+    });
+
+    // 2. Invalidar sesiones NORMAL activas anteriores de la entidad
     await invalidateAllUserSessions(
       idUsuario,
       idCongregacion,
@@ -246,28 +287,29 @@ export const createUserSession = async (
       transaction,
     );
 
-    // 2. Generar nuevo sessionId único
+    // 3. Generar nuevo sessionId único
     const sessionId = uuidv4();
 
-    // 3. Parsear información del dispositivo
-    const deviceInfo = parseDeviceInfo(userAgent);
+    console.log(
+      `Ubicación detectada para ${tipoEntidad} ${idUsuario || idCongregacion}:`,
+      {
+        pais: locationInfo.pais,
+        ciudad: locationInfo.ciudad,
+        ip,
+      },
+    );
 
-    // 4. Obtener ubicación geográfica desde la IP
-    const locationInfo = await getLocationFromIP(ip);
-    console.log(`Ubicación detectada para usuario ${idUsuario}:`, {
-      pais: locationInfo.pais,
-      ciudad: locationInfo.ciudad,
-      ip: ip,
-    });
-
-    // 5. Crear nueva sesión activa
+    // 4. Crear nueva sesión activa dentro de la transacción
     const newSession = await UserSession.create(
       {
         tipoEntidad,
+        sessionType,
+        isLoginCodeQr,
+        qrCode: qrCode || null,
         idUsuario: tipoEntidad === "usuario" ? idUsuario : null,
         idCongregacion: tipoEntidad === "congregacion" ? idCongregacion : null,
         sessionId,
-        refreshToken,
+        refreshToken: refreshToken || null,
         ip,
         userAgent,
         navegador: deviceInfo.navegador,
@@ -288,21 +330,31 @@ export const createUserSession = async (
       { transaction },
     );
 
-    // 6. Commit de la transacción
+    // 5. Commit — libera el bloqueo FOR UPDATE
     await transaction.commit();
 
     const entidadId = idUsuario || idCongregacion;
     console.info(
-      `Nueva sesión creada para ${tipoEntidad} ${entidadId}. SessionId: ${sessionId}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
+      `Sesión NORMAL creada para ${tipoEntidad} ${entidadId}. SessionId: ${sessionId}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
     );
 
-    return {
-      sessionId,
-      session: newSession,
-    };
+    return { sessionId, session: newSession };
   } catch (error) {
-    // Rollback en caso de error
     await transaction.rollback();
+
+    // Error específico: el índice único detectó una sesión NORMAL duplicada.
+    // Esto solo ocurre como salvaguarda extrema (dos requests exactamente
+    // simultáneos que pasaron la barrera FOR UPDATE).
+    if (error instanceof UniqueConstraintError) {
+      console.warn(
+        `Conflicto de sesión única NORMAL para ${tipoEntidad} ${idUsuario || idCongregacion} — reintentando...`,
+      );
+      // Reintento simple: llamar de forma recursiva una vez más.
+      // En el reintento, la sesión del request ganador ya está visible
+      // y será invalidada correctamente por SELECT FOR UPDATE.
+      return createUserSession(params);
+    }
+
     console.error("Error al crear sesión de usuario:", error);
     throw new Error("Error al crear sesión de usuario");
   }
@@ -476,6 +528,8 @@ export const validateUserSession = async (
     return {
       isValid: true,
       session,
+      sessionType: session.getDataValue("sessionType") || "NORMAL",
+      isLoginCodeQr: session.getDataValue("isLoginCodeQr") || false,
     };
   } catch (error) {
     console.error("Error al validar sesión:", error);
@@ -485,6 +539,79 @@ export const validateUserSession = async (
       code: "VALIDATION_ERROR",
     };
   }
+};
+
+/**
+ * Crea una sesión de tipo QR sin invalidar otras sesiones activas.
+ *
+ * A diferencia de createUserSession, esta función:
+ * - NO invalida sesiones previas (ni NORMAL ni QR)
+ * - Permite múltiples sesiones simultáneas para el mismo QR
+ * - Registra sessionType = 'QR' e isLoginCodeQr = true
+ *
+ * @param params - Parámetros de la sesión (mismo tipo que createUserSession)
+ * @returns Objeto con sessionId generado y datos de la sesión
+ */
+export const createQrSession = async (
+  params: CreateSessionParams,
+): Promise<{ sessionId: string; session: any }> => {
+  const {
+    idUsuario,
+    idCongregacion,
+    tipoEntidad,
+    qrCode,
+    ip,
+    userAgent,
+    expiresAt,
+    refreshToken,
+  } = params;
+
+  if (tipoEntidad === "usuario" && !idUsuario) {
+    throw new Error("Se debe proporcionar idUsuario para sesiones de usuario");
+  }
+  if (tipoEntidad === "congregacion" && !idCongregacion) {
+    throw new Error(
+      "Se debe proporcionar idCongregacion para sesiones de congregación",
+    );
+  }
+
+  const sessionId = uuidv4();
+  const deviceInfo = parseDeviceInfo(userAgent);
+  const locationInfo = await getLocationFromIP(ip);
+
+  const newSession = await UserSession.create({
+    tipoEntidad,
+    sessionType: "QR",
+    isLoginCodeQr: true,
+    qrCode: qrCode || null,
+    idUsuario: idUsuario || null,
+    idCongregacion: tipoEntidad === "congregacion" ? idCongregacion : null,
+    sessionId,
+    refreshToken: refreshToken || null,
+    ip,
+    userAgent,
+    navegador: deviceInfo.navegador,
+    so: deviceInfo.so,
+    tipoDispositivo: deviceInfo.tipoDispositivo,
+    dispositivo: deviceInfo.dispositivo,
+    pais: locationInfo.pais,
+    ciudad: locationInfo.ciudad,
+    region: locationInfo.region,
+    codigoPostal: locationInfo.codigoPostal,
+    latitud: locationInfo.latitud,
+    longitud: locationInfo.longitud,
+    isp: locationInfo.isp,
+    isActive: true,
+    lastActivityAt: new Date(),
+    expiresAt,
+  });
+
+  const entidadId = idUsuario || idCongregacion;
+  console.info(
+    `Sesión QR creada para ${tipoEntidad} ${entidadId}. SessionId: ${sessionId}, QR: ${qrCode}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
+  );
+
+  return { sessionId, session: newSession };
 };
 
 /**
@@ -652,6 +779,9 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
         "id",
         "sessionId",
         "tipoEntidad",
+        "sessionType",
+        "isLoginCodeQr",
+        "qrCode",
         "idUsuario",
         "idCongregacion",
         "isActive",
@@ -812,8 +942,11 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
 
       return {
         sessionId: sessionData.sessionId,
+        sessionType: sessionData.sessionType || "NORMAL",
+        isLoginCodeQr: sessionData.isLoginCodeQr || false,
+        qrCode: sessionData.qrCode || null,
         isActive: sessionData.isActive,
-        isCurrentlyActive: isCurrentlyActive, // true solo si isActive=true y no expirada
+        isCurrentlyActive: isCurrentlyActive,
         isExpired: isExpired,
         invalidationReason: sessionData.invalidationReason || null,
         entidad: entidadInfo,
@@ -846,9 +979,19 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
       (s) => s.isCurrentlyActive,
     ).length;
 
+    // Contar por tipo de sesión (solo activas)
+    const activeNormalSessions = sessionsWithUserInfo.filter(
+      (s) => s.isCurrentlyActive && s.sessionType === "NORMAL",
+    ).length;
+    const activeQrSessions = sessionsWithUserInfo.filter(
+      (s) => s.isCurrentlyActive && s.sessionType === "QR",
+    ).length;
+
     return {
       totalSessions: totalActiveSessions,
       currentlyActiveSessions: currentlyActiveSessions,
+      activeNormalSessions,
+      activeQrSessions,
       inactiveSessions: totalActiveSessions - currentlyActiveSessions,
       sessions: sessionsWithUserInfo,
     };
@@ -889,6 +1032,9 @@ export const getActiveSessionsByEntity = async (
       where: whereClause,
       attributes: [
         "sessionId",
+        "sessionType",
+        "isLoginCodeQr",
+        "qrCode",
         "navegador",
         "so",
         "dispositivo",
@@ -909,6 +1055,9 @@ export const getActiveSessionsByEntity = async (
       const data = session.toJSON();
       return {
         sessionId: data.sessionId,
+        sessionType: data.sessionType || "NORMAL",
+        isLoginCodeQr: data.isLoginCodeQr || false,
+        qrCode: data.qrCode || null,
         device: {
           tipoDispositivo: data.tipoDispositivo || "desktop",
           navegador: data.navegador || "Desconocido",
@@ -939,6 +1088,7 @@ export const getActiveSessionsByEntity = async (
 
 export default {
   createUserSession,
+  createQrSession,
   validateUserSession,
   invalidateSession,
   invalidateAllUserSessions,

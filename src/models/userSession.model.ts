@@ -28,6 +28,28 @@ const UserSession = db.define(
       defaultValue: "usuario",
       field: "tipoEntidad",
     },
+    // Tipo de sesión: NORMAL (usuario/contraseña) o QR (código QR)
+    sessionType: {
+      type: DataTypes.ENUM("NORMAL", "QR"),
+      allowNull: false,
+      defaultValue: "NORMAL",
+      field: "sessionType",
+      comment: "NORMAL = login con credenciales, QR = login por código QR",
+    },
+    // Indica si la sesión fue creada mediante login por QR
+    isLoginCodeQr: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "isLoginCodeQr",
+    },
+    // Código QR utilizado (solo aplica cuando sessionType = 'QR')
+    qrCode: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
+      field: "qrCode",
+    },
     // ID del usuario al que pertenece la sesión (nullable para congregaciones)
     idUsuario: {
       type: DataTypes.INTEGER,
@@ -130,6 +152,21 @@ const UserSession = db.define(
       defaultValue: true,
       field: "isActive",
     },
+    // ---- Columnas generadas VIRTUAL (migración 003) ----
+    // Garantizan unicidad de sesiones NORMAL activas a nivel de base de datos.
+    // Retornan el idUsuario/idCongregacion solo para sesiones NORMAL+isActive=1;
+    // para QR o inactivas retornan NULL → MySQL permite múltiples NULLs.
+    // Sequelize las declara como VIRTUAL para que no intente escribir en ellas.
+    _normalUserGuard: {
+      type: DataTypes.VIRTUAL,
+      allowNull: true,
+      field: "_normalUserGuard",
+    },
+    _normalCongGuard: {
+      type: DataTypes.VIRTUAL,
+      allowNull: true,
+      field: "_normalCongGuard",
+    },
     // Fecha de última actividad (actualizada en cada request)
     lastActivityAt: {
       type: DataTypes.DATE,
@@ -187,6 +224,20 @@ const UserSession = db.define(
       {
         name: "idx_user_session_tipo_entidad",
         fields: ["tipoEntidad", "isActive"],
+      },
+      {
+        name: "idx_user_session_type_active",
+        fields: ["sessionType", "isActive"],
+      },
+      {
+        name: "uq_active_normal_session_user",
+        unique: true,
+        fields: ["_normalUserGuard"],
+      },
+      {
+        name: "uq_active_normal_session_cong",
+        unique: true,
+        fields: ["_normalCongGuard"],
       },
     ],
   },

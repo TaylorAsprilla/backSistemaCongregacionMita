@@ -18,6 +18,9 @@ import {
   getActiveSessions,
   checkSessionsBeforeLogin,
   closeOtherSessions,
+  getActiveSessionsByType,
+  getActiveQrSessions,
+  logoutQrSession,
 } from "../controllers/login.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -34,6 +37,12 @@ router.get("/check-session", validarJWT, checkSession);
 // Get Active Sessions - Obtener todas las sesiones activas
 router.get("/active-sessions", getActiveSessions);
 
+// Sesiones activas agrupadas por tipo (NORMAL / QR)
+router.get("/active-sessions/by-type", getActiveSessionsByType);
+
+// Sesiones QR activas en tiempo real
+router.get("/active-sessions/qr", getActiveQrSessions);
+
 // Check Sessions Before Login - Verificar sesiones antes de hacer login
 router.post(
   "/check-sessions-before-login",
@@ -45,8 +54,11 @@ router.post(
   checkSessionsBeforeLogin,
 );
 
-// Close Other Sessions - Cerrar otras sesiones del usuario actual
+// Close Other Sessions - Cerrar otras sesiones NORMAL del usuario actual
 router.post("/close-other-sessions", validarJWT, closeOtherSessions);
+
+// Logout QR - Cerrar una sesión QR específica por sessionId
+router.post("/logout-qr", validarJWT, logoutQrSession);
 
 // Logout - Cerrar sesión
 router.post("/logout", validarJWT, logout);
