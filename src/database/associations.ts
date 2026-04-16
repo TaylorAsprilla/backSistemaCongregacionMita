@@ -252,6 +252,11 @@ Pais.belongsTo(Usuario, {
   as: "obreroEncargado",
 });
 
+Pais.belongsTo(Usuario, {
+  foreignKey: "idAdministrador",
+  as: "administrador",
+});
+
 Congregacion.belongsTo(Usuario, {
   foreignKey: "idObreroEncargado",
   as: "obreroEncargado",
