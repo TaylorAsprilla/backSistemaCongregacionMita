@@ -33,6 +33,7 @@ import {
   getLocationFromIP,
   getActiveSessionsByEntity,
   invalidateAllUserSessions,
+  invalidateSession,
 } from "../helpers/session.service";
 import { v4 as uuidv4 } from "uuid";
 
@@ -91,13 +92,14 @@ export const login = async (req: Request, res: Response) => {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expirationHours);
 
-    // 2. Crear sesión (esto invalida automáticamente sesiones anteriores de la entidad)
+    // 2. Crear sesión NORMAL (invalida automáticamente sesiones NORMAL anteriores)
     const sessionParams: any = {
       tipoEntidad: entidadTipo,
+      sessionType: "NORMAL",
+      isLoginCodeQr: false,
       ip: ipAddress,
       userAgent: userAgent,
       expiresAt: expiresAt,
-      // refreshToken: null, // Para futuras implementaciones
     };
 
     // Asignar el ID correcto según el tipo de entidad
@@ -141,6 +143,8 @@ export const login = async (req: Request, res: Response) => {
       usuario: entidad,
       sessionInfo: {
         sessionId: sessionId,
+        sessionType: "NORMAL",
+        isLoginCodeQr: false,
         expiresAt: expiresAt,
         device: session.getDataValue("dispositivo"),
         browser: session.getDataValue("navegador"),
@@ -1261,6 +1265,8 @@ export const getActiveSessions = async (req: Request, res: Response) => {
       ok: true,
       totalSessions: stats.totalSessions,
       currentlyActiveSessions: stats.currentlyActiveSessions,
+      activeNormalSessions: stats.activeNormalSessions,
+      activeQrSessions: stats.activeQrSessions,
       inactiveSessions: stats.inactiveSessions,
       sessions: stats.sessions,
     });
@@ -1443,8 +1449,10 @@ export const closeOtherSessions = async (req: CustomRequest, res: Response) => {
     const idCongregacion = currentSession.getDataValue("idCongregacion");
 
     // Construir la condición where según el tipo de entidad
+    // Solo se cierran sesiones NORMAL — las QR son independientes
     const whereClause: any = {
       isActive: true,
+      sessionType: "NORMAL",
       sessionId: {
         [Op.ne]: sessionId, // No cerrar la sesión actual
       },
@@ -1601,3 +1609,168 @@ async function verificarCongregacion(email: string) {
 async function verificarPassword(password: string, hashedPassword: string) {
   return bcrypt.compareSync(password, hashedPassword);
 }
+
+// ============================================================
+// Endpoints adicionales de sesiones
+// ============================================================
+
+/**
+ * GET /api/login/active-sessions/by-type
+ *
+ * Retorna el conteo de sesiones activas agrupadas por tipo (NORMAL / QR).
+ * Útil para dashboards de monitoreo.
+ */
+export const getActiveSessionsByType = async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const [totalNormal, totalQr] = await Promise.all([
+      UserSession.count({
+        where: {
+          isActive: true,
+          sessionType: "NORMAL",
+          expiresAt: { [Op.gt]: now },
+        },
+      }),
+      UserSession.count({
+        where: {
+          isActive: true,
+          sessionType: "QR",
+          expiresAt: { [Op.gt]: now },
+        },
+      }),
+    ]);
+
+    return res.json({
+      ok: true,
+      activeNormalSessions: totalNormal,
+      activeQrSessions: totalQr,
+      totalActiveSessions: totalNormal + totalQr,
+    });
+  } catch (error) {
+    console.error("Error al obtener sesiones por tipo:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al obtener sesiones por tipo",
+    });
+  }
+};
+
+/**
+ * GET /api/login/active-sessions/qr
+ *
+ * Retorna todas las sesiones activas de tipo QR con información de entidad.
+ * Permite monitorear cuántas personas están conectadas por QR en tiempo real.
+ */
+export const getActiveQrSessions = async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+
+    const qrSessions = await UserSession.findAll({
+      where: {
+        isActive: true,
+        sessionType: "QR",
+        expiresAt: { [Op.gt]: now },
+      },
+      attributes: [
+        "id",
+        "sessionId",
+        "tipoEntidad",
+        "sessionType",
+        "isLoginCodeQr",
+        "qrCode",
+        "idCongregacion",
+        "navegador",
+        "so",
+        "dispositivo",
+        "tipoDispositivo",
+        "pais",
+        "ciudad",
+        "region",
+        "ip",
+        "isp",
+        "createdAt",
+        "lastActivityAt",
+        "expiresAt",
+      ],
+      include: [
+        {
+          model: Congregacion,
+          as: "congregacion",
+          attributes: ["id", "congregacion", "email"],
+          required: false,
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    return res.json({
+      ok: true,
+      total: qrSessions.length,
+      sessions: qrSessions,
+    });
+  } catch (error) {
+    console.error("Error al obtener sesiones QR activas:", error);
+    return res.status(500).json({
+      ok: false,
+      message: "Error al obtener sesiones QR activas",
+    });
+  }
+};
+
+/**
+ * POST /api/login/logout-qr
+ *
+ * Cierra una sesión QR específica por sessionId.
+ * Solo afecta esa sesión; el resto de sesiones QR permanecen activas.
+ *
+ * Body: { sessionId: string }
+ * Header: x-token (JWT válido del administrador u operador)
+ */
+export const logoutQrSession = async (req: CustomRequest, res: Response) => {
+  try {
+    const { sessionId: targetSessionId } = req.body;
+    const requesterId = req.id;
+
+    if (!targetSessionId) {
+      return res.status(400).json({
+        ok: false,
+        code: "INVALID_REQUEST",
+        message: "Se requiere el sessionId de la sesión QR a cerrar",
+      });
+    }
+
+    const session = await UserSession.findOne({
+      where: { sessionId: targetSessionId, isActive: true, sessionType: "QR" },
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        ok: false,
+        code: "SESSION_NOT_FOUND",
+        message: "Sesión QR activa no encontrada",
+      });
+    }
+
+    await session.update({
+      isActive: false,
+      invalidationReason: "LOGOUT",
+      invalidatedAt: new Date(),
+    });
+
+    console.info(
+      `Sesión QR ${targetSessionId} cerrada por usuario ${requesterId}`,
+    );
+
+    return res.json({
+      ok: true,
+      message: "Sesión QR cerrada correctamente",
+    });
+  } catch (error) {
+    console.error("Error al cerrar sesión QR:", error);
+    return res.status(500).json({
+      ok: false,
+      code: "LOGOUT_ERROR",
+      message: "Error al cerrar la sesión QR",
+    });
+  }
+};

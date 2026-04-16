@@ -11,6 +11,8 @@ export interface CustomRequest extends Request {
   login?: string;
   sessionId?: string;
   email?: string;
+  sessionType?: "NORMAL" | "QR";
+  isLoginCodeQr?: boolean;
 }
 
 /**
@@ -86,6 +88,8 @@ const validarJWT = async (
     req.login = login;
     req.sessionId = sessionId;
     req.email = email;
+    req.sessionType = sessionValidation.sessionType || "NORMAL";
+    req.isLoginCodeQr = sessionValidation.isLoginCodeQr || false;
 
     // Continuar con el siguiente middleware
     next();

@@ -11,6 +11,7 @@ import sharp from "sharp";
 import axios from "axios";
 import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
 import UbicacionConexion from "../models/ubicacionConexion.model";
+import { createQrSession } from "../helpers/session.service";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -214,10 +215,22 @@ export const loginPorQr = async (req: Request, res: Response) => {
         .json({ ok: false, msg: "Congregación no encontrada" });
     }
 
-    // Generar token JWT con sessionId temporal para acceso QR
-    // Nota: Para congregaciones por QR se usa un sessionId temporal
-    // En el futuro se puede implementar sistema de sesiones para congregaciones
-    const sessionId = uuidv4();
+    // Generar fecha de expiración (12 horas)
+    const expirationHours = 12;
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + expirationHours);
+
+    // Crear sesión QR independiente — no invalida otras sesiones activas
+    const { sessionId } = await createQrSession({
+      tipoEntidad: "congregacion",
+      idCongregacion: congregacion.getDataValue("id"),
+      idUsuario: numeroMita || undefined,
+      qrCode,
+      ip,
+      userAgent: userAgentRaw,
+      expiresAt,
+    });
+
     const email = congregacion.getDataValue("email") || "";
 
     const token = await generarJWT(
@@ -225,6 +238,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
       email,
       sessionId,
       email,
+      `${expirationHours}h`,
     );
 
     // Guardar el acceso
@@ -260,8 +274,31 @@ export const loginPorQr = async (req: Request, res: Response) => {
       token,
       congregacion,
       nombre,
+      sessionInfo: {
+        sessionId,
+        sessionType: "QR",
+        isLoginCodeQr: true,
+        expiresAt,
+      },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Verificar si el error es por columnas faltantes (migraciones pendientes)
+    const isMissingColumn =
+      error?.original?.code === "ER_BAD_FIELD_ERROR" ||
+      error?.message?.includes("Unknown column");
+
+    if (isMissingColumn) {
+      console.error(
+        "[loginPorQr] ERROR: Columnas faltantes en userSession. " +
+          "Ejecutar: migrations/002-add-session-type-to-user-session.sql\n",
+        error?.original?.sqlMessage || error?.message,
+      );
+      return res.status(500).json({
+        ok: false,
+        msg: "Error de configuración del servidor. Contacte al administrador.",
+      });
+    }
+
     console.error("Error al hacer login por QR:", error);
     res.status(500).json({ ok: false, msg: "Error interno" });
   }
