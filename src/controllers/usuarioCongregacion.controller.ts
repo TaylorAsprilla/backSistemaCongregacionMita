@@ -11,16 +11,16 @@ import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 
 export const getUsuariosPorPais = async (req: Request, res: Response) => {
   try {
-    const idUsuario = Number(req.query.idUsuario);
+    const idUsuario = req.query.idUsuario ? Number(req.query.idUsuario) : null;
 
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "Debe proporcionar un ID de usuario válido.",
+        msg: "Debe proporcionar un idUsuario válido.",
       });
     }
 
-    // Buscar todos los países donde el obrero es encargado o administrador
+    // Buscar países donde el usuario es Obrero Encargado o Administrador de País
     const paises = await Pais.findAll({
       where: {
         [Op.or]: [
@@ -33,7 +33,6 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
 
     const paisIds = paises.map((p) => p.getDataValue("id"));
 
-    // Si el obrero no tiene países asignados, retornar vacío
     if (paisIds.length === 0) {
       return res.status(404).json({
         ok: false,
@@ -120,7 +119,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Se encontraron ${count} feligreses activos en los países asignados.`,
+      msg: `Se encontraron ${count} feligreses activos en los países asignados al usuario con id ${idUsuario}.`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
@@ -137,17 +136,17 @@ export const getUsuariosPorCongregacion = async (
   res: Response,
 ) => {
   try {
-    const idUsuario = Number(req.query.idUsuario);
+    const idUsuario = req.query.idUsuario ? Number(req.query.idUsuario) : null;
 
-    // Validar si idUsuario es un número válido
+    // Validar si se proporcionó un ID válido
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "Debe proporcionar un ID de usuario válido.",
+        msg: "Debe proporcionar un idUsuario válido.",
       });
     }
 
-    // Buscar todos los países, congregaciones y campos del obrero encargado, obrero auxiliar y/o administrador de país con el ID proporcionado
+    // Buscar países (Obrero Encargado o Administrador de País), congregaciones y campos en paralelo
     const [paises, congregaciones, campos] = await Promise.all([
       Pais.findAll({
         where: {
@@ -178,7 +177,7 @@ export const getUsuariosPorCongregacion = async (
       }),
     ]);
 
-    // Verificar si el usuario tiene asignado algún país (como Obrero Encargado o Administrador de País), congregación o campo
+    // Verificar si el usuario tiene asignado algún país, congregación o campo
     if (
       paises.length === 0 &&
       congregaciones.length === 0 &&
@@ -295,7 +294,7 @@ export const getUsuariosPorCongregacion = async (
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Se encontraron ${count} feligreses activos en los países, congregaciones y campos asignados.`,
+      msg: `Se encontraron ${count} feligreses activos en los países, congregaciones y campos asignados al usuario con id ${idUsuario}.`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);

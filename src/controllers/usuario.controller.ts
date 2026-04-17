@@ -152,7 +152,7 @@ export const getTodosLosUsuarios = async (req: Request, res: Response) => {
  * Query params opcionales:
  * - page: número de página (default: 1)
  * - limit: registros por página (si no se envía, retorna todos los registros sin límite)
- * - obreroId: ID del obrero para filtrar usuarios de sus países, congregaciones y campos asignados
+ * - idUsuario: filtra por países (idObreroEncargado o idAdministrador), congregaciones y campos del usuario
  */
 export const getUsuariosCompleto = async (req: Request, res: Response) => {
   try {
@@ -160,24 +160,24 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
     const page = req.query.page ? parseInt(req.query.page as string) : 1;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : null;
     const offset = limit ? (page - 1) * limit : 0;
-    const obreroId = req.query.obreroId
-      ? parseInt(req.query.obreroId as string)
+    const idUsuario = req.query.idUsuario
+      ? parseInt(req.query.idUsuario as string)
       : null;
 
-    // Si se proporciona obreroId, filtrar por sus congregaciones y campos
+    // Si se proporciona idUsuario, filtrar por sus países, congregaciones y campos
     let whereCondition: any = {
       estado: ESTADO_USUARIO_ENUM.ACTIVO,
     };
 
-    if (obreroId) {
+    if (idUsuario) {
       // ✅ OPTIMIZACIÓN 1: Ejecutar consultas en paralelo
       const [paisesObrero, congregacionesObrero, camposObrero] =
         await Promise.all([
           Pais.findAll({
             where: {
               [Op.or]: [
-                { idObreroEncargado: obreroId },
-                { idAdministrador: obreroId },
+                { idObreroEncargado: idUsuario },
+                { idAdministrador: idUsuario },
               ],
             },
             attributes: ["id"],
@@ -185,8 +185,8 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
           Congregacion.findAll({
             where: {
               [Op.or]: [
-                { idObreroEncargado: obreroId },
-                { idObreroEncargadoDos: obreroId },
+                { idObreroEncargado: idUsuario },
+                { idObreroEncargadoDos: idUsuario },
               ],
             },
             attributes: ["id"],
@@ -194,8 +194,8 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
           Campo.findAll({
             where: {
               [Op.or]: [
-                { idObreroEncargado: obreroId },
-                { idObreroEncargadoDos: obreroId },
+                { idObreroEncargado: idUsuario },
+                { idObreroEncargadoDos: idUsuario },
               ],
             },
             attributes: ["id"],
@@ -208,7 +208,7 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
       );
       const campoIds = camposObrero.map((c) => c.getDataValue("id"));
 
-      // Si el obrero no tiene países, congregaciones ni campos asignados, retornar vacío
+      // Si no tiene países, congregaciones ni campos asignados, retornar vacío
       if (
         paisIds.length === 0 &&
         congregacionIds.length === 0 &&
@@ -221,7 +221,7 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
             total: 0,
             ...(limit ? { page, limit, totalPages: 0 } : {}),
           },
-          msg: "El obrero no tiene países, congregaciones ni campos asignados",
+          msg: `El usuario con id ${idUsuario} no tiene ningún país, congregación ni campo asignado como Obrero Encargado, Obrero Auxiliar o Administrador de País.`,
         });
       }
 
@@ -247,7 +247,7 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
         ),
       ];
 
-      // Si no hay usuarios en esos países, congregaciones o campos, retornar vacío
+      // Si no hay feligreses en esos países, congregaciones o campos, retornar vacío
       if (usuarioIds.length === 0) {
         return res.json({
           ok: true,
@@ -256,7 +256,7 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
             total: 0,
             ...(limit ? { page, limit, totalPages: 0 } : {}),
           },
-          msg: "No se encontraron usuarios en los países, congregaciones y campos del obrero",
+          msg: `No se encontraron feligreses activos asignados al usuario con id ${idUsuario}.`,
         });
       }
 
@@ -265,11 +265,10 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
     }
 
     // ✅ OPTIMIZACIÓN 2: Count separado más eficiente
-    // Cuando ya filtrado por IDs, usar la cantidad directa en lugar de COUNT DISTINCT
     let totalCount: number;
 
-    if (obreroId && whereCondition.id) {
-      // Si hay filtro de obrero, el total es el tamaño del array de IDs
+    if (idUsuario && whereCondition.id) {
+      // Si hay filtro activo, el total es el tamaño del array de IDs
       totalCount = (whereCondition.id[Op.in] as number[]).length;
     } else {
       // Si no hay filtro, hacer count simple sin includes
