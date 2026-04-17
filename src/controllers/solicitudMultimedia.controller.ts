@@ -304,69 +304,81 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
   req: Request,
   res: Response,
 ) => {
-  const { usuario_id } = req.query;
+  const usuario_id = req.query.usuario_id
+    ? parseInt(req.query.usuario_id as string)
+    : null;
+
+  if (!usuario_id || isNaN(usuario_id)) {
+    return res.status(400).json({
+      ok: false,
+      msg: "Debe proporcionar un usuario_id válido.",
+    });
+  }
 
   try {
-    // Obtener el país y la congregación a cargo del usuario
-    const congregacionPais = await Pais.findOne({
-      where: { idObreroEncargado: usuario_id, estado: true },
-    });
-
-    const congregacionCiudad = await Congregacion.findOne({
-      where: {
-        estado: true,
-        [Op.or]: [
-          { idObreroEncargado: usuario_id },
-          { idObreroEncargadoDos: usuario_id },
-        ],
-      },
-    });
-
-    const congregacionCampo = await Campo.findOne({
-      where: {
-        estado: true,
-        [Op.or]: [
-          { idObreroEncargado: usuario_id },
-          { idObreroEncargadoDos: usuario_id },
-        ],
-      },
-    });
+    // ✅ Ejecutar las 3 consultas en paralelo
+    const [congregacionPais, congregacionCiudad, congregacionCampo] =
+      await Promise.all([
+        Pais.findOne({
+          where: {
+            estado: true,
+            [Op.or]: [
+              { idObreroEncargado: usuario_id },
+              { idAdministrador: usuario_id },
+            ],
+          },
+          attributes: ["id"],
+        }),
+        Congregacion.findOne({
+          where: {
+            estado: true,
+            [Op.or]: [
+              { idObreroEncargado: usuario_id },
+              { idObreroEncargadoDos: usuario_id },
+            ],
+          },
+          attributes: ["id"],
+        }),
+        Campo.findOne({
+          where: {
+            estado: true,
+            [Op.or]: [
+              { idObreroEncargado: usuario_id },
+              { idObreroEncargadoDos: usuario_id },
+            ],
+          },
+          attributes: ["id"],
+        }),
+      ]);
 
     const pais_id = congregacionPais?.getDataValue("id");
     const congregacion_id = congregacionCiudad?.getDataValue("id");
     const campo_id = congregacionCampo?.getDataValue("id");
 
     if (!pais_id && !congregacion_id && !campo_id) {
-      return res.status(400).json({
+      return res.status(404).json({
         ok: false,
-        msg: "El usuario no tiene un país o congregación a cargo",
+        msg: `El usuario con id ${usuario_id} no tiene ningún país, congregación ni campo asignado.`,
       });
     }
 
-    // Construir la condición de búsqueda
-    let whereCondition = {};
-
-    if (pais_id && congregacion_id) {
-      whereCondition = {
-        [Op.or]: [
-          { "$usuarioCongregacion.pais_id$": pais_id },
-          { "$usuarioCongregacion.congregacion_id$": congregacion_id },
-        ],
-      };
-    } else if (pais_id) {
-      whereCondition = { "$usuarioCongregacion.pais_id$": pais_id };
-    } else if (congregacion_id) {
-      whereCondition = {
+    // ✅ Construir whereCondition incluyendo todas las condiciones disponibles
+    const orConditions: object[] = [];
+    if (pais_id)
+      orConditions.push({ "$usuarioCongregacion.pais_id$": pais_id });
+    if (congregacion_id)
+      orConditions.push({
         "$usuarioCongregacion.congregacion_id$": congregacion_id,
-      };
-    } else if (campo_id) {
-      whereCondition = {
-        "$usuarioCongregacion.campo_id$": campo_id,
-      };
-    }
+      });
+    if (campo_id)
+      orConditions.push({ "$usuarioCongregacion.campo_id$": campo_id });
 
-    // Consulta a la base de datos con filtros dinámicos
+    const whereCondition: any =
+      orConditions.length > 1 ? { [Op.or]: orConditions } : orConditions[0];
+
+    // ✅ subQuery: false evita duplicados cuando hay includes con where
     const usuarios = await Usuario.findAll({
+      subQuery: false,
       attributes: [
         "id",
         "primerNombre",
@@ -386,6 +398,7 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
         {
           model: SolicitudMultimedia,
           as: "solicitudes",
+          required: true,
           attributes: [
             "id",
             "emailVerificado",
@@ -410,9 +423,7 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "createdAt",
           ],
           where: {
-            emailVerificado: {
-              [Op.ne]: null, // Asegurar de que el campo emailVerificado tenga un valor
-            },
+            emailVerificado: { [Op.ne]: null },
           },
           include: [
             {
@@ -447,7 +458,6 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
                 "segundoApellido",
               ],
             },
-
             {
               model: Parentesco,
               as: "parentesco",
@@ -468,34 +478,26 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
         {
           model: UsuarioCongregacion,
           as: "usuarioCongregacion",
+          required: true,
           attributes: ["id"],
           include: [
-            {
-              model: Pais,
-              as: "pais",
-              attributes: ["id", "pais"],
-            },
+            { model: Pais, as: "pais", attributes: ["id", "pais"] },
             {
               model: Congregacion,
               as: "congregacion",
               attributes: ["id", "congregacion"],
             },
-            {
-              model: Campo,
-              as: "campo",
-              attributes: ["id", "campo"],
-            },
+            { model: Campo, as: "campo", attributes: ["id", "campo"] },
           ],
         },
       ],
       where: whereCondition,
     });
 
-    // Responder con los resultados
     return res.status(200).json({
       ok: true,
       total: usuarios.length,
-      usuarios: usuarios || [],
+      usuarios,
     });
   } catch (error) {
     console.error(
