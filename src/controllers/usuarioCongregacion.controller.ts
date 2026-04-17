@@ -227,6 +227,8 @@ export const getUsuariosPorCongregacion = async (
 
     // Obtener todos los usuarios con sus relaciones
     const { count, rows } = await Usuario.findAndCountAll({
+      distinct: true,
+      col: "id",
       attributes: [
         "id",
         "primerNombre",
@@ -263,19 +265,6 @@ export const getUsuariosPorCongregacion = async (
           as: "usuarioCongregacionCampo",
           attributes: ["campo"],
           through: { attributes: [] },
-        },
-        {
-          model: Usuario,
-          as: "usuarioQueRegistra",
-          attributes: [
-            "id",
-            "primerNombre",
-            "segundoNombre",
-            "primerApellido",
-            "segundoApellido",
-            "email",
-            "numeroCelular",
-          ],
         },
         {
           model: EstadoCivil,
