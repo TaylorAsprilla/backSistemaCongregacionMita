@@ -174,7 +174,12 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
       const [paisesObrero, congregacionesObrero, camposObrero] =
         await Promise.all([
           Pais.findAll({
-            where: { idObreroEncargado: obreroId },
+            where: {
+              [Op.or]: [
+                { idObreroEncargado: obreroId },
+                { idAdministrador: obreroId },
+              ],
+            },
             attributes: ["id"],
           }),
           Congregacion.findAll({

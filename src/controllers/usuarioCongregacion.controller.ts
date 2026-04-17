@@ -16,13 +16,18 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "El ID del usuario no es válido.",
+        msg: "Debe proporcionar un ID de usuario válido.",
       });
     }
 
-    // Buscar todos los países donde el obrero es encargado
+    // Buscar todos los países donde el obrero es encargado o administrador
     const paises = await Pais.findAll({
-      where: { idObreroEncargado: idUsuario },
+      where: {
+        [Op.or]: [
+          { idObreroEncargado: idUsuario },
+          { idAdministrador: idUsuario },
+        ],
+      },
       attributes: ["id"],
     });
 
@@ -30,11 +35,9 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
 
     // Si el obrero no tiene países asignados, retornar vacío
     if (paisIds.length === 0) {
-      return res.json({
-        ok: true,
-        usuarios: [],
-        totalUsuarios: 0,
-        msg: `El obrero no tiene países asignados`,
+      return res.status(404).json({
+        ok: false,
+        msg: `El usuario con id ${idUsuario} no tiene ningún país asignado como Obrero Encargado ni como Administrador de País.`,
       });
     }
 
@@ -57,7 +60,7 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
         ok: true,
         usuarios: [],
         totalUsuarios: 0,
-        msg: `No se encontraron usuarios en los países asignados`,
+        msg: `No se encontraron feligreses activos en los países asignados al usuario con id ${idUsuario}.`,
       });
     }
 
@@ -117,13 +120,13 @@ export const getUsuariosPorPais = async (req: Request, res: Response) => {
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Feligreses de los países asignados`,
+      msg: `Se encontraron ${count} feligreses activos en los países asignados.`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
     return res.status(500).json({
       ok: false,
-      msg: "Error al obtener usuarios, por favor contacta al administrador",
+      msg: "Ocurrió un error al obtener los feligreses. Por favor, contacta al administrador.",
       error,
     });
   }
@@ -140,15 +143,18 @@ export const getUsuariosPorCongregacion = async (
     if (!idUsuario || isNaN(idUsuario)) {
       return res.status(400).json({
         ok: false,
-        msg: "El ID de usuario no es válido.",
+        msg: "Debe proporcionar un ID de usuario válido.",
       });
     }
 
-    // Buscar todos los países, congregaciones y campos del obrero encargado y/o obrero auxiliar con el ID proporcionado
+    // Buscar todos los países, congregaciones y campos del obrero encargado, obrero auxiliar y/o administrador de país con el ID proporcionado
     const [paises, congregaciones, campos] = await Promise.all([
       Pais.findAll({
         where: {
-          idObreroEncargado: idUsuario,
+          [Op.or]: [
+            { idObreroEncargado: idUsuario },
+            { idAdministrador: idUsuario },
+          ],
         },
         attributes: ["id"],
       }),
@@ -172,7 +178,7 @@ export const getUsuariosPorCongregacion = async (
       }),
     ]);
 
-    // Verificar si el obrero encargado tiene asignado algún país, congregación o campo
+    // Verificar si el usuario tiene asignado algún país (como Obrero Encargado o Administrador de País), congregación o campo
     if (
       paises.length === 0 &&
       congregaciones.length === 0 &&
@@ -180,8 +186,7 @@ export const getUsuariosPorCongregacion = async (
     ) {
       return res.status(404).json({
         ok: false,
-        message:
-          "El obrero no tiene asignado ningún país, congregación o campo.",
+        msg: `El usuario con id ${idUsuario} no tiene ningún país, congregación ni campo asignado como Obrero Encargado, Obrero Auxiliar o Administrador de País.`,
       });
     }
 
@@ -217,7 +222,7 @@ export const getUsuariosPorCongregacion = async (
         ok: true,
         usuarios: [],
         totalUsuarios: 0,
-        msg: `No se encontraron usuarios en los países, congregaciones y campos asignados`,
+        msg: `No se encontraron feligreses activos en los países, congregaciones y campos asignados al usuario con id ${idUsuario}.`,
       });
     }
 
@@ -290,13 +295,13 @@ export const getUsuariosPorCongregacion = async (
       ok: true,
       usuarios: rows,
       totalUsuarios: count,
-      msg: `Usuarios de países, congregaciones y campos asignados`,
+      msg: `Se encontraron ${count} feligreses activos en los países, congregaciones y campos asignados.`,
     });
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
     return res.status(500).json({
       ok: false,
-      msg: "Error al obtener usuarios, por favor contacta al administrador",
+      msg: "Ocurrió un error al obtener los feligreses. Por favor, contacta al administrador.",
       error,
     });
   }
