@@ -227,116 +227,6 @@ const notificarAprobadoresMultimedia = async () => {
 
     console.log(`Encontrados ${aprobadores.length} aprobadores multimedia`);
 
-    // Obtener obreros encargados de países
-    const obrerosPais = await Pais.findAll({
-      where: {
-        idObreroEncargado: { [Op.ne]: null },
-        estado: true,
-      },
-      include: [
-        {
-          model: Usuario,
-          as: "obreroEncargado",
-          include: [
-            {
-              model: UsuarioPermiso,
-              as: "usuarioPermiso",
-              where: {
-                permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA, // ID 11
-              },
-              required: true,
-            },
-          ],
-        },
-      ],
-    });
-
-    // Obtener obreros encargados de congregaciones
-    const obrerosCongregacion = await Congregacion.findAll({
-      where: {
-        [Op.or]: [
-          { idObreroEncargado: { [Op.ne]: null } },
-          { idObreroEncargadoDos: { [Op.ne]: null } },
-        ],
-        estado: true,
-      },
-      include: [
-        {
-          model: Usuario,
-          as: "obreroEncargado",
-          include: [
-            {
-              model: UsuarioPermiso,
-              as: "usuarioPermiso",
-              where: {
-                permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA,
-              },
-              required: true,
-            },
-          ],
-          required: false,
-        },
-        {
-          model: Usuario,
-          as: "obreroEncargadoDos",
-          include: [
-            {
-              model: UsuarioPermiso,
-              as: "usuarioPermiso",
-              where: {
-                permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA,
-              },
-              required: true,
-            },
-          ],
-          required: false,
-        },
-      ],
-    });
-
-    // Obtener obreros encargados de campos
-    const obrerosCampo = await Campo.findAll({
-      where: {
-        [Op.or]: [
-          { idObreroEncargado: { [Op.ne]: null } },
-          { idObreroEncargadoDos: { [Op.ne]: null } },
-        ],
-        estado: true,
-      },
-      include: [
-        {
-          model: Usuario,
-          as: "obreroEncargado",
-          include: [
-            {
-              model: UsuarioPermiso,
-              as: "usuarioPermiso",
-              where: {
-                permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA,
-              },
-              required: true,
-            },
-          ],
-          required: false,
-        },
-        {
-          model: Usuario,
-          as: "obreroEncargadoDos",
-          include: [
-            {
-              model: UsuarioPermiso,
-              as: "usuarioPermiso",
-              where: {
-                permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA,
-              },
-              required: true,
-            },
-          ],
-          required: false,
-        },
-      ],
-    });
-
     const fechaReporte = new Date().toLocaleDateString("es-ES", {
       weekday: "long",
       year: "numeric",
@@ -344,186 +234,109 @@ const notificarAprobadoresMultimedia = async () => {
       day: "numeric",
     });
 
-    // Procesar obreros de países
-    for (const pais of obrerosPais) {
-      const obrero = pais.getDataValue("obreroEncargado");
-      if (obrero && obrero.getDataValue("email")) {
-        const solicitudesPendientes =
+    // Procesar cada aprobador multimedia
+    for (const aprobador of aprobadores) {
+      const email = aprobador.getDataValue("email");
+      if (!email) {
+        console.log(
+          `Aprobador ID ${aprobador.getDataValue("id")} no tiene email configurado`,
+        );
+        continue;
+      }
+
+      const usuarioCongregacion = aprobador.getDataValue("usuarioCongregacion");
+      if (!usuarioCongregacion) {
+        console.log(`Aprobador ${email} no tiene congregación asignada`);
+        continue;
+      }
+
+      const nombreAprobador =
+        `${aprobador.getDataValue("primerNombre") || ""} ${
+          aprobador.getDataValue("segundoNombre") || ""
+        } ${aprobador.getDataValue("primerApellido") || ""} ${
+          aprobador.getDataValue("segundoApellido") || ""
+        }`
+          .replace(/\s+/g, " ")
+          .trim();
+
+      // Determinar jurisdicción del aprobador y obtener solicitudes
+      let solicitudesPendientes: any[] = [];
+      let tipoCongregacion = "";
+      let nombreCongregacion = "";
+
+      // Verificar jurisdicción por orden de prioridad: Campo > Congregación > País
+      const campoId = usuarioCongregacion.getDataValue("campo_id");
+      const congregacionId =
+        usuarioCongregacion.getDataValue("congregacion_id");
+      const paisId = usuarioCongregacion.getDataValue("pais_id");
+
+      if (campoId) {
+        // Tiene campo asignado
+        solicitudesPendientes =
+          await obtenerSolicitudesPendientesPorCongregacion("campo", campoId);
+        tipoCongregacion = "campo";
+        const campo = usuarioCongregacion.getDataValue("campo");
+        nombreCongregacion = campo ? campo.getDataValue("campo") : "Campo";
+      } else if (congregacionId) {
+        // Tiene congregación asignada
+        solicitudesPendientes =
           await obtenerSolicitudesPendientesPorCongregacion(
-            "pais",
-            pais.getDataValue("id"),
+            "congregacion",
+            congregacionId,
           );
-
-        if (solicitudesPendientes.length > 0) {
-          const nombreObrero = `${obrero.getDataValue("primerNombre") || ""} ${
-            obrero.getDataValue("segundoNombre") || ""
-          } ${obrero.getDataValue("primerApellido") || ""} ${
-            obrero.getDataValue("segundoApellido") || ""
-          }`
-            .replace(/\s+/g, " ")
-            .trim();
-
-          const emailPersonalizado = renderTemplate(
-            emailTemplateSolicitudesPendientes,
-            {
-              imagenEmail,
-              nombreAprobador: nombreObrero,
-              tipoCongregacion: "país",
-              nombreCongregacion: pais.getDataValue("pais"),
-              totalSolicitudes: solicitudesPendientes.length.toString(),
-              fechaReporte,
-              listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-            },
-          );
-
-          await enviarEmail(
-            obrero.getDataValue("email"),
-            `Solicitudes Multimedia Pendientes - ${pais.getDataValue("pais")}`,
-            emailPersonalizado,
-          );
-
-          console.log(
-            `Email enviado al Obrero País: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
-          );
-        }
-      }
-    }
-
-    // Procesar obreros de congregaciones
-    for (const congregacion of obrerosCongregacion) {
-      // Obrero principal
-      const obreroPrincipal = congregacion.getDataValue("obreroEncargado");
-      if (obreroPrincipal && obreroPrincipal.getDataValue("email")) {
-        await procesarObreroCongregacion(
-          obreroPrincipal,
-          congregacion,
-          fechaReporte,
+        tipoCongregacion = "congregación";
+        const congregacion = usuarioCongregacion.getDataValue("congregacion");
+        nombreCongregacion = congregacion
+          ? congregacion.getDataValue("congregacion")
+          : "Congregación";
+      } else if (paisId) {
+        // Tiene país asignado
+        solicitudesPendientes =
+          await obtenerSolicitudesPendientesPorCongregacion("pais", paisId);
+        tipoCongregacion = "país";
+        const pais = usuarioCongregacion.getDataValue("pais");
+        nombreCongregacion = pais ? pais.getDataValue("pais") : "País";
+      } else {
+        console.log(
+          `Aprobador ${email} no tiene ninguna jurisdicción asignada`,
         );
+        continue;
       }
 
-      // Obrero secundario
-      const obreroSecundario = congregacion.getDataValue("obreroEncargadoDos");
-      if (obreroSecundario && obreroSecundario.getDataValue("email")) {
-        await procesarObreroCongregacion(
-          obreroSecundario,
-          congregacion,
-          fechaReporte,
+      // Enviar email solo si hay solicitudes pendientes
+      if (solicitudesPendientes.length > 0) {
+        const emailPersonalizado = renderTemplate(
+          emailTemplateSolicitudesPendientes,
+          {
+            imagenEmail,
+            nombreAprobador,
+            tipoCongregacion,
+            nombreCongregacion,
+            totalSolicitudes: solicitudesPendientes.length.toString(),
+            fechaReporte,
+            listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
+          },
         );
-      }
-    }
 
-    // Procesar obreros de campos
-    for (const campo of obrerosCampo) {
-      // Obrero principal
-      const obreroPrincipal = campo.getDataValue("obreroEncargado");
-      if (obreroPrincipal && obreroPrincipal.getDataValue("email")) {
-        await procesarObreroCampo(obreroPrincipal, campo, fechaReporte);
-      }
+        await enviarEmail(
+          email,
+          `Solicitudes Multimedia Pendientes - ${nombreCongregacion}`,
+          emailPersonalizado,
+        );
 
-      // Obrero secundario
-      const obreroSecundario = campo.getDataValue("obreroEncargadoDos");
-      if (obreroSecundario && obreroSecundario.getDataValue("email")) {
-        await procesarObreroCampo(obreroSecundario, campo, fechaReporte);
+        console.log(
+          `✅ Email enviado a ${nombreAprobador} (${email}) - ${tipoCongregacion}: ${nombreCongregacion} (${solicitudesPendientes.length} solicitudes)`,
+        );
+      } else {
+        console.log(
+          `ℹ️ ${nombreAprobador} (${email}) no tiene solicitudes pendientes en ${tipoCongregacion}: ${nombreCongregacion}`,
+        );
       }
     }
 
     console.log("Proceso de notificación semanal completado exitosamente");
   } catch (error) {
     console.error("Error en notificación semanal a aprobadores:", error);
-  }
-};
-
-// Función auxiliar para procesar obreros de congregación
-const procesarObreroCongregacion = async (
-  obrero: any,
-  congregacion: any,
-  fechaReporte: string,
-) => {
-  const solicitudesPendientes =
-    await obtenerSolicitudesPendientesPorCongregacion(
-      "congregacion",
-      congregacion.getDataValue("id"),
-    );
-
-  if (solicitudesPendientes.length > 0) {
-    const nombreObrero = `${obrero.getDataValue("primerNombre") || ""} ${
-      obrero.getDataValue("segundoNombre") || ""
-    } ${obrero.getDataValue("primerApellido") || ""} ${
-      obrero.getDataValue("segundoApellido") || ""
-    }`
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const emailPersonalizado = renderTemplate(
-      emailTemplateSolicitudesPendientes,
-      {
-        imagenEmail,
-        nombreAprobador: nombreObrero,
-        tipoCongregacion: "congregación",
-        nombreCongregacion: congregacion.getDataValue("congregacion"),
-        totalSolicitudes: solicitudesPendientes.length.toString(),
-        fechaReporte,
-        listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-      },
-    );
-
-    await enviarEmail(
-      obrero.getDataValue("email"),
-      `Solicitudes Multimedia Pendientes - ${congregacion.getDataValue(
-        "congregacion",
-      )}`,
-      emailPersonalizado,
-    );
-
-    console.log(
-      `Email enviado al Obrero Congregación: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
-    );
-  }
-};
-
-// Función auxiliar para procesar obreros de campo
-const procesarObreroCampo = async (
-  obrero: any,
-  campo: any,
-  fechaReporte: string,
-) => {
-  const solicitudesPendientes =
-    await obtenerSolicitudesPendientesPorCongregacion(
-      "campo",
-      campo.getDataValue("id"),
-    );
-
-  if (solicitudesPendientes.length > 0) {
-    const nombreObrero = `${obrero.getDataValue("primerNombre") || ""} ${
-      obrero.getDataValue("segundoNombre") || ""
-    } ${obrero.getDataValue("primerApellido") || ""} ${
-      obrero.getDataValue("segundoApellido") || ""
-    }`
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const emailPersonalizado = renderTemplate(
-      emailTemplateSolicitudesPendientes,
-      {
-        imagenEmail,
-        nombreAprobador: nombreObrero,
-        tipoCongregacion: "campo",
-        nombreCongregacion: campo.getDataValue("campo"),
-        totalSolicitudes: solicitudesPendientes.length.toString(),
-        fechaReporte,
-        listaSolicitudes: generarListaSolicitudes(solicitudesPendientes),
-      },
-    );
-
-    await enviarEmail(
-      obrero.getDataValue("email"),
-      `Solicitudes Multimedia Pendientes - ${campo.getDataValue("campo")}`,
-      emailPersonalizado,
-    );
-
-    console.log(
-      `Email enviado al Obrero Campo: ${nombreObrero} (${solicitudesPendientes.length} solicitudes)`,
-    );
   }
 };
 
