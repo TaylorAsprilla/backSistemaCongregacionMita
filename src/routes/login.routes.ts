@@ -25,7 +25,6 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
-import { loginLimiter, passwordResetLimiter } from "../config/rateLimiting";
 
 const router = Router();
 
@@ -64,10 +63,9 @@ router.post("/logout-qr", validarJWT, logoutQrSession);
 // Logout - Cerrar sesión
 router.post("/logout", validarJWT, logout);
 
-// Login (con rate limiting estricto)
+// Login
 router.post(
   "/",
-  loginLimiter, // Protección contra fuerza bruta
   [
     check("login", "El nombre de usuario es obligatorio").not().isEmpty(),
     check("password", "El password es obligatorio").not().isEmpty(),
@@ -76,10 +74,9 @@ router.post(
   login,
 );
 
-// Se olvidó la contraseña (con rate limiting)
+// Se olvidó la contraseña
 router.put(
   "/forgotpassword",
-  passwordResetLimiter, // Protección contra abuso de email
   [
     check("login", "Se requiere la cuenta de usuario").not().isEmpty(),
     validarCampos,
@@ -87,10 +84,9 @@ router.put(
   forgotPassword,
 );
 
-// Crear una nueva contraseña (con rate limiting)
+// Crear una nueva contraseña
 router.put(
   "/cambiarpassword",
-  passwordResetLimiter,
   [
     check("nuevoPassword", "Se requiere la nueva contraseña").not().isEmpty(),
     validarCampos,
