@@ -1,7 +1,10 @@
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
+import ActividadEspiritual from "../models/actividadEspiritual.model";
+import AsuntoPendiente from "../models/asuntoPendiente.model";
 import Campo from "../models/campo.model";
+import CategoriaActividadEspiritual from "../models/categoriaActividadEspiritual.model";
 import CategoriaProfesion from "../models/categoriaProfesion.model";
 import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
@@ -9,6 +12,7 @@ import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import GrupoGemelos from "../models/grupoGemelos.model";
 import Informe from "../models/informe.model";
+import Meta from "../models/meta.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
 import OpcionTransporte from "../models/opcionTransporte.model";
@@ -24,6 +28,7 @@ import TipoDocumento from "../models/tipoDocumento.model";
 import TipoEstudio from "../models/tipoEstudio.model";
 import TipoMiembro from "../models/tipoMiembro.model";
 import TipoActividadEconomica from "../models/tipoActividadEconomica.model";
+import TipoStatus from "../models/tipoStatus,model";
 import UbicacionConexion from "../models/ubicacionConexion.model";
 import Usuario from "../models/usuario.model";
 import UsuarioCongregacion from "../models/usuarioCongregacion.model";
@@ -324,4 +329,84 @@ TipoActividadEconomica.hasMany(ActividadEconomica, {
 ActividadEconomica.belongsTo(TipoActividadEconomica, {
   foreignKey: "tipoActividadEconomica_id",
   as: "tipoActividadEconomica",
+});
+
+// Relaciones de Informe y ActividadEspiritual
+Informe.hasMany(ActividadEspiritual, {
+  foreignKey: "informe_id",
+  as: "actividadesEspirituales",
+});
+
+ActividadEspiritual.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
+});
+
+// Relaciones de CategoriaActividadEspiritual y ActividadEspiritual
+CategoriaActividadEspiritual.hasMany(ActividadEspiritual, {
+  foreignKey: "categoria_id",
+  as: "actividadesEspirituales",
+});
+
+ActividadEspiritual.belongsTo(CategoriaActividadEspiritual, {
+  foreignKey: "categoria_id",
+  as: "categoria",
+});
+
+// Relaciones de Informe y Meta
+Informe.hasMany(Meta, {
+  foreignKey: "informe_id",
+  as: "metas",
+});
+
+Meta.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
+});
+
+// Relaciones de TipoStatus y Meta
+TipoStatus.hasMany(Meta, {
+  foreignKey: "tipoStatus_id",
+  as: "metas",
+});
+
+Meta.belongsTo(TipoStatus, {
+  foreignKey: "tipoStatus_id",
+  as: "tipoStatus",
+});
+
+// Auto-relación de Meta (meta original)
+Meta.hasOne(Meta, {
+  as: "metaOriginal",
+  sourceKey: "metaOriginal_id",
+  foreignKey: "id",
+});
+
+// Relaciones de Informe y AsuntoPendiente
+Informe.hasMany(AsuntoPendiente, {
+  foreignKey: "informe_id",
+  as: "asuntosPendientes",
+});
+
+AsuntoPendiente.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
+});
+
+// Relaciones de TipoStatus y AsuntoPendiente
+TipoStatus.hasMany(AsuntoPendiente, {
+  foreignKey: "tipoStatus_id",
+  as: "asuntosPendientes",
+});
+
+AsuntoPendiente.belongsTo(TipoStatus, {
+  foreignKey: "tipoStatus_id",
+  as: "tipoStatus",
+});
+
+// Auto-relación de AsuntoPendiente (asunto original)
+AsuntoPendiente.hasOne(AsuntoPendiente, {
+  as: "asuntoOriginal",
+  sourceKey: "asuntoOriginal_id",
+  foreignKey: "id",
 });

@@ -17,6 +17,15 @@ const Meta = db.define(
     comentarios: {
       type: DataTypes.TEXT,
     },
+    fechaCumplimiento: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    metaOriginal_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Referencia a la meta original si es una copia/continuación",
+    },
     estado: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

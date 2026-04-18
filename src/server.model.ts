@@ -47,6 +47,9 @@ import ayudanteRoutes from "./routes/ayudante.routes";
 import emailRoutes from "./routes/email.routes";
 import accesoQrRoutes from "./routes/accesoQR.routes";
 import grupoGemelosRoutes from "./routes/grupoGemelos.routes";
+import categoriaActividadEspiritualRoutes from "./routes/categoriaActividadEspiritual.routes";
+import actividadEspiritualRoutes from "./routes/actividadEspiritual.routes";
+import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
 
 import cors from "cors";
 import db from "./database/connection";
@@ -111,6 +114,9 @@ class Server {
     email: "/api/email",
     accesoQr: "/api/accesoqr",
     grupoGemelos: "/api/grupogemelos",
+    categoriaActividadEspiritual: "/api/categoriaactividadespiritual",
+    actividadEspiritual: "/api/actividadespiritual",
+    asuntoPendiente: "/api/asunto-pendiente",
     cron: "/api/cron",
   };
 
@@ -206,6 +212,12 @@ class Server {
     this.app.use(this.apiPaths.email, emailRoutes);
     this.app.use(this.apiPaths.accesoQr, accesoQrRoutes);
     this.app.use(this.apiPaths.grupoGemelos, grupoGemelosRoutes);
+    this.app.use(
+      this.apiPaths.categoriaActividadEspiritual,
+      categoriaActividadEspiritualRoutes,
+    );
+    this.app.use(this.apiPaths.actividadEspiritual, actividadEspiritualRoutes);
+    this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
   }
 
   listen() {

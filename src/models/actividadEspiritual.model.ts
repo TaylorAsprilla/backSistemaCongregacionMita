@@ -1,46 +1,43 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
 
-const Visita = db.define(
-  "Visita",
+const ActividadEspiritual = db.define(
+  "ActividadEspiritual",
   {
-    mes: {
+    id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    referidasOots: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    visitasHogares: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    visitaHospital: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    visitaRemota: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-    observaciones: {
-      type: DataTypes.TEXT,
-    },
-    estado: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
+      primaryKey: true,
+      autoIncrement: true,
     },
     informe_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    categoria_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    fecha: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    observaciones: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    responsable: {
+      type: DataTypes.STRING(200),
+      allowNull: false,
+    },
+    estado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   },
   {
     freezeTableName: true,
-    tableName: "visita",
+    tableName: "actividadEspiritual",
   },
 );
 
-export default Visita;
+export default ActividadEspiritual;
