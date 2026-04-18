@@ -9,7 +9,6 @@ import config from "../config/config";
 import db from "../database/connection";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
-import logger from "../helpers/logger";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -36,7 +35,7 @@ const verificarFechasYEnviarCorreos = async () => {
   const hoy = new Date();
   const dias = [15, 8, 5, 2, 1];
 
-  logger.info("Verificando fechas y enviando correos...");
+  console.log("Verificando fechas y enviando correos...");
 
   const solicitudes = await SolicitudMultimedia.findAll({
     where: {
