@@ -10,6 +10,10 @@ import {
   eliminarMeta,
   getMeta,
   getMetas,
+  getMetasPorInforme,
+  getMetasPendientesPorUsuario,
+  copiarMetaANuevoInforme,
+  marcarMetaComoCumplida,
 } from "../controllers/meta.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -19,6 +23,15 @@ const router = Router();
 
 router.get("/", validarJWT, getMetas);
 router.get("/:id", validarJWT, getMeta);
+
+// Nuevas rutas para seguimiento de metas
+router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
+router.get(
+  "/pendientes/usuario/:usuarioId",
+  validarJWT,
+  getMetasPendientesPorUsuario,
+);
+
 router.post(
   "/",
   [
@@ -33,7 +46,28 @@ router.post(
   ],
   crearMeta,
 );
+
+router.post(
+  "/copiar",
+  [
+    check(
+      "meta_id_original",
+      "El ID de la meta original es obligatorio",
+    ).isNumeric(),
+    check(
+      "nuevo_informe_id",
+      "El ID del nuevo informe es obligatorio",
+    ).isNumeric(),
+    validarCampos,
+    validarJWT,
+  ],
+  copiarMetaANuevoInforme,
+);
+
 router.put("/:id", validarJWT, actualizarMeta);
+
+router.put("/:id/cumplir", validarJWT, marcarMetaComoCumplida);
+
 router.delete("/:id", validarJWT, eliminarMeta);
 
 export default router;

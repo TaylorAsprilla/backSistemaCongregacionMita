@@ -8,6 +8,7 @@ import {
   crearTipoActividad,
   eliminarTipoActividad,
   getTipoActividad,
+  actualizarTipoActividad,
 } from "../controllers/tipoActividad.controller";
 
 import validarCampos from "../middlewares/validar-campos";
@@ -26,6 +27,17 @@ router.post(
     validarJWT,
   ],
   crearTipoActividad,
+);
+router.put(
+  "/:id",
+  [
+    check("nombre", "El nombre de la actividad es obligatorio ")
+      .not()
+      .isEmpty(),
+    validarCampos,
+    validarJWT,
+  ],
+  actualizarTipoActividad,
 );
 router.delete("/:id", validarJWT, eliminarTipoActividad);
 
