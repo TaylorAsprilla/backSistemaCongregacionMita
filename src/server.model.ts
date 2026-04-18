@@ -50,15 +50,22 @@ import grupoGemelosRoutes from "./routes/grupoGemelos.routes";
 import categoriaActividadEspiritualRoutes from "./routes/categoriaActividadEspiritual.routes";
 import actividadEspiritualRoutes from "./routes/actividadEspiritual.routes";
 import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
+import healthRoutes from "./routes/health.routes";
 
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import db from "./database/connection";
 import config from "./config/config";
+import logger from "./helpers/logger";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
+import { generalLimiter } from "./config/rateLimiting";
 
 require("./database/associations");
 
 const environment = config[process.env.NODE_ENV || "development"];
 const whiteList = environment.whiteList;
+const isProd = process.env.NODE_ENV === "production";
 
 class Server {
   private app: Application;
@@ -137,29 +144,110 @@ class Server {
   async dbConnection() {
     try {
       await db.authenticate();
-      console.info("Database Online");
+      logger.info("✅ Database Online");
     } catch (error) {
-      console.error(error);
+      logger.error("❌ Error conectando a la base de datos:", error);
+      process.exit(1); // Salir si no hay conexión a BD en producción
     }
   }
 
   middlewares() {
-    // CORS
-    this.app.use(cors({ origin: whiteList }));
+    // 1. SEGURIDAD: Helmet debe ir PRIMERO
+    this.app.use(
+      helmet({
+        contentSecurityPolicy: isProd
+          ? {
+              directives: {
+                defaultSrc: ["'self'"],
+                connectSrc: [
+                  "'self'",
+                  "https://cmar.live",
+                  "https://*.cmar.live",
+                ],
+                imgSrc: ["'self'", "https://cmar.live", "https:", "data:"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'"],
+                fontSrc: ["'self'", "https:", "data:"],
+                objectSrc: ["'none'"],
+                mediaSrc: ["'self'"],
+                frameSrc: ["'none'"],
+              },
+            }
+          : false, // Desactivar CSP en desarrollo
+        hsts: isProd
+          ? {
+              maxAge: 31536000, // 1 año
+              includeSubDomains: true,
+              preload: true,
+            }
+          : false, // Solo HSTS en producción con HTTPS
+        frameguard: { action: "deny" },
+        noSniff: true,
+        hidePoweredBy: true,
+      }),
+    );
 
-    // Aumenta el tamaño máximo permitido del body para JSON y formularios
+    // 2. CORS con whitelist
+    this.app.use(
+      cors({
+        origin: (origin, callback) => {
+          // Permitir requests sin origin (mobile apps, Postman, etc)
+          if (!origin) return callback(null, true);
+
+          if (whiteList.indexOf(origin) !== -1) {
+            callback(null, true);
+          } else {
+            logger.warn(`Blocked CORS request from origin: ${origin}`);
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
+        credentials: true, // Permitir cookies
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+        allowedHeaders: ["Content-Type", "Authorization", "x-token"],
+      }),
+    );
+
+    // 3. COMPRESIÓN de respuestas
+    this.app.use(compression());
+
+    // 4. Rate limiting general (solo en producción)
+    if (isProd) {
+      this.app.use("/api/", generalLimiter);
+    }
+
+    // 5. Parseo de JSON y URL encoded
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-    // Carpeta pública
-    // this.app.use(express.static("public")); //TODO Carpeta pública
+    // 6. Logging de requests (solo en desarrollo)
+    if (!isProd) {
+      this.app.use((req, res, next) => {
+        const start = Date.now();
+        res.on("finish", () => {
+          const duration = Date.now() - start;
+          logger.debug(
+            `${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`,
+          );
+        });
+        next();
+      });
+    }
 
+    // 7. Ruta raíz
     this.app.get("/", (req, res, next) =>
-      res.status(200).json({ msg: "CMAR LIVE - Congregación Mita INC 2025" }),
+      res.status(200).json({
+        msg: "CMAR LIVE - Congregación Mita INC 2025",
+        version: require("../package.json").version,
+        environment: process.env.NODE_ENV,
+      }),
     );
   }
 
   routes() {
+    // Health check endpoints (sin autenticación para load balancers)
+    this.app.use("/api", healthRoutes);
+
+    // Rutas de la aplicación
     // this.app.use(this.apiPaths.home, homeRoutes);
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
@@ -218,11 +306,20 @@ class Server {
     );
     this.app.use(this.apiPaths.actividadEspiritual, actividadEspiritualRoutes);
     this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
+
+    // IMPORTANTE: Error handlers al FINAL
+    // 1. Manejar rutas no encontradas (404)
+    this.app.use(notFoundHandler);
+
+    // 2. Manejar todos los demás errores
+    this.app.use(errorHandler);
   }
 
   listen() {
     this.app.listen(this.port, () => {
-      console.info(`Servidor corriendo en puerto ${this.port}`);
+      logger.info(`🚀 Servidor corriendo en puerto ${this.port}`);
+      logger.info(`📊 Entorno: ${process.env.NODE_ENV}`);
+      logger.info(`💾 Base de datos: ${environment.database.database}`);
     });
   }
 }

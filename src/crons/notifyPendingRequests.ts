@@ -11,6 +11,7 @@ import Congregacion from "../models/congregacion.model";
 import Campo from "../models/campo.model";
 import enviarEmail from "../helpers/email";
 import config from "../config/config";
+import logger from "../helpers/logger";
 import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 import { ROLES_ID } from "../enum/roles.enum";
 
@@ -177,7 +178,7 @@ const generarListaSolicitudes = (solicitudes: any[]) => {
 
 // Función principal para enviar notificaciones a aprobadores
 const notificarAprobadoresMultimedia = async () => {
-  console.log("🔍 Iniciando notificación semanal a aprobadores multimedia...");
+  logger.info("🔍 Iniciando notificación semanal a aprobadores multimedia...");
 
   try {
     // Obtener todos los usuarios con permiso de ADMINISTRADOR_MULTIMEDIA (ID 7)
@@ -225,7 +226,7 @@ const notificarAprobadoresMultimedia = async () => {
       ],
     });
 
-    console.log(`Encontrados ${aprobadores.length} aprobadores multimedia`);
+    logger.info(`Encontrados ${aprobadores.length} aprobadores multimedia`);
 
     const fechaReporte = new Date().toLocaleDateString("es-ES", {
       weekday: "long",
@@ -334,7 +335,7 @@ const notificarAprobadoresMultimedia = async () => {
       }
     }
 
-    console.log("Proceso de notificación semanal completado exitosamente");
+    logger.info("Proceso de notificación semanal completado exitosamente");
   } catch (error) {
     console.error("Error en notificación semanal a aprobadores:", error);
   }
