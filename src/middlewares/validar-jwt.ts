@@ -43,6 +43,9 @@ const validarJWT = async (
 
   // Validación 1: Verificar que existe el token
   if (!token) {
+    console.warn(
+      `[AUTH] NO_TOKEN | IP: ${req.ip} | Path: ${req.path} | UserAgent: ${req.get("user-agent")?.substring(0, 50)}`,
+    );
     return res.status(401).json({
       success: false,
       code: "NO_TOKEN",
@@ -57,6 +60,9 @@ const validarJWT = async (
 
     // Validación 3: Verificar que el token incluye sessionId
     if (!sessionId) {
+      console.warn(
+        `[AUTH] TOKEN_INVALID (No SessionId) | User: ${id} | IP: ${req.ip} | Path: ${req.path}`,
+      );
       return res.status(401).json({
         success: false,
         code: "TOKEN_INVALID",
@@ -68,6 +74,11 @@ const validarJWT = async (
     const sessionValidation = await validateUserSession(sessionId, id);
 
     if (!sessionValidation.isValid) {
+      // Logging detallado del error de sesión
+      console.warn(
+        `[AUTH] ${sessionValidation.code} | User: ${id} | Session: ${sessionId} | IP: ${req.ip} | Path: ${req.path} | Reason: ${sessionValidation.error}`,
+      );
+
       // La sesión no es válida - retornar error específico
       const errorResponse: any = {
         success: false,
@@ -96,6 +107,9 @@ const validarJWT = async (
   } catch (error: any) {
     // Manejo de errores de JWT
     if (error.name === "TokenExpiredError") {
+      console.warn(
+        `[AUTH] TOKEN_EXPIRED | IP: ${req.ip} | Path: ${req.path} | ExpiredAt: ${error.expiredAt}`,
+      );
       return res.status(401).json({
         success: false,
         code: "TOKEN_EXPIRED",
@@ -105,6 +119,9 @@ const validarJWT = async (
     }
 
     if (error.name === "JsonWebTokenError") {
+      console.warn(
+        `[AUTH] TOKEN_INVALID (JWT Error) | IP: ${req.ip} | Path: ${req.path} | Error: ${error.message}`,
+      );
       return res.status(401).json({
         success: false,
         code: "TOKEN_INVALID",
@@ -113,7 +130,10 @@ const validarJWT = async (
     }
 
     // Error genérico
-    console.error("Error en validación de JWT:", error);
+    console.error(
+      `[AUTH] AUTH_ERROR | IP: ${req.ip} | Path: ${req.path} | Error:`,
+      error,
+    );
     return res.status(401).json({
       success: false,
       code: "AUTH_ERROR",

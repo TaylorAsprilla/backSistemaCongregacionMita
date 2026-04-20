@@ -748,7 +748,10 @@ export const cleanExpiredSessions = async (
  *
  * @returns Objeto con estadísticas y lista de sesiones activas
  */
-export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
+export const getActiveSessionsWithUserInfo = async (
+  limit: number = 100,
+  offset: number = 0,
+): Promise<any> => {
   try {
     const now = new Date();
 
@@ -757,6 +760,8 @@ export const getActiveSessionsWithUserInfo = async (): Promise<any> => {
     fortyEightHoursAgo.setHours(fortyEightHoursAgo.getHours() - 48);
 
     const activeSessions = await UserSession.findAll({
+      limit: limit, // Limitar resultados
+      offset: offset, // Paginación
       where: {
         [Op.or]: [
           // Condición 1: Sesiones activas (sin importar cuándo se crearon)
