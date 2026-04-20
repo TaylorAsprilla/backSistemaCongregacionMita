@@ -50,10 +50,13 @@ import grupoGemelosRoutes from "./routes/grupoGemelos.routes";
 import categoriaActividadEspiritualRoutes from "./routes/categoriaActividadEspiritual.routes";
 import actividadEspiritualRoutes from "./routes/actividadEspiritual.routes";
 import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
+import healthRoutes from "./routes/health.routes";
 
 import cors from "cors";
 import db from "./database/connection";
 import config from "./config/config";
+import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
+import { moderateRateLimiter } from "./middlewares/rate-limiter";
 
 require("./database/associations");
 
@@ -118,6 +121,7 @@ class Server {
     actividadEspiritual: "/api/actividadespiritual",
     asuntoPendiente: "/api/asunto-pendiente",
     cron: "/api/cron",
+    health: "/api/health",
   };
 
   constructor() {
@@ -147,6 +151,9 @@ class Server {
     // CORS
     this.app.use(cors({ origin: whiteList }));
 
+    // Rate limiting global (moderado)
+    this.app.use(moderateRateLimiter);
+
     // Aumenta el tamaño máximo permitido del body para JSON y formularios
     this.app.use(express.json({ limit: "10mb" }));
     this.app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -160,6 +167,9 @@ class Server {
   }
 
   routes() {
+    // Health check (sin autenticación)
+    this.app.use(this.apiPaths.health, healthRoutes);
+
     // this.app.use(this.apiPaths.home, homeRoutes);
     this.app.use(this.apiPaths.usuarios, usuarioRoutes);
     this.app.use(this.apiPaths.login, loginRoutes);
@@ -218,6 +228,12 @@ class Server {
     );
     this.app.use(this.apiPaths.actividadEspiritual, actividadEspiritualRoutes);
     this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
+
+    // Middleware para rutas no encontradas (404)
+    this.app.use(notFoundHandler);
+
+    // Middleware de manejo de errores (debe ser el último)
+    this.app.use(errorHandler);
   }
 
   listen() {

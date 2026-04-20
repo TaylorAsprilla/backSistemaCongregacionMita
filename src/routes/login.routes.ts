@@ -25,6 +25,10 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import {
+  strictRateLimiter,
+  permissiveRateLimiter,
+} from "../middlewares/rate-limiter";
 
 const router = Router();
 
@@ -34,8 +38,8 @@ router.get("/renew", validarJWT, renewToken);
 // Check Session - Verificar estado de sesión
 router.get("/check-session", validarJWT, checkSession);
 
-// Get Active Sessions - Obtener todas las sesiones activas
-router.get("/active-sessions", getActiveSessions);
+// Get Active Sessions - Limitar a 50 requests/min para evitar respuestas grandes
+router.get("/active-sessions", permissiveRateLimiter, getActiveSessions);
 
 // Sesiones activas agrupadas por tipo (NORMAL / QR)
 router.get("/active-sessions/by-type", getActiveSessionsByType);
@@ -63,10 +67,11 @@ router.post("/logout-qr", validarJWT, logoutQrSession);
 // Logout - Cerrar sesión
 router.post("/logout", validarJWT, logout);
 
-// Login
+// Login - Protegido contra fuerza bruta (10 intentos/min)
 router.post(
   "/",
   [
+    strictRateLimiter, // Rate limiting estricto
     check("login", "El nombre de usuario es obligatorio").not().isEmpty(),
     check("password", "El password es obligatorio").not().isEmpty(),
     validarCampos,
@@ -74,10 +79,11 @@ router.post(
   login,
 );
 
-// Se olvidó la contraseña
+// Se olvidó la contraseña - Protegido contra abuso
 router.put(
   "/forgotpassword",
   [
+    strictRateLimiter, // Rate limiting estricto
     check("login", "Se requiere la cuenta de usuario").not().isEmpty(),
     validarCampos,
   ],
