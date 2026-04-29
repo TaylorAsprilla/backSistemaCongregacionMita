@@ -306,23 +306,38 @@ export const loginPorQr = async (req: Request, res: Response) => {
 
 export const getQrAccesos = async (req: Request, res: Response) => {
   try {
-    // Realizar consulta para obtener accesos con login QR
-    const accesos = await obtenerAccesosQr();
+    // Obtener parámetros de paginación
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
-    // Validar si no se encontraron accesos
-    if (accesos.length === 0) {
-      return res.status(404).json({
+    // Validar parámetros
+    if (page < 1 || limit < 1 || limit > 100) {
+      return res.status(400).json({
         ok: false,
-        msg: "No se encontraron accesos QR.",
-        data: [],
+        msg: "Parámetros de paginación inválidos (page >= 1, limit 1-100)",
       });
     }
+
+    // Realizar consulta para obtener accesos con login QR
+    const { count, rows: accesos } = await obtenerAccesosQr(limit, offset);
+
+    // Calcular metadata de paginación
+    const totalPages = Math.ceil(count / limit);
 
     // Devolver resultados con status 200
     return res.status(200).json({
       ok: true,
       msg: "Accesos obtenidos correctamente mediante código QR.",
       data: accesos,
+      pagination: {
+        total: count,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error: any) {
     console.error("Error al obtener accesos QR:", error);
@@ -336,8 +351,8 @@ export const getQrAccesos = async (req: Request, res: Response) => {
 };
 
 // Función para obtener los accesos QR con las relaciones necesarias
-const obtenerAccesosQr = async () => {
-  return await UbicacionConexion.findAll({
+const obtenerAccesosQr = async (limit: number, offset: number) => {
+  return await UbicacionConexion.findAndCountAll({
     where: { isLoginCodeQr: true }, // Filtrar accesos QR
     attributes: [
       "ip",
@@ -349,6 +364,8 @@ const obtenerAccesosQr = async () => {
       "ciudad",
     ],
     order: [["createdAt", "DESC"]], // Ordenar por fecha descendente
+    limit,
+    offset,
     include: [
       {
         model: QrAccesos,

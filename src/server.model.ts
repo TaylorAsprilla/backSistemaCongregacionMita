@@ -36,6 +36,7 @@ import voluntariadoRoutes from "./routes/voluntariado.routes";
 import buscarCorreoRoutes from "./routes/buscarCorreo.routes";
 import razonSolicitudRoutes from "./routes/razonSolicitud.routes";
 import linkEventosRoutes from "./routes/linkEventos.routes";
+import eventoEnVivoRoutes from "./routes/eventoEnVivo.routes";
 import obreroRoutes from "./routes/obrero.routes";
 import accesoMultimediaRoutes from "./routes/accesoMultimedia.routes";
 import supervisorCongregacionRoutes from "./routes/supervisorCongregacion.routes";
@@ -106,6 +107,7 @@ class Server {
     razonSolicitud: "/api/razonsolicitud",
     parentesco: "/api/parentesco",
     evento: "/api/evento",
+    eventoEnVivo: "/api/evento-en-vivo",
     obrero: "/api/obrero",
     accesoMultimedia: "/api/accesomultimedia",
     supervisorCongregacion: "/api/supervisorcongregacion",
@@ -208,6 +210,7 @@ class Server {
     this.app.use(this.apiPaths.buscarCorreo, buscarCorreoRoutes);
     this.app.use(this.apiPaths.razonSolicitud, razonSolicitudRoutes);
     this.app.use(this.apiPaths.evento, linkEventosRoutes);
+    this.app.use(this.apiPaths.eventoEnVivo, eventoEnVivoRoutes);
     this.app.use(this.apiPaths.obrero, obreroRoutes);
     this.app.use(this.apiPaths.accesoMultimedia, accesoMultimediaRoutes);
     this.app.use(

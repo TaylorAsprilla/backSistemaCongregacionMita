@@ -1,4 +1,5 @@
 import AuditoriaUsuario from "../models/auditoriaUsuario.model";
+import AuditoriaEventoEnVivo from "../models/auditoriaEventoEnVivo.model";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import ActividadEspiritual from "../models/actividadEspiritual.model";
@@ -8,6 +9,7 @@ import CategoriaActividadEspiritual from "../models/categoriaActividadEspiritual
 import CategoriaProfesion from "../models/categoriaProfesion.model";
 import Congregacion from "../models/congregacion.model";
 import EstadoCivil from "../models/estadoCivil.model";
+import EventoEnVivo from "../models/eventoEnVivo.model";
 import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import GrupoGemelos from "../models/grupoGemelos.model";
@@ -409,4 +411,36 @@ AsuntoPendiente.hasOne(AsuntoPendiente, {
   as: "asuntoOriginal",
   sourceKey: "asuntoOriginal_id",
   foreignKey: "id",
+});
+
+// Relaciones de EventoEnVivo
+EventoEnVivo.belongsTo(Usuario, {
+  foreignKey: "usuario_id",
+  as: "usuario",
+});
+
+Usuario.hasMany(EventoEnVivo, {
+  foreignKey: "usuario_id",
+  as: "eventosEnVivo",
+});
+
+// Relaciones de AuditoriaEventoEnVivo
+AuditoriaEventoEnVivo.belongsTo(EventoEnVivo, {
+  foreignKey: "eventoEnVivo_id",
+  as: "eventoEnVivo",
+});
+
+AuditoriaEventoEnVivo.belongsTo(Usuario, {
+  foreignKey: "usuario_id",
+  as: "usuario",
+});
+
+EventoEnVivo.hasMany(AuditoriaEventoEnVivo, {
+  foreignKey: "eventoEnVivo_id",
+  as: "auditorias",
+});
+
+Usuario.hasMany(AuditoriaEventoEnVivo, {
+  foreignKey: "usuario_id",
+  as: "auditoriasEventoEnVivo",
 });
