@@ -30,22 +30,21 @@ router.get("/todos", validarJWT, getTodosLosUsuarios);
 // Ruta para obtener usuarios con TODA la información completa y todas las relaciones
 router.get("/completo", validarJWT, getUsuariosCompleto);
 
-// Búsqueda por número de documento (query params)
+// Búsqueda por número de documento o número Mita (query params)
 router.get(
   "/buscar-documento",
 
   [
     check("numeroDocumento").custom((value, { req }) => {
-      if (!req.query?.numeroDocumento) {
-        throw new Error("El número de documento es obligatorio");
+      if (!req.query?.numeroDocumento && !req.query?.numeroMita) {
+        throw new Error(
+          "Debe proporcionar el número de documento o el número Mita",
+        );
       }
       return true;
     }),
     check("paisId").custom((value, { req }) => {
-      if (!req.query?.paisId) {
-        throw new Error("El ID del país es obligatorio");
-      }
-      if (isNaN(Number(req.query?.paisId))) {
+      if (req.query?.paisId && isNaN(Number(req.query?.paisId))) {
         throw new Error("El ID del país debe ser un número válido");
       }
       return true;

@@ -672,98 +672,114 @@ export const buscarNumerosMitas = async (req: Request, res: Response) => {
 };
 
 export const buscarPorNumeroDocumento = async (req: Request, res: Response) => {
-  const { numeroDocumento, paisId } = req.query;
+  const { numeroDocumento, numeroMita, paisId } = req.query;
 
-  if (!numeroDocumento) {
+  if (!numeroDocumento && !numeroMita) {
     return res.status(400).json({
       ok: false,
-      msg: "Debe proporcionar un número de documento.",
+      msg: "Debe proporcionar el número de documento o el número Mita.",
     });
   }
 
-  if (!paisId) {
-    return res.status(400).json({
-      ok: false,
-      msg: "Debe proporcionar el ID del país.",
-    });
-  }
+  const includes = [
+    {
+      model: Pais,
+      as: "usuarioCongregacionPais",
+      attributes: ["id", "pais"],
+      ...(paisId ? { where: { id: Number(paisId) } } : {}),
+      required: paisId ? true : false,
+    },
+    {
+      model: Congregacion,
+      as: "usuarioCongregacionCongregacion",
+      attributes: ["id", "congregacion"],
+      required: false,
+    },
+    {
+      model: Campo,
+      as: "usuarioCongregacionCampo",
+      attributes: ["id", "campo"],
+      required: false,
+    },
+    {
+      model: EstadoCivil,
+      as: "estadoCivil",
+      attributes: ["id", "estadoCivil"],
+      required: false,
+    },
+    {
+      model: Genero,
+      as: "genero",
+      attributes: ["id", "genero"],
+      required: false,
+    },
+  ];
+
+  const attributes = [
+    "id",
+    "primerNombre",
+    "segundoNombre",
+    "primerApellido",
+    "segundoApellido",
+    "numeroDocumento",
+    "fechaNacimiento",
+    "email",
+    "direccion",
+    "ciudadDireccion",
+    "departamentoDireccion",
+    "codigoPostalDireccion",
+    "paisDireccion",
+    "numeroCelular",
+    "estado",
+    "genero_id",
+  ];
 
   try {
-    const pais = await Pais.findByPk(Number(paisId));
+    let usuario: any;
 
-    if (!pais) {
-      return res.status(404).json({
-        ok: false,
-        msg: "País no encontrado.",
+    if (numeroMita) {
+      // Buscar por número Mita (id)
+      usuario = await Usuario.findOne({
+        attributes,
+        include: includes,
+        where: {
+          id: numeroMita as string,
+          estado: ESTADO_USUARIO_ENUM.ACTIVO,
+        },
+      });
+    } else {
+      // Buscar por número de documento
+      usuario = await Usuario.findOne({
+        attributes,
+        include: includes,
+        where: {
+          numeroDocumento: numeroDocumento as string,
+          estado: ESTADO_USUARIO_ENUM.ACTIVO,
+        },
       });
     }
-
-    // Buscar usuario por número de documento
-    const usuario = await Usuario.findOne({
-      attributes: [
-        "id",
-        "primerNombre",
-        "segundoNombre",
-        "primerApellido",
-        "segundoApellido",
-        "numeroDocumento",
-        "fechaNacimiento",
-        "email",
-        "direccion",
-        "ciudadDireccion",
-        "departamentoDireccion",
-        "codigoPostalDireccion",
-        "paisDireccion",
-        "numeroCelular",
-        "estado",
-      ],
-      include: [
-        {
-          model: Pais,
-          as: "usuarioCongregacionPais",
-          attributes: ["id", "pais"],
-          where: { id: Number(paisId) }, // Filtrar por el país especificado
-          required: true, // INNER JOIN para asegurar que el usuario pertenezca al país
-        },
-        {
-          model: Congregacion,
-          as: "usuarioCongregacionCongregacion",
-          attributes: ["id", "congregacion"],
-          required: false,
-        },
-        {
-          model: Campo,
-          as: "usuarioCongregacionCampo",
-          attributes: ["id", "campo"],
-          required: false,
-        },
-        {
-          model: EstadoCivil,
-          as: "estadoCivil",
-          attributes: ["id", "estadoCivil"],
-          required: false,
-        },
-      ],
-      where: {
-        numeroDocumento: numeroDocumento as string,
-        estado: ESTADO_USUARIO_ENUM.ACTIVO,
-      },
-    });
 
     if (!usuario) {
+      const criterio = numeroMita
+        ? `número Mita ${numeroMita}`
+        : `número de documento ${numeroDocumento}`;
       return res.status(404).json({
         ok: false,
-        msg: `No se encontró ningún usuario con el número de documento ${numeroDocumento} en el país especificado.`,
+        msg: `No se encontró ningún usuario con el ${criterio}.`,
       });
     }
 
+    const { codigoPostalDireccion, ...usuarioData } = (usuario as any).toJSON();
     res.json({
       ok: true,
-      usuario,
+      usuario: { ...usuarioData, zipCode: codigoPostalDireccion },
       msg: "Usuario encontrado correctamente.",
     });
   } catch (error) {
-    console.error("Error al buscar usuario por número de documento:", error);
+    console.error(
+      "Error al buscar usuario por número de documento o Mita:",
+      error,
+    );
     res.status(500).json({
       ok: false,
       msg: "Error interno, contacte al administrador.",
