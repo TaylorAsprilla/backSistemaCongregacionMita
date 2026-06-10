@@ -395,24 +395,6 @@ AsuntoPendiente.belongsTo(Informe, {
   as: "informe",
 });
 
-// Relaciones de TipoStatus y AsuntoPendiente
-TipoStatus.hasMany(AsuntoPendiente, {
-  foreignKey: "tipoStatus_id",
-  as: "asuntosPendientes",
-});
-
-AsuntoPendiente.belongsTo(TipoStatus, {
-  foreignKey: "tipoStatus_id",
-  as: "tipoStatus",
-});
-
-// Auto-relación de AsuntoPendiente (asunto original)
-AsuntoPendiente.hasOne(AsuntoPendiente, {
-  as: "asuntoOriginal",
-  sourceKey: "asuntoOriginal_id",
-  foreignKey: "id",
-});
-
 // Relaciones de EventoEnVivo
 EventoEnVivo.belongsTo(Usuario, {
   foreignKey: "usuario_id",

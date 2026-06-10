@@ -153,8 +153,10 @@ class Server {
     // CORS
     this.app.use(cors({ origin: whiteList }));
 
-    // Rate limiting global (moderado)
-    this.app.use(moderateRateLimiter);
+    // En desarrollo omitimos el rate limit global para no bloquear pruebas locales.
+    if (process.env.NODE_ENV !== "development") {
+      this.app.use(moderateRateLimiter);
+    }
 
     // Aumenta el tamaño máximo permitido del body para JSON y formularios
     this.app.use(express.json({ limit: "10mb" }));

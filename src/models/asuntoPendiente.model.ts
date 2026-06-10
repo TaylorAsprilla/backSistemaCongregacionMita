@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import db from "../database/connection";
+import { TIPO_ASUNTO_PENDIENTE_ENUM } from "../enum/asuntoPendiente.enum";
 
 const AsuntoPendiente = db.define(
   "AsuntoPendiente",
@@ -13,32 +14,16 @@ const AsuntoPendiente = db.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    descripcion: {
-      type: DataTypes.TEXT,
-      allowNull: false,
+    tipoAsunto: {
+      type: DataTypes.ENUM(...Object.values(TIPO_ASUNTO_PENDIENTE_ENUM)),
+      allowNull: true,
     },
+
     responsable: {
       type: DataTypes.STRING(200),
       allowNull: true,
     },
-    fechaLimite: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    fechaResolucion: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    asuntoOriginal_id: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: "Referencia al asunto original si es una continuación",
-    },
     informe_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    tipoStatus_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
