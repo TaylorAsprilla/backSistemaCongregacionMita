@@ -12,12 +12,12 @@ import {
   crearAsuntoPendiente,
   actualizarAsuntoPendiente,
   copiarAsuntoANuevoInforme,
-  marcarAsuntoComoResuelto,
   eliminarAsuntoPendiente,
 } from "../controllers/asuntoPendiente.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { TIPO_ASUNTO_PENDIENTE_ENUM } from "../enum/asuntoPendiente.enum";
 
 const router = Router();
 
@@ -36,12 +36,13 @@ router.post(
   "/",
   [
     check("asunto", "El asunto es obligatorio").not().isEmpty(),
-    check("descripcion", "La descripción es obligatoria").not().isEmpty(),
+    check("tipoAsunto", "El tipo de asunto es obligatorio")
+      .not()
+      .isEmpty(),
+    check("tipoAsunto", "El tipo de asunto no es valido").isIn(
+      Object.values(TIPO_ASUNTO_PENDIENTE_ENUM),
+    ),
     check("informe_id", "El ID del informe es obligatorio").isNumeric(),
-    check(
-      "tipoStatus_id",
-      "El ID del tipo de status es obligatorio",
-    ).isNumeric(),
     validarCampos,
     validarJWT,
   ],
@@ -65,9 +66,17 @@ router.post(
   copiarAsuntoANuevoInforme,
 );
 
-router.put("/:id", validarJWT, actualizarAsuntoPendiente);
-
-router.put("/:id/resolver", validarJWT, marcarAsuntoComoResuelto);
+router.put(
+  "/:id",
+  [
+    check("tipoAsunto", "El tipo de asunto no es valido")
+      .optional()
+      .isIn(Object.values(TIPO_ASUNTO_PENDIENTE_ENUM)),
+    validarCampos,
+    validarJWT,
+  ],
+  actualizarAsuntoPendiente,
+);
 
 router.delete("/:id", validarJWT, eliminarAsuntoPendiente);
 

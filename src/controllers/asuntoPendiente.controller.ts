@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import AsuntoPendiente from "../models/asuntoPendiente.model";
 import Informe from "../models/informe.model";
 import TipoStatus from "../models/tipoStatus,model";
-import { Op } from "sequelize";
 
 export const getAsuntosPendientes = async (req: Request, res: Response) => {
   try {
@@ -10,17 +9,11 @@ export const getAsuntosPendientes = async (req: Request, res: Response) => {
       where: { estado: true },
       include: [
         {
-          model: TipoStatus,
-          as: "tipoStatus",
-          attributes: ["id", "status"],
-        },
-        {
           model: Informe,
           as: "informe",
           attributes: ["id", "createdAt"],
         },
       ],
-      order: [["fechaLimite", "ASC"]],
     });
 
     res.json({
@@ -42,21 +35,7 @@ export const getAsuntoPendiente = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const asunto = await AsuntoPendiente.findByPk(id, {
-      include: [
-        {
-          model: TipoStatus,
-          as: "tipoStatus",
-          attributes: ["id", "status"],
-        },
-        {
-          model: AsuntoPendiente,
-          as: "asuntoOriginal",
-          attributes: ["id", "asunto", "descripcion"],
-          required: false,
-        },
-      ],
-    });
+    const asunto = await AsuntoPendiente.findByPk(id);
 
     if (!asunto) {
       return res.status(404).json({
@@ -88,20 +67,6 @@ export const getAsuntosPorInforme = async (req: Request, res: Response) => {
         informe_id: informeId,
         estado: true,
       },
-      include: [
-        {
-          model: TipoStatus,
-          as: "tipoStatus",
-          attributes: ["id", "status"],
-        },
-        {
-          model: AsuntoPendiente,
-          as: "asuntoOriginal",
-          attributes: ["id", "asunto"],
-          required: false,
-        },
-      ],
-      order: [["fechaLimite", "ASC"]],
     });
 
     res.json({
@@ -129,9 +94,6 @@ export const getAsuntosPendientesPorUsuario = async (
     // Obtener estados pendientes/en progreso
     const estadosPendientes = await TipoStatus.findAll({
       where: {
-        status: {
-          [Op.in]: ["Pendiente", "En Progreso"],
-        },
         estado: true,
       },
     });
@@ -149,9 +111,6 @@ export const getAsuntosPendientesPorUsuario = async (
     // Obtener asuntos pendientes del usuario
     const asuntos = await AsuntoPendiente.findAll({
       where: {
-        tipoStatus_id: {
-          [Op.in]: statusIds,
-        },
         estado: true,
       },
       include: [
@@ -163,13 +122,7 @@ export const getAsuntosPendientesPorUsuario = async (
           },
           attributes: ["id", "createdAt"],
         },
-        {
-          model: TipoStatus,
-          as: "tipoStatus",
-          attributes: ["id", "status"],
-        },
       ],
-      order: [["fechaLimite", "ASC"]],
     });
 
     res.json({
@@ -189,7 +142,9 @@ export const getAsuntosPendientesPorUsuario = async (
 
 export const crearAsuntoPendiente = async (req: Request, res: Response) => {
   try {
-    const { informe_id, tipoStatus_id } = req.body;
+    const { informe_id } = req.body;
+
+    console.log("Datos recibidos para crear asunto pendiente:", req.body);
 
     // Verificar que existe el informe
     const informe = await Informe.findByPk(informe_id);
@@ -197,15 +152,6 @@ export const crearAsuntoPendiente = async (req: Request, res: Response) => {
       return res.status(404).json({
         ok: false,
         msg: `No existe un informe con el id ${informe_id}`,
-      });
-    }
-
-    // Verificar que existe el tipo de status
-    const tipoStatus = await TipoStatus.findByPk(tipoStatus_id);
-    if (!tipoStatus) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe un tipo de status con el id ${tipoStatus_id}`,
       });
     }
 
@@ -287,12 +233,9 @@ export const copiarAsuntoANuevoInforme = async (
     // Crear nuevo asunto como continuación
     const nuevoAsunto = await AsuntoPendiente.create({
       asunto: asuntoOriginal.getDataValue("asunto"),
-      descripcion: actualizacion || asuntoOriginal.getDataValue("descripcion"),
+      tipoAsunto: asuntoOriginal.getDataValue("tipoAsunto"),
       responsable: asuntoOriginal.getDataValue("responsable"),
-      fechaLimite: asuntoOriginal.getDataValue("fechaLimite"),
-      asuntoOriginal_id: asunto_id_original,
       informe_id: nuevo_informe_id,
-      tipoStatus_id: asuntoOriginal.getDataValue("tipoStatus_id"),
       estado: true,
     });
 
@@ -300,56 +243,6 @@ export const copiarAsuntoANuevoInforme = async (
       ok: true,
       msg: "Asunto copiado al nuevo informe exitosamente",
       asunto: nuevoAsunto,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      ok: false,
-      msg: "Hable con el administrador",
-      error,
-    });
-  }
-};
-
-export const marcarAsuntoComoResuelto = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { descripcion } = req.body;
-
-  try {
-    const asunto = await AsuntoPendiente.findByPk(id);
-    if (!asunto) {
-      return res.status(404).json({
-        ok: false,
-        msg: `No existe un asunto pendiente con el id ${id}`,
-      });
-    }
-
-    // Buscar el estado "Cumplida"
-    const estadoResuelto = await TipoStatus.findOne({
-      where: {
-        status: "Cumplida",
-        estado: true,
-      },
-    });
-
-    if (!estadoResuelto) {
-      return res.status(404).json({
-        ok: false,
-        msg: 'No existe el estado "Cumplida" en el sistema',
-      });
-    }
-
-    // Actualizar asunto
-    await asunto.update({
-      tipoStatus_id: estadoResuelto.getDataValue("id"),
-      fechaResolucion: new Date(),
-      descripcion: descripcion || asunto.getDataValue("descripcion"),
-    });
-
-    res.json({
-      ok: true,
-      msg: "Asunto marcado como resuelto exitosamente",
-      asunto,
     });
   } catch (error) {
     console.error(error);
