@@ -67,6 +67,7 @@ const Usuario = db.define(
         ESTADO_USUARIO_ENUM.ACTIVO,
         ESTADO_USUARIO_ENUM.ELIMINADO,
         ESTADO_USUARIO_ENUM.TRANSCENDIO,
+        ESTADO_USUARIO_ENUM.DUPLICADO,
       ),
       defaultValue: ESTADO_USUARIO_ENUM.ACTIVO,
     },

@@ -134,3 +134,16 @@ DROP TABLE IF EXISTS categoriaProfesion;
 - Los usuarios existentes se asignarán automáticamente a la categoría por defecto (id = 1)
 - La columna `ocupacion` será eliminada permanentemente
 - La foreign key está configurada con `ON DELETE RESTRICT` para evitar eliminar categorías que estén en uso
+
+### 003-add-duplicado-auditoria-usuario.sql
+
+**Fecha:** 2026-06-16  
+**Descripción:**
+
+- Agrega el valor `DUPLICADO` al enum de la columna `accion` en la tabla `auditoriaUsuario`
+
+**Verificación:**
+
+```sql
+SHOW COLUMNS FROM auditoriaUsuario LIKE 'accion';
+```
