@@ -41,6 +41,28 @@ import GrupoGemelos from "../models/grupoGemelos.model";
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
 
+const getAuditoriaAccionPorEstado = (
+  estadoAnterior?: ESTADO_USUARIO_ENUM,
+  estadoNuevo?: ESTADO_USUARIO_ENUM,
+): AUDITORIAUSUARIO_ENUM | null => {
+  if (!estadoNuevo || estadoAnterior === estadoNuevo) {
+    return null;
+  }
+
+  switch (estadoNuevo) {
+    case ESTADO_USUARIO_ENUM.ACTIVO:
+      return AUDITORIAUSUARIO_ENUM.ACTIVACION;
+    case ESTADO_USUARIO_ENUM.DUPLICADO:
+      return AUDITORIAUSUARIO_ENUM.DUPLICADO;
+    case ESTADO_USUARIO_ENUM.ELIMINADO:
+      return AUDITORIAUSUARIO_ENUM.ELIMINACION;
+    case ESTADO_USUARIO_ENUM.TRANSCENDIO:
+      return AUDITORIAUSUARIO_ENUM.TRANSCENDIO;
+    default:
+      return null;
+  }
+};
+
 export const getUsuarios = async (req: Request, res: Response) => {
   try {
     // Obtener todos los usuarios asociados a esta congregación
@@ -1000,6 +1022,22 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
       });
     }
 
+    const estadoAnterior = usuario.getDataValue("estado") as
+      | ESTADO_USUARIO_ENUM
+      | undefined;
+    const accionAuditoriaEstado = getAuditoriaAccionPorEstado(
+      estadoAnterior,
+      campos.estado as ESTADO_USUARIO_ENUM | undefined,
+    );
+
+    if (accionAuditoriaEstado) {
+      console.log("Cambio de estado de usuario:", {
+        usuarioId: Number(id),
+        estadoAnterior,
+        estadoNuevo: campos.estado,
+      });
+    }
+
     // =======================================================================
     //                          Actualizar Usuario
     // =======================================================================
@@ -1098,7 +1136,7 @@ export const actualizarUsuario = async (req: CustomRequest, res: Response) => {
       await auditoriaUsuario(
         Number(id),
         Number(idUsuarioActual),
-        AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
+        accionAuditoriaEstado ?? AUDITORIAUSUARIO_ENUM.ACTUALIZACION,
         transaction,
       );
 
@@ -1613,6 +1651,8 @@ export const transcendioUsuario = async (req: CustomRequest, res: Response) => {
 export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
   const { id } = req.params;
 
+  console.log(`Body: ${JSON.stringify(req.body)}`);
+
   const transaction = await db.transaction();
   const idUsuarioActual = req.id;
 
@@ -1624,10 +1664,12 @@ export const eliminarUsuario = async (req: CustomRequest, res: Response) => {
         { transaction },
       );
 
+      console.log(`Usuario con id ${id} marcado como eliminado.`);
+
       await auditoriaUsuario(
         Number(id),
         Number(idUsuarioActual),
-        AUDITORIAUSUARIO_ENUM.DESACTIVACION,
+        AUDITORIAUSUARIO_ENUM.ELIMINACION,
         transaction,
       );
 
