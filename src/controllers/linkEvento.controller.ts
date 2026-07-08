@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import db from "../database/connection";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import LinkEvento from "../models/linkEvento.model";
 import { TIPOEVENTO_ID } from "../enum/evento.enum";
