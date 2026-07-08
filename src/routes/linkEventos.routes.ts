@@ -28,14 +28,12 @@ router.post(
   "/",
   [
     check("link", "El link es obligatorio").not().isEmpty(),
-    check("tipoEvento_id", "El tipo de evento es obligatorio").not().isEmpty(),
-    check("fecha", "El tipo de evento es obligatorio").not().isEmpty(),
-    check("plataforma", "El tipo de evento es obligatorio").not().isEmpty(),
-    check("titulo", "El tipo de evento es obligatorio").not().isEmpty(),
+    check("fecha", "La fecha del evento es obligatoria").not().isEmpty(),
+    check("titulo", "El título del evento es obligatorio").not().isEmpty(),
     validarCampos,
     validarJWT,
   ],
-  crearLinkEvento
+  crearLinkEvento,
 );
 router.put("/:id", validarJWT, actualizarLinkEvento);
 router.put("/activar/:id", validarJWT, activarLinkEvento);

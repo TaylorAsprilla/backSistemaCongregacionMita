@@ -20,15 +20,21 @@ const LinkEvento = db.define(
     plataforma: {
       type: DataTypes.STRING,
       allowNull: false,
-      values: [PLATAFORMA.YOUTUBE, PLATAFORMA.VIMEO],
+      values: [
+        PLATAFORMA.YOUTUBE,
+        PLATAFORMA.VIMEO,
+        PLATAFORMA.ANTMEDIA,
+        PLATAFORMA.SWARMIFY,
+      ],
+      defaultValue: PLATAFORMA.SWARMIFY,
     },
     estado: {
       type: DataTypes.BOOLEAN,
-      defaultValue: 1,
+      defaultValue: true,
     },
     eventoEnBiblioteca: {
       type: DataTypes.BOOLEAN,
-      defaultValue: 0,
+      defaultValue: true,
     },
     tipoEvento_id: {
       type: DataTypes.INTEGER,
@@ -38,7 +44,7 @@ const LinkEvento = db.define(
   {
     freezeTableName: true,
     tableName: "linkEvento",
-  }
+  },
 );
 
 export default LinkEvento;
