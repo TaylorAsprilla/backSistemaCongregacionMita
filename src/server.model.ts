@@ -51,6 +51,7 @@ import grupoGemelosRoutes from "./routes/grupoGemelos.routes";
 import categoriaActividadEspiritualRoutes from "./routes/categoriaActividadEspiritual.routes";
 import actividadEspiritualRoutes from "./routes/actividadEspiritual.routes";
 import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
+import mensajeInformativoRoutes from "./routes/mensajeInformativo.routes";
 import healthRoutes from "./routes/health.routes";
 
 import cors from "cors";
@@ -122,6 +123,7 @@ class Server {
     categoriaActividadEspiritual: "/api/categoriaactividadespiritual",
     actividadEspiritual: "/api/actividadespiritual",
     asuntoPendiente: "/api/asunto-pendiente",
+    mensajesInformativos: "/api/mensajes-informativos",
     cron: "/api/cron",
     health: "/api/health",
   };
@@ -233,6 +235,7 @@ class Server {
     );
     this.app.use(this.apiPaths.actividadEspiritual, actividadEspiritualRoutes);
     this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
+    this.app.use(this.apiPaths.mensajesInformativos, mensajeInformativoRoutes);
 
     // Middleware para rutas no encontradas (404)
     this.app.use(notFoundHandler);
