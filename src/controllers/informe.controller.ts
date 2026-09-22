@@ -4,6 +4,7 @@ import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import ActividadEspiritual from "../models/actividadEspiritual.model";
+import AsuntoPendiente from "../models/asuntoPendiente.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import Diezmos from "../models/diezmos.model";
@@ -22,18 +23,20 @@ const esFechaISO = (fecha: unknown): fecha is string =>
   typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha);
 
 export const getResumenInforme = async (req: Request, res: Response) => {
-  const { usuarioId, fechaInicio, fechaFin } = req.query;
+  const { usuarioId, informeId, fechaInicio, fechaFin } = req.query;
   const usuarioAutenticado = (req as AuthenticatedRequest).id;
 
   if (
     typeof usuarioId !== "string" ||
     !/^\d+$/.test(usuarioId) ||
+    (informeId !== undefined &&
+      (typeof informeId !== "string" || !/^\d+$/.test(informeId))) ||
     !esFechaISO(fechaInicio) ||
     !esFechaISO(fechaFin)
   ) {
     return res.status(400).json({
       ok: false,
-      msg: "Se requiere usuarioId numérico, fechaInicio y fechaFin en formato YYYY-MM-DD",
+      msg: "Se requiere usuarioId numérico, fechaInicio y fechaFin en formato YYYY-MM-DD; informeId es opcional",
     });
   }
 
@@ -52,15 +55,21 @@ export const getResumenInforme = async (req: Request, res: Response) => {
   }
 
   try {
+    const whereInforme: any = {
+      usuario_id: Number(usuarioId),
+      estado: ESTADO_INFORME_ENUM.ABIERTO,
+      createdAt: {
+        [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
+      },
+    };
+
+    if (typeof informeId === "string") {
+      whereInforme.id = Number(informeId);
+    }
+
     const informe = await Informe.findOne({
       attributes: ["id", "usuario_id", "estado", "createdAt", "updatedAt"],
-      where: {
-        usuario_id: Number(usuarioId),
-        estado: ESTADO_INFORME_ENUM.ABIERTO,
-        createdAt: {
-          [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
-        },
-      },
+      where: whereInforme,
       order: [["createdAt", "DESC"]],
     });
 
@@ -73,7 +82,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const informeId = informe.getDataValue("id");
+    const idInformeEncontrado = informe.getDataValue("id");
     const [
       actividades,
       metas,
@@ -82,14 +91,26 @@ export const getResumenInforme = async (req: Request, res: Response) => {
       logros,
       aspectoEspiritual,
       actividadesEconomicas,
+      asuntosPendientes,
     ] = await Promise.all([
-      Actividad.count({ where: { informe_id: informeId } }),
-      Meta.count({ where: { informe_id: informeId } }),
-      Visita.count({ where: { informe_id: informeId } }),
-      SituacionVisita.count({ where: { informe_id: informeId } }),
-      Logro.count({ where: { informe_id: informeId } }),
-      ActividadEspiritual.count({ where: { informe_id: informeId } }),
-      ActividadEconomica.count({ where: { informe_id: informeId } }),
+      Actividad.count({ where: { informe_id: idInformeEncontrado } }),
+      Meta.count({
+        where: { informe_id: idInformeEncontrado, estado: true },
+      }),
+      Visita.count({
+        where: { informe_id: idInformeEncontrado, estado: true },
+      }),
+      SituacionVisita.count({ where: { informe_id: idInformeEncontrado } }),
+      Logro.count({
+        where: { informe_id: idInformeEncontrado, estado: true },
+      }),
+      ActividadEspiritual.count({
+        where: { informe_id: idInformeEncontrado, estado: true },
+      }),
+      ActividadEconomica.count({ where: { informe_id: idInformeEncontrado } }),
+      AsuntoPendiente.count({
+        where: { informe_id: idInformeEncontrado, estado: true },
+      }),
     ]);
 
     return res.json({
@@ -104,6 +125,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
         logros: logros > 0,
         aspectoEspiritual: aspectoEspiritual > 0,
         actividadesEconomicas: actividadesEconomicas > 0,
+        asuntosPendientes: asuntosPendientes > 0,
       },
       msg: "Informe abierto encontrado",
     });
@@ -152,6 +174,7 @@ export const getInforme = async (req: Request, res: Response) => {
       const visitas = await Visita.findAll({
         where: {
           informe_id: id,
+          estado: true,
         },
       });
 
@@ -170,12 +193,34 @@ export const getInforme = async (req: Request, res: Response) => {
       const logros = await Logro.findAll({
         where: {
           informe_id: id,
+          estado: true,
         },
       });
 
       const metas = await Meta.findAll({
         where: {
           informe_id: id,
+          estado: true,
+        },
+      });
+
+      const actividadesEspirituales = await ActividadEspiritual.findAll({
+        where: {
+          informe_id: id,
+          estado: true,
+        },
+      });
+
+      const actividadesEconomicas = await ActividadEconomica.findAll({
+        where: {
+          informe_id: id,
+        },
+      });
+
+      const asuntosPendientes = await AsuntoPendiente.findAll({
+        where: {
+          informe_id: id,
+          estado: true,
         },
       });
 
@@ -185,6 +230,9 @@ export const getInforme = async (req: Request, res: Response) => {
         informe: {
           informacioninforme: informe,
           actividades,
+          actividadesEspirituales,
+          actividadesEconomicas,
+          asuntosPendientes,
           visitas,
           situacionVisita,
           aspectoContable,
@@ -213,6 +261,21 @@ export const crearInforme = async (req: Request, res: Response) => {
   //                          Guardar Informe
   // =======================================================================
   try {
+    const informeAbierto = await Informe.findOne({
+      where: {
+        usuario_id: body.usuario_id,
+        estado: ESTADO_INFORME_ENUM.ABIERTO,
+      },
+    });
+
+    if (informeAbierto) {
+      return res.status(409).json({
+        ok: false,
+        msg: "El obrero ya tiene un informe abierto",
+        informe: informeAbierto,
+      });
+    }
+
     const informe = Informe.build(body);
     await informe.save();
 

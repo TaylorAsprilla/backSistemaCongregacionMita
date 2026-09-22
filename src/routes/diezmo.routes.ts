@@ -18,13 +18,13 @@ import {
 
 const router = Router();
 
-router.get("/informe/:informeId", validarJWT, getDiezmosPorInforme);
 router.get(
   "/informe/diezmos",
   validarJWT,
   cargarInformeIdDesdeQuery,
   getDiezmosPorInforme,
 );
+router.get("/informe/:informeId", validarJWT, getDiezmosPorInforme);
 router.get("/", validarJWT, getDiezmos);
 router.get("/:id", validarJWT, getUnDiezmo);
 router.post(

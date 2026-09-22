@@ -14,7 +14,9 @@ export const getLogrosPorInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const logros = await Logro.findAll({ where: { informe_id: informeId } });
+    const logros = await Logro.findAll({
+      where: { informe_id: informeId, estado: true },
+    });
     return res.json({
       ok: true,
       logros,
