@@ -74,7 +74,7 @@ export const crearSituacionVisita = async (req: Request, res: Response) => {
 
 export const actualizarSituacionVisita = async (
   req: Request,
-  res: Response
+  res: Response,
 ) => {
   const { id } = req.params;
   const { body } = req;

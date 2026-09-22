@@ -43,9 +43,7 @@ router.post(
   "/",
   [
     check("asunto", "El asunto es obligatorio").not().isEmpty(),
-    check("tipoAsunto", "El tipo de asunto es obligatorio")
-      .not()
-      .isEmpty(),
+    check("tipoAsunto", "El tipo de asunto es obligatorio").not().isEmpty(),
     check("tipoAsunto", "El tipo de asunto no es valido").isIn(
       Object.values(TIPO_ASUNTO_PENDIENTE_ENUM),
     ),

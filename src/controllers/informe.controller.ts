@@ -58,10 +58,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
         usuario_id: Number(usuarioId),
         estado: ESTADO_INFORME_ENUM.ABIERTO,
         createdAt: {
-          [Op.between]: [
-            `${fechaInicio} 00:00:00`,
-            `${fechaFin} 23:59:59.999`,
-          ],
+          [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
         },
       },
       order: [["createdAt", "DESC"]],
@@ -77,16 +74,23 @@ export const getResumenInforme = async (req: Request, res: Response) => {
     }
 
     const informeId = informe.getDataValue("id");
-    const [actividades, metas, visitas, situacionVisitas, logros, aspectoEspiritual, actividadesEconomicas] =
-      await Promise.all([
-        Actividad.count({ where: { informe_id: informeId } }),
-        Meta.count({ where: { informe_id: informeId } }),
-        Visita.count({ where: { informe_id: informeId } }),
-        SituacionVisita.count({ where: { informe_id: informeId } }),
-        Logro.count({ where: { informe_id: informeId } }),
-        ActividadEspiritual.count({ where: { informe_id: informeId } }),
-        ActividadEconomica.count({ where: { informe_id: informeId } }),
-      ]);
+    const [
+      actividades,
+      metas,
+      visitas,
+      situacionVisitas,
+      logros,
+      aspectoEspiritual,
+      actividadesEconomicas,
+    ] = await Promise.all([
+      Actividad.count({ where: { informe_id: informeId } }),
+      Meta.count({ where: { informe_id: informeId } }),
+      Visita.count({ where: { informe_id: informeId } }),
+      SituacionVisita.count({ where: { informe_id: informeId } }),
+      Logro.count({ where: { informe_id: informeId } }),
+      ActividadEspiritual.count({ where: { informe_id: informeId } }),
+      ActividadEconomica.count({ where: { informe_id: informeId } }),
+    ]);
 
     return res.json({
       ok: true,

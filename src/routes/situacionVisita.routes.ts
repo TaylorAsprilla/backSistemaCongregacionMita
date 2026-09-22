@@ -40,7 +40,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearSituacionVisita
+  crearSituacionVisita,
 );
 router.put("/:id", validarJWT, actualizarSituacionVisita);
 

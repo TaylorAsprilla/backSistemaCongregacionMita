@@ -41,7 +41,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearActividad
+  crearActividad,
 );
 router.put("/:id", validarJWT, actualizarActividad);
 

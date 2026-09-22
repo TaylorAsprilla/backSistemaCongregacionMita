@@ -3,10 +3,7 @@ import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
-export const getActividadPorInforme = async (
-  req: Request,
-  res: Response,
-) => {
+export const getActividadPorInforme = async (req: Request, res: Response) => {
   const { informeId } = req.params;
 
   try {
