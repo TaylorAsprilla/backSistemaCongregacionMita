@@ -26,13 +26,13 @@ router.get("/", validarJWT, getMetas);
 router.get("/:id", validarJWT, getMeta);
 
 // Nuevas rutas para seguimiento de metas
-router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
 router.get(
   "/informe/metas",
   validarJWT,
   cargarInformeIdDesdeQuery,
   getMetasPorInforme,
 );
+router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,

@@ -26,13 +26,13 @@ router.get("/", validarJWT, getAsuntosPendientes);
 router.get("/:id", validarJWT, getAsuntoPendiente);
 
 // Rutas para seguimiento de asuntos pendientes
-router.get("/informe/:informeId", validarJWT, getAsuntosPorInforme);
 router.get(
   "/informe/asuntos-pendientes",
   validarJWT,
   cargarInformeIdDesdeQuery,
   getAsuntosPorInforme,
 );
+router.get("/informe/:informeId", validarJWT, getAsuntosPorInforme);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,

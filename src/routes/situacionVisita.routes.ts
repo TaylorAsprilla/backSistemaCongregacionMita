@@ -18,13 +18,13 @@ import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
-router.get("/informe/:informeId", validarJWT, getSituacionVisitaPorInforme);
 router.get(
   "/informe/situaciones-visita",
   validarJWT,
   cargarInformeIdDesdeQuery,
   getSituacionVisitaPorInforme,
 );
+router.get("/informe/:informeId", validarJWT, getSituacionVisitaPorInforme);
 router.get("/", validarJWT, getSituacionVisita);
 router.post(
   "/",

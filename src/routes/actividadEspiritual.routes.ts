@@ -17,13 +17,13 @@ import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
-router.get("/informe/:informeId", validarJWT, getActividadEspiritualPorInforme);
 router.get(
   "/informe/actividades-espirituales",
   validarJWT,
   cargarInformeIdDesdeQuery,
   getActividadEspiritualPorInforme,
 );
+router.get("/informe/:informeId", validarJWT, getActividadEspiritualPorInforme);
 
 router.post(
   "/",

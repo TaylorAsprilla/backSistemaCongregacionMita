@@ -14,7 +14,9 @@ export const getVisitasPorInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const visitas = await Visita.findAll({ where: { informe_id: informeId } });
+    const visitas = await Visita.findAll({
+      where: { informe_id: informeId, estado: true },
+    });
 
     return res.json({
       ok: true,
