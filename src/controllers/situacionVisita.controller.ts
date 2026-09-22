@@ -108,3 +108,42 @@ export const actualizarSituacionVisita = async (
     });
   }
 };
+
+export const eliminarSituacionVisita = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const situacionVisita = await SituacionVisita.findByPk(id);
+    if (!situacionVisita) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una situación visita con el id ${id}`,
+      });
+    }
+
+    const informe = await obtenerInformeAutorizado(
+      req,
+      situacionVisita.getDataValue("informe_id").toString(),
+    );
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No existe el informe asociado o no pertenece al usuario autenticado",
+      });
+    }
+
+    await situacionVisita.destroy();
+
+    return res.json({
+      ok: true,
+      msg: "Situación de la visita eliminada",
+      id,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};

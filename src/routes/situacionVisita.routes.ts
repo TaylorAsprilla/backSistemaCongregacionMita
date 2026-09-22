@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   actualizarSituacionVisita,
   crearSituacionVisita,
+  eliminarSituacionVisita,
   getSituacionVisita,
   getSituacionVisitaPorInforme,
 } from "../controllers/situacionVisita.controller";
@@ -43,5 +44,6 @@ router.post(
   crearSituacionVisita,
 );
 router.put("/:id", validarJWT, actualizarSituacionVisita);
+router.delete("/:id", validarJWT, eliminarSituacionVisita);
 
 export default router;
