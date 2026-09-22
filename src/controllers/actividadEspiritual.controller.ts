@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import ActividadEspiritual from "../models/actividadEspiritual.model";
 import CategoriaActividadEspiritual from "../models/categoriaActividadEspiritual.model";
 import Informe from "../models/informe.model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
 export const getActividadEspiritualPorInforme = async (
   req: Request,
@@ -10,6 +11,14 @@ export const getActividadEspiritualPorInforme = async (
   const { informeId } = req.params;
 
   try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
     const actividades = await ActividadEspiritual.findAll({
       where: { informe_id: informeId, estado: true },
       include: [

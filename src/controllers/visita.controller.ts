@@ -1,5 +1,30 @@
 import { Request, Response } from "express";
 import Visita from "../models/visita.model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
+
+export const getVisitasPorInforme = async (req: Request, res: Response) => {
+  const { informeId } = req.params;
+
+  try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
+    const visitas = await Visita.findAll({ where: { informe_id: informeId } });
+
+    return res.json({
+      ok: true,
+      visitas,
+      msg: "Visitas registradas",
+    });
+  } catch (error) {
+    return res.status(500).json({ msg: "Hable con el administrador", error });
+  }
+};
 
 export const getVisitas = async (req: Request, res: Response) => {
   try {

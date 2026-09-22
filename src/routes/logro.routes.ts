@@ -9,13 +9,22 @@ import {
   crearLogro,
   eliminarLogro,
   getLogros,
+  getLogrosPorInforme,
 } from "../controllers/logro.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getLogrosPorInforme);
+router.get(
+  "/informe/logros",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getLogrosPorInforme,
+);
 router.get("/", validarJWT, getLogros);
 router.post(
   "/",

@@ -1,6 +1,39 @@
 import { Request, Response } from "express";
 import db from "../database/connection";
 import Actividad from "../models/actividad.model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
+
+export const getActividadPorInforme = async (
+  req: Request,
+  res: Response,
+) => {
+  const { informeId } = req.params;
+
+  try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
+    const atividad = await Actividad.findAll({
+      where: { informe_id: informeId },
+      order: db.col("fecha"),
+    });
+
+    return res.json({
+      ok: true,
+      atividad,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      msg: "Hable con el administrador - ",
+      error,
+    });
+  }
+};
 
 export const getActividad = async (req: Request, res: Response) => {
   try {

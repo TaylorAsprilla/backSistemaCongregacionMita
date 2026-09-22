@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import AsuntoPendiente from "../models/asuntoPendiente.model";
 import Informe from "../models/informe.model";
 import TipoStatus from "../models/tipoStatus,model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
 export const getAsuntosPendientes = async (req: Request, res: Response) => {
   try {
@@ -62,6 +63,14 @@ export const getAsuntosPorInforme = async (req: Request, res: Response) => {
   const { informeId } = req.params;
 
   try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
     const asuntos = await AsuntoPendiente.findAll({
       where: {
         informe_id: informeId,

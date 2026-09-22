@@ -10,13 +10,22 @@ import {
   eliminarVisita,
   getUnaVisita,
   getVisitas,
+  getVisitasPorInforme,
 } from "../controllers/visita.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getVisitasPorInforme);
+router.get(
+  "/informe/visitas",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getVisitasPorInforme,
+);
 router.get("/", validarJWT, getVisitas);
 router.get("/:id", validarJWT, getUnaVisita);
 router.post(

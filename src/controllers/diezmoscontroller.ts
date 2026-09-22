@@ -1,5 +1,25 @@
 import { Request, Response } from "express";
 import Diezmos from "../models/diezmos.model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
+
+export const getDiezmosPorInforme = async (req: Request, res: Response) => {
+  const { informeId } = req.params;
+
+  try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
+    const diezmos = await Diezmos.findAll({ where: { informe_id: informeId } });
+    return res.json({ ok: true, diezmos });
+  } catch (error) {
+    return res.status(500).json({ msg: "Hable con el administrador", error });
+  }
+};
 
 export const getDiezmos = async (req: Request, res: Response) => {
   try {

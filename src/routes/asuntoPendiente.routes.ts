@@ -17,6 +17,7 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import { TIPO_ASUNTO_PENDIENTE_ENUM } from "../enum/asuntoPendiente.enum";
 
 const router = Router();
@@ -26,6 +27,12 @@ router.get("/:id", validarJWT, getAsuntoPendiente);
 
 // Rutas para seguimiento de asuntos pendientes
 router.get("/informe/:informeId", validarJWT, getAsuntosPorInforme);
+router.get(
+  "/informe/asuntos-pendientes",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getAsuntosPorInforme,
+);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,

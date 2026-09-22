@@ -8,13 +8,22 @@ import {
   actualizarActividad,
   crearActividad,
   getActividad,
+  getActividadPorInforme,
 } from "../controllers/actividad.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getActividadPorInforme);
+router.get(
+  "/informe/actividades",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getActividadPorInforme,
+);
 router.get("/", validarJWT, getActividad);
 router.post(
   "/",
