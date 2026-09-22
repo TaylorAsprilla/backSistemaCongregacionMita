@@ -7,14 +7,24 @@ import { check } from "express-validator";
 import {
   actualizarSituacionVisita,
   crearSituacionVisita,
+  eliminarSituacionVisita,
   getSituacionVisita,
+  getSituacionVisitaPorInforme,
 } from "../controllers/situacionVisita.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getSituacionVisitaPorInforme);
+router.get(
+  "/informe/situaciones-visita",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getSituacionVisitaPorInforme,
+);
 router.get("/", validarJWT, getSituacionVisita);
 router.post(
   "/",
@@ -31,8 +41,9 @@ router.post(
     validarCampos,
     validarJWT,
   ],
-  crearSituacionVisita
+  crearSituacionVisita,
 );
 router.put("/:id", validarJWT, actualizarSituacionVisita);
+router.delete("/:id", validarJWT, eliminarSituacionVisita);
 
 export default router;

@@ -1,5 +1,29 @@
 import { Request, Response } from "express";
 import Logro from "../models/logro.model";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
+
+export const getLogrosPorInforme = async (req: Request, res: Response) => {
+  const { informeId } = req.params;
+
+  try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
+    const logros = await Logro.findAll({ where: { informe_id: informeId } });
+    return res.json({
+      ok: true,
+      logros,
+      msg: "Logros registrados",
+    });
+  } catch (error) {
+    return res.status(500).json({ msg: "Hable con el administrador", error });
+  }
+};
 
 export const getLogros = async (req: Request, res: Response) => {
   try {

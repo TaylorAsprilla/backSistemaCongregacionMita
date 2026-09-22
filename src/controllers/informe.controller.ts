@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
+import ActividadEspiritual from "../models/actividadEspiritual.model";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import Diezmos from "../models/diezmos.model";
@@ -14,6 +15,107 @@ import SituacionVisita from "../models/situacionVisita.model";
 import Usuario from "../models/usuario.model";
 import Visita from "../models/visita.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
+
+type AuthenticatedRequest = Request & { id?: number };
+
+const esFechaISO = (fecha: unknown): fecha is string =>
+  typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+
+export const getResumenInforme = async (req: Request, res: Response) => {
+  const { usuarioId, fechaInicio, fechaFin } = req.query;
+  const usuarioAutenticado = (req as AuthenticatedRequest).id;
+
+  if (
+    typeof usuarioId !== "string" ||
+    !/^\d+$/.test(usuarioId) ||
+    !esFechaISO(fechaInicio) ||
+    !esFechaISO(fechaFin)
+  ) {
+    return res.status(400).json({
+      ok: false,
+      msg: "Se requiere usuarioId numérico, fechaInicio y fechaFin en formato YYYY-MM-DD",
+    });
+  }
+
+  if (Number(usuarioId) !== usuarioAutenticado) {
+    return res.status(403).json({
+      ok: false,
+      msg: "No tiene permiso para consultar este informe",
+    });
+  }
+
+  if (fechaInicio > fechaFin) {
+    return res.status(400).json({
+      ok: false,
+      msg: "fechaInicio no puede ser posterior a fechaFin",
+    });
+  }
+
+  try {
+    const informe = await Informe.findOne({
+      attributes: ["id", "usuario_id", "estado", "createdAt", "updatedAt"],
+      where: {
+        usuario_id: Number(usuarioId),
+        estado: ESTADO_INFORME_ENUM.ABIERTO,
+        createdAt: {
+          [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
+        },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!informe) {
+      return res.json({
+        ok: true,
+        tieneInformeAbierto: false,
+        informe: null,
+        secciones: null,
+      });
+    }
+
+    const informeId = informe.getDataValue("id");
+    const [
+      actividades,
+      metas,
+      visitas,
+      situacionVisitas,
+      logros,
+      aspectoEspiritual,
+      actividadesEconomicas,
+    ] = await Promise.all([
+      Actividad.count({ where: { informe_id: informeId } }),
+      Meta.count({ where: { informe_id: informeId } }),
+      Visita.count({ where: { informe_id: informeId } }),
+      SituacionVisita.count({ where: { informe_id: informeId } }),
+      Logro.count({ where: { informe_id: informeId } }),
+      ActividadEspiritual.count({ where: { informe_id: informeId } }),
+      ActividadEconomica.count({ where: { informe_id: informeId } }),
+    ]);
+
+    return res.json({
+      ok: true,
+      tieneInformeAbierto: true,
+      informe,
+      secciones: {
+        actividades: actividades > 0,
+        metas: metas > 0,
+        visitas: visitas > 0,
+        situacionVisitas: situacionVisitas > 0,
+        logros: logros > 0,
+        aspectoEspiritual: aspectoEspiritual > 0,
+        actividadesEconomicas: actividadesEconomicas > 0,
+      },
+      msg: "Informe abierto encontrado",
+    });
+  } catch (error) {
+    console.error("Error obteniendo resumen del informe:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
 
 export const getInformes = async (req: Request, res: Response) => {
   try {

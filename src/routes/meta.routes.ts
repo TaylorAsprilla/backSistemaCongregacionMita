@@ -18,6 +18,7 @@ import {
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
@@ -26,6 +27,12 @@ router.get("/:id", validarJWT, getMeta);
 
 // Nuevas rutas para seguimiento de metas
 router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
+router.get(
+  "/informe/metas",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getMetasPorInforme,
+);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,

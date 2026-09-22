@@ -3,6 +3,7 @@ import Meta from "../models/meta.model";
 import Informe from "../models/informe.model";
 import TipoStatus from "../models/tipoStatus,model";
 import { Op } from "sequelize";
+import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
 export const getMetas = async (req: Request, res: Response) => {
   try {
@@ -132,6 +133,14 @@ export const getMetasPorInforme = async (req: Request, res: Response) => {
   const { informeId } = req.params;
 
   try {
+    const informe = await obtenerInformeAutorizado(req, informeId);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe el informe con el id ${informeId}`,
+      });
+    }
+
     const metas = await Meta.findAll({
       where: {
         informe_id: informeId,

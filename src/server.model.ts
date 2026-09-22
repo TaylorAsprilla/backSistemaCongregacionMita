@@ -1,5 +1,6 @@
 import "./crons/notifyExpiration";
 import "./crons/notifyPendingRequests";
+import "./crons/closeQuarterlyReports";
 
 import express, { Application } from "express";
 import usuarioRoutes from "./routes/usuario.routes";

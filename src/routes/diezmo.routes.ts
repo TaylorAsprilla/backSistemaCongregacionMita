@@ -7,15 +7,24 @@ import { check } from "express-validator";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import {
   actualizarDiezmo,
   crearDiezmo,
   getDiezmos,
+  getDiezmosPorInforme,
   getUnDiezmo,
 } from "../controllers/diezmoscontroller";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getDiezmosPorInforme);
+router.get(
+  "/informe/diezmos",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getDiezmosPorInforme,
+);
 router.get("/", validarJWT, getDiezmos);
 router.get("/:id", validarJWT, getUnDiezmo);
 router.post(

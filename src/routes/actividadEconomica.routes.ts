@@ -8,15 +8,24 @@ import {
   actualizarActividadEconomica,
   crearActividadEconomica,
   getActividadEconomica,
+  getActividadEconomicaPorInforme,
   getUnaActividadEconomica,
   eliminarActividadEconomica,
 } from "../controllers/actividadEconomica.controller";
 
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 
 const router = Router();
 
+router.get("/informe/:informeId", validarJWT, getActividadEconomicaPorInforme);
+router.get(
+  "/informe/actividades-economicas",
+  validarJWT,
+  cargarInformeIdDesdeQuery,
+  getActividadEconomicaPorInforme,
+);
 router.get("/", validarJWT, getActividadEconomica);
 
 router.get("/:id", validarJWT, getUnaActividadEconomica);

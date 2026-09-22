@@ -11,6 +11,7 @@ import {
   getInforme,
   getInformes,
   getInformesPorTrimestreYPais,
+  getResumenInforme,
   verificarInformeAbierto,
 } from "../controllers/informe.controller";
 
@@ -21,6 +22,7 @@ const router = Router();
 
 router.get("/", validarJWT, getInformes);
 router.get("/verificar-abierto", validarJWT, verificarInformeAbierto);
+router.get("/resumen", validarJWT, getResumenInforme);
 router.get("/trimestre-pais", validarJWT, getInformesPorTrimestreYPais);
 router.get("/:id", validarJWT, getInforme);
 router.post(
