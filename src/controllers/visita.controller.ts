@@ -16,6 +16,10 @@ export const getVisitasPorInforme = async (req: Request, res: Response) => {
 
     const visitas = await Visita.findAll({
       where: { informe_id: informeId, estado: true },
+      order: [
+        ["mes", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     return res.json({
@@ -30,7 +34,12 @@ export const getVisitasPorInforme = async (req: Request, res: Response) => {
 
 export const getVisitas = async (req: Request, res: Response) => {
   try {
-    const visitas = await Visita.findAll();
+    const visitas = await Visita.findAll({
+      order: [
+        ["mes", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
 
     res.json({
       ok: true,

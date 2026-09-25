@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import db from "../database/connection";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
@@ -20,7 +19,10 @@ export const getActividadEconomicaPorInforme = async (
 
     const actividadEconomica = await ActividadEconomica.findAll({
       where: { informe_id: informeId },
-      order: db.col("fecha"),
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     return res.json({ ok: true, actividadEconomica });
@@ -35,7 +37,10 @@ export const getActividadEconomicaPorInforme = async (
 export const getActividadEconomica = async (req: Request, res: Response) => {
   try {
     const actividadEconomica = await ActividadEconomica.findAll({
-      order: db.col("fecha"),
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({

@@ -19,6 +19,10 @@ export const getSituacionVisitaPorInforme = async (
 
     const situacionVisitas = await SituacionVisita.findAll({
       where: { informe_id: informeId },
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     return res.json({

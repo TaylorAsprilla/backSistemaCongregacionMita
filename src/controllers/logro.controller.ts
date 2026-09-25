@@ -16,6 +16,10 @@ export const getLogrosPorInforme = async (req: Request, res: Response) => {
 
     const logros = await Logro.findAll({
       where: { informe_id: informeId, estado: true },
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
     return res.json({
       ok: true,
@@ -29,7 +33,12 @@ export const getLogrosPorInforme = async (req: Request, res: Response) => {
 
 export const getLogros = async (req: Request, res: Response) => {
   try {
-    const logros = await Logro.findAll();
+    const logros = await Logro.findAll({
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
 
     res.json({
       ok: true,

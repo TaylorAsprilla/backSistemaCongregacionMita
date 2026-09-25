@@ -15,6 +15,10 @@ export const getAsuntosPendientes = async (req: Request, res: Response) => {
           attributes: ["id", "createdAt"],
         },
       ],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({
@@ -76,6 +80,10 @@ export const getAsuntosPorInforme = async (req: Request, res: Response) => {
         informe_id: informeId,
         estado: true,
       },
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({
@@ -131,6 +139,10 @@ export const getAsuntosPendientesPorUsuario = async (
           },
           attributes: ["id", "createdAt"],
         },
+      ],
+      order: [
+        ["createdAt", "DESC"],
+        ["id", "DESC"],
       ],
     });
 

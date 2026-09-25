@@ -14,7 +14,13 @@ export const getDiezmosPorInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const diezmos = await Diezmos.findAll({ where: { informe_id: informeId } });
+    const diezmos = await Diezmos.findAll({
+      where: { informe_id: informeId },
+      order: [
+        ["mes", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
     return res.json({ ok: true, diezmos });
   } catch (error) {
     return res.status(500).json({ msg: "Hable con el administrador", error });
@@ -23,7 +29,12 @@ export const getDiezmosPorInforme = async (req: Request, res: Response) => {
 
 export const getDiezmos = async (req: Request, res: Response) => {
   try {
-    const diezmos = await Diezmos.findAll();
+    const diezmos = await Diezmos.findAll({
+      order: [
+        ["mes", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
 
     res.json({
       ok: true,
