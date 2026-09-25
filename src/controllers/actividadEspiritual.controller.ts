@@ -28,7 +28,10 @@ export const getActividadEspiritualPorInforme = async (
           attributes: ["id", "nombre", "descripcion"],
         },
       ],
-      order: [["createdAt", "DESC"]],
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({

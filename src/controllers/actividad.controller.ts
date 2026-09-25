@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
@@ -17,7 +16,10 @@ export const getActividadPorInforme = async (req: Request, res: Response) => {
 
     const atividad = await Actividad.findAll({
       where: { informe_id: informeId },
-      order: db.col("fecha"),
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     return res.json({
@@ -35,7 +37,10 @@ export const getActividadPorInforme = async (req: Request, res: Response) => {
 export const getActividad = async (req: Request, res: Response) => {
   try {
     const atividad = await Actividad.findAll({
-      order: db.col("fecha"),
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({

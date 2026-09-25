@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import db from "../database/connection";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import ActividadEspiritual from "../models/actividadEspiritual.model";
@@ -92,6 +91,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
       aspectoEspiritual,
       actividadesEconomicas,
       asuntosPendientes,
+      diezmos,
     ] = await Promise.all([
       Actividad.count({ where: { informe_id: idInformeEncontrado } }),
       Meta.count({
@@ -111,6 +111,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
       AsuntoPendiente.count({
         where: { informe_id: idInformeEncontrado, estado: true },
       }),
+      Diezmos.count({ where: { informe_id: idInformeEncontrado } }),
     ]);
 
     return res.json({
@@ -126,6 +127,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
         aspectoEspiritual: aspectoEspiritual > 0,
         actividadesEconomicas: actividadesEconomicas > 0,
         asuntosPendientes: asuntosPendientes > 0,
+        aspectoContable: diezmos > 0,
       },
       msg: "Informe abierto encontrado",
     });
@@ -142,7 +144,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
 export const getInformes = async (req: Request, res: Response) => {
   try {
     const informes = await Informe.findAll({
-      order: db.col("fecha"),
+      order: [["createdAt", "DESC"]],
     });
 
     res.json({
@@ -169,6 +171,10 @@ export const getInforme = async (req: Request, res: Response) => {
         where: {
           informe_id: id,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const visitas = await Visita.findAll({
@@ -176,18 +182,30 @@ export const getInforme = async (req: Request, res: Response) => {
           informe_id: id,
           estado: true,
         },
+        order: [
+          ["mes", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const situacionVisita = await SituacionVisita.findAll({
         where: {
           informe_id: id,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const aspectoContable = await Diezmos.findAll({
         where: {
           informe_id: id,
         },
+        order: [
+          ["mes", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const logros = await Logro.findAll({
@@ -195,6 +213,10 @@ export const getInforme = async (req: Request, res: Response) => {
           informe_id: id,
           estado: true,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const metas = await Meta.findAll({
@@ -202,6 +224,10 @@ export const getInforme = async (req: Request, res: Response) => {
           informe_id: id,
           estado: true,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const actividadesEspirituales = await ActividadEspiritual.findAll({
@@ -209,12 +235,20 @@ export const getInforme = async (req: Request, res: Response) => {
           informe_id: id,
           estado: true,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const actividadesEconomicas = await ActividadEconomica.findAll({
         where: {
           informe_id: id,
         },
+        order: [
+          ["fecha", "DESC"],
+          ["id", "DESC"],
+        ],
       });
 
       const asuntosPendientes = await AsuntoPendiente.findAll({
@@ -533,18 +567,38 @@ export const getInformesPorTrimestreYPais = async (
           await Promise.all([
             Visita.findAll({
               where: { informe_id: informe.id },
+              order: [
+                ["mes", "DESC"],
+                ["id", "DESC"],
+              ],
             }),
             SituacionVisita.findAll({
               where: { informe_id: informe.id },
+              order: [
+                ["fecha", "DESC"],
+                ["id", "DESC"],
+              ],
             }),
             Diezmos.findAll({
               where: { informe_id: informe.id },
+              order: [
+                ["mes", "DESC"],
+                ["id", "DESC"],
+              ],
             }),
             Logro.findAll({
               where: { informe_id: informe.id },
+              order: [
+                ["fecha", "DESC"],
+                ["id", "DESC"],
+              ],
             }),
             Meta.findAll({
               where: { informe_id: informe.id },
+              order: [
+                ["fecha", "DESC"],
+                ["id", "DESC"],
+              ],
             }),
           ]);
 

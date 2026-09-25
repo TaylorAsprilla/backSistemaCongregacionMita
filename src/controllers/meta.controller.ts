@@ -7,7 +7,12 @@ import { obtenerInformeAutorizado } from "../helpers/informe-autorizado";
 
 export const getMetas = async (req: Request, res: Response) => {
   try {
-    const metas = await Meta.findAll();
+    const metas = await Meta.findAll({
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
+    });
 
     res.json({
       ok: true,
@@ -159,7 +164,10 @@ export const getMetasPorInforme = async (req: Request, res: Response) => {
           required: false,
         },
       ],
-      order: [["fecha", "ASC"]],
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({
@@ -227,7 +235,10 @@ export const getMetasPendientesPorUsuario = async (
           attributes: ["id", "status"],
         },
       ],
-      order: [["fecha", "ASC"]],
+      order: [
+        ["fecha", "DESC"],
+        ["id", "DESC"],
+      ],
     });
 
     res.json({
