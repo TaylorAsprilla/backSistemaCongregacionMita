@@ -11,6 +11,7 @@ import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import {
   actualizarDiezmo,
   crearDiezmo,
+  eliminarDiezmo,
   getDiezmos,
   getDiezmosPorInforme,
   getUnDiezmo,
@@ -55,5 +56,6 @@ router.post(
   crearDiezmo,
 );
 router.put("/:id", validarJWT, actualizarDiezmo);
+router.delete("/:id", validarJWT, eliminarDiezmo);
 
 export default router;

@@ -123,3 +123,31 @@ export const actualizarDiezmo = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const eliminarDiezmo = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const diezmo = await Diezmos.findByPk(id);
+    if (!diezmo) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe un diezmo con el id ${id}`,
+      });
+    }
+
+    await diezmo.destroy();
+
+    return res.json({
+      ok: true,
+      msg: "Diezmo eliminado",
+      id,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
