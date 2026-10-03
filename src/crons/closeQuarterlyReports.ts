@@ -14,10 +14,12 @@ const closeExpiredQuarterlyReports = async () => {
     let informesCerrados = 0;
 
     for (const informe of informesAbiertos) {
-      const fechaCreacion = new Date(informe.getDataValue("createdAt"));
-      const trimestre = Math.floor(fechaCreacion.getMonth() / 3);
+      const fechaInforme = informe.getDataValue("periodo")
+        ? new Date(`${informe.getDataValue("periodo")}T00:00:00`)
+        : new Date(informe.getDataValue("createdAt"));
+      const trimestre = Math.floor(fechaInforme.getMonth() / 3);
       const finTrimestre = new Date(
-        fechaCreacion.getFullYear(),
+        fechaInforme.getFullYear(),
         (trimestre + 1) * 3,
         0,
         23,

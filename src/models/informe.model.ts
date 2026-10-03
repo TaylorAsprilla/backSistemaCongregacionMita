@@ -19,6 +19,10 @@ const Informe = db.define(
       allowNull: false,
       defaultValue: ESTADO_INFORME_ENUM.ABIERTO,
     },
+    periodo: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,

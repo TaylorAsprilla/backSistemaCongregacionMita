@@ -15,6 +15,7 @@ import SituacionVisita from "../models/situacionVisita.model";
 import Usuario from "../models/usuario.model";
 import Visita from "../models/visita.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
+import { obtenerPeriodoInformeActivo } from "../helpers/periodoInforme";
 
 type AuthenticatedRequest = Request & { id?: number };
 
@@ -57,9 +58,15 @@ export const getResumenInforme = async (req: Request, res: Response) => {
     const whereInforme: any = {
       usuario_id: Number(usuarioId),
       estado: ESTADO_INFORME_ENUM.ABIERTO,
-      createdAt: {
-        [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
-      },
+      [Op.or]: [
+        { periodo: fechaInicio },
+        {
+          periodo: null,
+          createdAt: {
+            [Op.between]: [`${fechaInicio} 00:00:00`, `${fechaFin} 23:59:59.999`],
+          },
+        },
+      ],
     };
 
     if (typeof informeId === "string") {
@@ -67,7 +74,7 @@ export const getResumenInforme = async (req: Request, res: Response) => {
     }
 
     const informe = await Informe.findOne({
-      attributes: ["id", "usuario_id", "estado", "createdAt", "updatedAt"],
+      attributes: ["id", "usuario_id", "estado", "periodo", "createdAt", "updatedAt"],
       where: whereInforme,
       order: [["createdAt", "DESC"]],
     });
@@ -290,6 +297,14 @@ export const getInforme = async (req: Request, res: Response) => {
 
 export const crearInforme = async (req: Request, res: Response) => {
   const { body } = req;
+  const periodo = body.periodo || obtenerPeriodoInformeActivo();
+
+  if (!esFechaISO(periodo) || periodo !== obtenerPeriodoInformeActivo()) {
+    return res.status(400).json({
+      ok: false,
+      msg: "El periodo del informe debe ser el trimestre abierto actualmente",
+    });
+  }
 
   // =======================================================================
   //                          Guardar Informe
@@ -310,7 +325,7 @@ export const crearInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const informe = Informe.build(body);
+    const informe = Informe.build({ ...body, periodo });
     await informe.save();
 
     res.json({ ok: true, msg: "Informe creado ", informe });
@@ -400,9 +415,15 @@ export const verificarInformeAbierto = async (req: Request, res: Response) => {
       where: {
         usuario_id,
         estado: ESTADO_INFORME_ENUM.ABIERTO,
-        createdAt: {
-          [Op.between]: [fechaInicio, fechaFin],
-        },
+        [Op.or]: [
+          { periodo: fechaInicio },
+          {
+            periodo: null,
+            createdAt: {
+              [Op.between]: [fechaInicio, fechaFin],
+            },
+          },
+        ],
       },
     });
 
@@ -524,15 +545,23 @@ export const getInformesPorTrimestreYPais = async (
       });
     }
 
-    // Buscar todos los informes de esos obreros en el trimestre especificado
+    const periodo = `${añoNum}-${String((trimestreNum - 1) * 3 + 1).padStart(2, "0")}-01`;
+
+    // Buscar informes del periodo solicitado, incluyendo los registros anteriores a la columna periodo.
     const informes = await Informe.findAll({
       where: {
         usuario_id: {
           [Op.in]: obrerosArray,
         },
-        createdAt: {
-          [Op.between]: [fechaInicio, fechaFin],
-        },
+        [Op.or]: [
+          { periodo },
+          {
+            periodo: null,
+            createdAt: {
+              [Op.between]: [fechaInicio, fechaFin],
+            },
+          },
+        ],
       },
       include: [
         {
