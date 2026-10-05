@@ -62,6 +62,13 @@ import {
   periodosHistorico,
 } from "./dashboardSupervision/periodos";
 import { calcularPromedio, calcularVariacion, Variacion } from "./dashboardSupervision/variacion";
+import {
+  contarPorGrupo,
+  grupoDeVariacion,
+  gruposDeFiltro,
+  SERVICIOS_VARIACION,
+  servicioVariacion,
+} from "./dashboardSupervision/variacionServicios";
 
 export class ErrorDashboard extends Error {
   constructor(
@@ -551,6 +558,24 @@ const construirSeries = (
       })),
     }));
 
+/** Variación de los indicadores indicados para una unidad (periodo actual vs comparación). */
+const variacionesUnidad = (
+  ds: Dataset,
+  unidad: (typeof ds.unidades)[number],
+  claves: string[],
+): Record<string, Variacion> => {
+  const actual = agregadoUnidad(ds, unidad, ds.periodo);
+  const anterior = agregadoUnidad(ds, unidad, ds.comparacion);
+  const resultado: Record<string, Variacion> = {};
+  for (const clave of claves) {
+    const indicador = INDICADORES_POR_CLAVE.get(clave)!;
+    resultado[clave] = calcularVariacion(indicador.extraer(anterior), indicador.extraer(actual));
+  }
+  return resultado;
+};
+
+const INDICADORES_SERVICIO = SERVICIOS_VARIACION.map((s) => s.indicador);
+
 const todasLasAlertas = (ds: Dataset) =>
   ordenarAlertas(ds.unidades.flatMap((u) => ds.alertasPorUnidad.get(u.clave) ?? []));
 
@@ -619,6 +644,15 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
     },
     indicadores: construirIndicadores(total, actual, anterior),
     asistenciaPorServicio: construirAsistenciaPorServicio(total, actual, anterior),
+    variacionPorServicio: (() => {
+      const porUnidad = ds.unidades.map((u) => variacionesUnidad(ds, u, INDICADORES_SERVICIO));
+      return SERVICIOS_VARIACION.map((s) => ({
+        clave: s.clave,
+        etiqueta: s.etiqueta,
+        indicador: s.indicador,
+        conteo: contarPorGrupo(porUnidad.map((v) => v[s.indicador])),
+      }));
+    })(),
     actividadesEspiritualesPorCategoria: ds.categoriasEspirituales.map((cat) => {
       const leer = (ag: AgregadoMetricas) =>
         ag.informes > 0 ? ag.valores[`esp.cat.${cat.id}`] ?? 0 : null;
@@ -676,9 +710,9 @@ export const obtenerAlertas = async (
 
 const INDICADORES_TABLA = [
   "asistenciaGeneral",
-  "promedioAsistenciaServicio",
   "visitasTotales",
   "actividadesEspirituales",
+  ...INDICADORES_SERVICIO,
 ];
 
 const ORDENES: OrdenUnidades[] = [
@@ -695,6 +729,10 @@ export interface OpcionesUnidades {
   tipo?: string;
   estado?: string;
   orden?: string;
+  /** Clave de servicio (general, martes, jueves, domingo, otros). */
+  servicio?: string;
+  /** Grupo de variación (tendencia, DISMINUYO, AUMENTO o SIN_COMPARACION). Requiere `servicio`. */
+  variacion?: string;
   pagina?: number;
   porPagina?: number;
 }
@@ -705,29 +743,24 @@ export const obtenerUnidades = async (
 ): Promise<UnidadesDTO> => {
   const ds = await obtenerDataset(filtros);
   const busqueda = normalizarTexto(opciones.busqueda);
+  const servicio = servicioVariacion(opciones.servicio);
+  const grupos = servicio ? gruposDeFiltro(opciones.variacion) : null;
+  const indicadorOrden = servicio?.indicador ?? "asistenciaGeneral";
 
-  let filas: UnidadFilaDTO[] = ds.unidades.map((unidad) => {
-    const actual = agregadoUnidad(ds, unidad, ds.periodo);
-    const anterior = agregadoUnidad(ds, unidad, ds.comparacion);
-    const indicadores: Record<string, Variacion> = {};
-    for (const clave of INDICADORES_TABLA) {
-      const indicador = INDICADORES_POR_CLAVE.get(clave)!;
-      indicadores[clave] = calcularVariacion(indicador.extraer(anterior), indicador.extraer(actual));
-    }
-    return {
-      unidad: unidad.ref,
-      obreros: nombreObreros(unidad, ds.usuarios),
-      estadoEntrega: estadoUnidad(ds, unidad),
-      informes: actual.informes,
-      indicadores,
-      alertas: ds.alertasPorUnidad.get(unidad.clave)?.length ?? 0,
-    };
-  });
+  let filas: UnidadFilaDTO[] = ds.unidades.map((unidad) => ({
+    unidad: unidad.ref,
+    obreros: nombreObreros(unidad, ds.usuarios),
+    estadoEntrega: estadoUnidad(ds, unidad),
+    informes: agregadoUnidad(ds, unidad, ds.periodo).informes,
+    indicadores: variacionesUnidad(ds, unidad, INDICADORES_TABLA),
+    alertas: ds.alertasPorUnidad.get(unidad.clave)?.length ?? 0,
+  }));
 
   filas = filas.filter(
     (f) =>
       (!opciones.tipo || f.unidad.tipo === opciones.tipo) &&
       (!opciones.estado || f.estadoEntrega === opciones.estado) &&
+      (!grupos || grupos.includes(grupoDeVariacion(f.indicadores[servicio!.indicador]))) &&
       (!busqueda ||
         normalizarTexto(
           [f.unidad.nombre, f.unidad.pais, f.unidad.congregacion, ...f.obreros].join(" "),
@@ -738,7 +771,7 @@ export const obtenerUnidades = async (
     ? (opciones.orden as OrdenUnidades)
     : "NOMBRE";
   const texto = (a: string | null, b: string | null) => (a ?? "").localeCompare(b ?? "", "es");
-  const porcentaje = (f: UnidadFilaDTO) => f.indicadores.asistenciaGeneral?.porcentaje ?? null;
+  const porcentaje = (f: UnidadFilaDTO) => f.indicadores[indicadorOrden]?.porcentaje ?? null;
   const porNombre = (a: UnidadFilaDTO, b: UnidadFilaDTO) => texto(a.unidad.nombre, b.unidad.nombre);
 
   filas.sort((a, b) => {

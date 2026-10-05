@@ -4,6 +4,10 @@ import {
   CategoriaActividad,
 } from "../services/dashboardSupervision/clasificacion";
 import { GrupoIndicador } from "../services/dashboardSupervision/metricas";
+import {
+  ClaveServicio,
+  GrupoVariacion,
+} from "../services/dashboardSupervision/variacionServicios";
 
 /** PAIS = Congregación País, CONGREGACION = Congregación Ciudad, CAMPO = Congregación Campo. */
 export type TipoUnidad = "PAIS" | "CONGREGACION" | "CAMPO";
@@ -122,9 +126,18 @@ export interface ResumenDTO {
   cobertura: CoberturaDTO;
   indicadores: IndicadorDTO[];
   asistenciaPorServicio: AsistenciaServicioDTO[];
+  /** Cantidad de congregaciones por tipo de variación del promedio de asistencia de cada servicio. */
+  variacionPorServicio: VariacionServicioDTO[];
   actividadesEspiritualesPorCategoria: CategoriaEspiritualDTO[];
   actividadEconomica: MonedaDTO;
   alertas: { total: number; porTipo: Record<string, number> };
+}
+
+export interface VariacionServicioDTO {
+  clave: ClaveServicio;
+  etiqueta: string;
+  indicador: string;
+  conteo: Record<GrupoVariacion, number>;
 }
 
 export interface PuntoSerieDTO {

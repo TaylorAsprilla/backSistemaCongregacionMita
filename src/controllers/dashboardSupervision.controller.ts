@@ -58,6 +58,8 @@ export const getUnidades = manejar(async (req) => ({
     tipo: texto(req.query.tipo),
     estado: texto(req.query.estado),
     orden: texto(req.query.orden),
+    servicio: texto(req.query.servicio),
+    variacion: texto(req.query.variacion),
     pagina: entero(req.query.pagina),
     porPagina: entero(req.query.porPagina),
   }),

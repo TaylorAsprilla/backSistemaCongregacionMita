@@ -102,6 +102,22 @@ del periodo.
 
 Las palabras clave están en la configuración.
 
+### Variación de asistencia por servicio
+
+Para revisar muchas congregaciones a la vez, `/resumen` incluye `variacionPorServicio`: por cada
+servicio (`general`, `martes`, `jueves`, `domingo`, `otros`), cuántas congregaciones del alcance
+quedan en cada grupo según la variación de **su propio** promedio de asistencia por servicio
+(periodo actual vs. comparación): `DISMINUCION_SIGNIFICATIVA`, `DISMINUCION_MODERADA`, `ESTABLE`,
+`INCREMENTO_MODERADO`, `INCREMENTO_SIGNIFICATIVO` y `SIN_COMPARACION` (sin informe en alguno de
+los periodos, sin base o sin servicios). Cada congregación cuenta una sola vez por servicio, de modo
+que la suma de cada fila es el total de congregaciones del alcance.
+
+En `/unidades`, `servicio` + `variacion` filtran la tabla por ese mismo grupo. `variacion` acepta
+cualquiera de los grupos anteriores o `DISMINUYO` / `AUMENTO` (ambos niveles). Con `servicio`, el
+orden `MAYOR_INCREMENTO` / `MAYOR_DISMINUCION` usa el promedio de ese servicio. Cada fila incluye
+`promedioAsistenciaServicio`, `promedioServicioMartes`, `promedioServicioJueves`,
+`promedioServicioDomingo` y `promedioServicioOtrosDias`.
+
 ### Alertas
 
 | Tipo                    | Nivel        | Regla                                                                 |
@@ -134,7 +150,7 @@ jerarquía; de lo contrario se responde 400.
 | GET    | `/resumen`                | —                                                                            |
 | GET    | `/tendencias`             | —                                                                            |
 | GET    | `/alertas`                | `tipo`, `nivel`                                                              |
-| GET    | `/unidades`               | `busqueda`, `tipo`, `estado`, `orden`, `pagina`, `porPagina` (máx. 100)      |
+| GET    | `/unidades`               | `busqueda`, `tipo`, `estado`, `orden`, `servicio`, `variacion`, `pagina`, `porPagina` (máx. 100) |
 | GET    | `/unidades/:tipo/:id`     | `tipo` = `PAIS` \| `CONGREGACION` \| `CAMPO`                                   |
 
 `orden`: `NOMBRE`, `PAIS`, `CONGREGACION`, `MAYOR_INCREMENTO`, `MAYOR_DISMINUCION`,
@@ -163,6 +179,7 @@ desempeño).
       }
     ],
     "asistenciaPorServicio": [],
+    "variacionPorServicio": [],
     "actividadesEspiritualesPorCategoria": [],
     "actividadEconomica": { "disponible": false, "montoRecaudado": null, "mensaje": "Seleccione un país para ver montos: cada país registra en su moneda local y no se suman entre sí." },
     "alertas": { "total": 227, "porTipo": { "INFORME_PENDIENTE": 222 } }
