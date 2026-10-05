@@ -8,6 +8,7 @@
     "build:dev": "tsc -w",
     "start:dev": "nodemon build/app.js",
     "start": "node build/app.js",
+    "test": "tsc -p tsconfig.test.json && node --test \"build-test/tests/**/*.test.js\"",
     "deploy:prod": "eb deploy Sistemacmi-env",
     "dist": "sh ./scripts/dist.sh",
     "clean": "rm -rf build",

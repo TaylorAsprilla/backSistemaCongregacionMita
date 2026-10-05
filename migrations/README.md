@@ -147,3 +147,23 @@ DROP TABLE IF EXISTS categoriaProfesion;
 ```sql
 SHOW COLUMNS FROM auditoriaUsuario LIKE 'accion';
 ```
+
+### 005-indices-dashboard-supervision.sql
+
+**Descripción:**
+
+- Agrega el índice `idx_informe_periodo_usuario (periodo, usuario_id)` a la tabla `informe`, usado por el Dashboard Ejecutivo de Supervisión Congregacional (`/api/dashboard-supervision`).
+- Es idempotente: si el índice ya existe no hace cambios.
+- Requiere haber ejecutado antes la migración `004-add-periodo-a-informe.sql`.
+
+**Verificación:**
+
+```sql
+SHOW INDEX FROM informe WHERE Key_name = 'idx_informe_periodo_usuario';
+```
+
+**Rollback:**
+
+```sql
+ALTER TABLE informe DROP INDEX idx_informe_periodo_usuario;
+```
