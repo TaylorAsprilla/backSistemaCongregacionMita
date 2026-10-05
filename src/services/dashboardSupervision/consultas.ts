@@ -26,6 +26,10 @@ export interface FilaPais {
   nombre: string;
 }
 
+export interface FilaPaisCatalogo extends FilaPais {
+  obreros: number[];
+}
+
 export interface FilaCongregacion {
   id: number;
   nombre: string;
@@ -43,12 +47,12 @@ export interface FilaCampo {
 const obreros = (...ids: unknown[]) =>
   [...new Set(ids.map(numeroONulo).filter((id): id is number => !!id && id > 0))];
 
-export const obtenerPaises = async (): Promise<FilaPais[]> =>
+export const obtenerPaises = async (): Promise<FilaPaisCatalogo[]> =>
   (
     await seleccionar<any>(
-      "SELECT id, pais FROM pais WHERE COALESCE(estado, 1) = 1 ORDER BY pais",
+      "SELECT id, pais, idObreroEncargado FROM pais WHERE COALESCE(estado, 1) = 1 ORDER BY pais",
     )
-  ).map((f) => ({ id: numero(f.id), nombre: f.pais }));
+  ).map((f) => ({ id: numero(f.id), nombre: f.pais, obreros: obreros(f.idObreroEncargado) }));
 
 export const obtenerCongregaciones = async (): Promise<FilaCongregacion[]> =>
   (

@@ -5,7 +5,8 @@ import {
 } from "../services/dashboardSupervision/clasificacion";
 import { GrupoIndicador } from "../services/dashboardSupervision/metricas";
 
-export type TipoUnidad = "CONGREGACION" | "CAMPO";
+/** PAIS = Congregación País, CONGREGACION = Congregación Ciudad, CAMPO = Congregación Campo. */
+export type TipoUnidad = "PAIS" | "CONGREGACION" | "CAMPO";
 
 /**
  * ENTREGADO       informe del periodo cerrado
@@ -80,6 +81,8 @@ export interface IndicadorDTO {
 
 export interface CoberturaDTO {
   unidades: number;
+  /** Cantidad de congregaciones por tipo (país, ciudad y campo). */
+  porTipo: Record<TipoUnidad, number>;
   conObrero: number;
   entregados: number;
   enElaboracion: number;

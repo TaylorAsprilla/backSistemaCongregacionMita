@@ -79,7 +79,7 @@ interface Unidad {
 }
 
 interface Catalogo extends CatalogoJerarquia {
-  listaPaises: consultas.FilaPais[];
+  listaPaises: consultas.FilaPaisCatalogo[];
   listaCongregaciones: consultas.FilaCongregacion[];
   listaCampos: consultas.FilaCampo[];
   categoriasEspirituales: consultas.FilaPais[];
@@ -163,6 +163,20 @@ const obtenerCatalogo = (): Promise<Catalogo> =>
   });
 
 const unidadesEnAlcance = (filtros: FiltrosDashboard, catalogo: Catalogo): Unidad[] => {
+  const paisRef = (p: consultas.FilaPaisCatalogo): Unidad => ({
+    clave: `PAIS-${p.id}`,
+    obreros: p.obreros,
+    ref: {
+      tipo: "PAIS",
+      id: p.id,
+      nombre: p.nombre,
+      pais_id: p.id,
+      pais: p.nombre,
+      congregacion_id: null,
+      congregacion: null,
+    },
+  });
+
   const congregacionRef = (c: consultas.FilaCongregacion): Unidad => ({
     clave: `CONGREGACION-${c.id}`,
     obreros: c.obreros,
@@ -211,7 +225,13 @@ const unidadesEnAlcance = (filtros: FiltrosDashboard, catalogo: Catalogo): Unida
     (k) => k.congregacion_id !== null && idsCongregacion.has(k.congregacion_id),
   );
 
-  return [...congregaciones.map(congregacionRef), ...campos.map(campoRef)];
+  // La congregación país solo entra en el alcance cuando no se filtra una congregación ciudad.
+  const paises =
+    filtros.congregacion_id === null
+      ? catalogo.listaPaises.filter((p) => filtros.pais_id === null || p.id === filtros.pais_id)
+      : [];
+
+  return [...paises.map(paisRef), ...congregaciones.map(congregacionRef), ...campos.map(campoRef)];
 };
 
 const nombreObreros = (unidad: Unidad, usuarios: Map<number, consultas.FilaUsuario>) =>
@@ -582,6 +602,11 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
     contexto: ds.contexto,
     cobertura: {
       unidades: ds.unidades.length,
+      porTipo: {
+        PAIS: ds.unidades.filter((u) => u.ref.tipo === "PAIS").length,
+        CONGREGACION: ds.unidades.filter((u) => u.ref.tipo === "CONGREGACION").length,
+        CAMPO: ds.unidades.filter((u) => u.ref.tipo === "CAMPO").length,
+      },
       conObrero,
       entregados: contar("ENTREGADO"),
       enElaboracion: contar("EN_ELABORACION"),
@@ -761,20 +786,25 @@ export const obtenerDetalleUnidad = async (
   tipo: string,
   id: number,
 ): Promise<DetalleUnidadDTO> => {
-  if (tipo !== "CONGREGACION" && tipo !== "CAMPO") {
-    throw new ErrorDashboard("El tipo de unidad debe ser CONGREGACION o CAMPO.");
+  if (tipo !== "PAIS" && tipo !== "CONGREGACION" && tipo !== "CAMPO") {
+    throw new ErrorDashboard("El tipo debe ser PAIS, CONGREGACION o CAMPO.");
   }
   if (!Number.isInteger(id) || id <= 0) {
     throw new ErrorDashboard("El identificador de la unidad no es válido.");
   }
 
   const catalogo = await obtenerCatalogo();
-  const existe = tipo === "CAMPO" ? catalogo.campos.has(id) : catalogo.congregaciones.has(id);
-  if (!existe) throw new ErrorDashboard("La unidad solicitada no existe o está inactiva.", 404);
+  const existe =
+    tipo === "CAMPO"
+      ? catalogo.campos.has(id)
+      : tipo === "PAIS"
+        ? catalogo.paises.has(id)
+        : catalogo.congregaciones.has(id);
+  if (!existe) throw new ErrorDashboard("La congregación solicitada no existe o está inactiva.", 404);
 
   const alcance: FiltrosDashboard = {
     ...filtros,
-    pais_id: null,
+    pais_id: tipo === "PAIS" ? id : null,
     congregacion_id: tipo === "CONGREGACION" ? id : null,
     campo_id: tipo === "CAMPO" ? id : null,
   };

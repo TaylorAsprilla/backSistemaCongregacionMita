@@ -38,11 +38,19 @@ menú sólo se muestra a administradores.
   - `TRIMESTRE_ANTERIOR` (por defecto): Q3 2026 vs Q2 2026.
   - `MISMO_TRIMESTRE_ANIO_ANTERIOR`: Q3 2026 vs Q3 2025.
 
-### Unidades y estado de entrega
+### Congregaciones (unidades) y estado de entrega
 
-La jerarquía es País → Congregación → Campo. Un informe no tiene llave hacia la unidad: se
-asocia por `informe.usuario_id` = `idObreroEncargado` / `idObreroEncargadoDos` de la
-congregación o campo.
+En la interfaz cada unidad se muestra como **congregación**, discriminada por tipo:
+
+| `tipo`         | En pantalla          | Tabla      | Obrero(s) que la representan                      |
+| -------------- | -------------------- | ---------- | ------------------------------------------------- |
+| `PAIS`         | Congregación País    | `pais`     | `idObreroEncargado`                               |
+| `CONGREGACION` | Congregación Ciudad  | `congregacion` | `idObreroEncargado` / `idObreroEncargadoDos`  |
+| `CAMPO`        | Congregación Campo   | `campo`    | `idObreroEncargado` / `idObreroEncargadoDos`      |
+
+Un informe no tiene llave hacia la congregación: se asocia por `informe.usuario_id` = obrero
+encargado. La Congregación País entra en el alcance cuando no se filtra una Congregación
+Ciudad o Campo. `cobertura.porTipo` entrega el conteo por tipo.
 
 | Estado           | Significado                                      |
 | ---------------- | ------------------------------------------------ |
@@ -127,7 +135,7 @@ jerarquía; de lo contrario se responde 400.
 | GET    | `/tendencias`             | —                                                                            |
 | GET    | `/alertas`                | `tipo`, `nivel`                                                              |
 | GET    | `/unidades`               | `busqueda`, `tipo`, `estado`, `orden`, `pagina`, `porPagina` (máx. 100)      |
-| GET    | `/unidades/:tipo/:id`     | `tipo` = `CONGREGACION` \| `CAMPO`                                           |
+| GET    | `/unidades/:tipo/:id`     | `tipo` = `PAIS` \| `CONGREGACION` \| `CAMPO`                                   |
 
 `orden`: `NOMBRE`, `PAIS`, `CONGREGACION`, `MAYOR_INCREMENTO`, `MAYOR_DISMINUCION`,
 `MAS_ALERTAS` (los dos de variación ordenan por la asistencia general; no es un ranking de
@@ -146,7 +154,7 @@ desempeño).
       "descripcionComparacion": "trimestre anterior (Q2 2026)",
       "generadoEn": "2026-10-04T22:00:00.000Z"
     },
-    "cobertura": { "unidades": 349, "conObrero": 223, "entregados": 0, "enElaboracion": 1, "pendientes": 222, "sinObrero": 126, "porcentajeConInforme": 0.4, "informesPeriodo": 1, "unidadesComparadas": 1 },
+    "cobertura": { "unidades": 349, "porTipo": { "PAIS": 12, "CONGREGACION": 120, "CAMPO": 217 }, "conObrero": 223, "entregados": 0, "enElaboracion": 1, "pendientes": 222, "sinObrero": 126, "porcentajeConInforme": 0.4, "informesPeriodo": 1, "unidadesComparadas": 1 },
     "indicadores": [
       {
         "clave": "asistenciaGeneral", "etiqueta": "Asistencia general", "grupo": "ASISTENCIA", "formato": "ENTERO",
@@ -180,7 +188,7 @@ desempeño).
 
 ## Exportación
 
-Desde la página se exporta a **Excel** (hojas Resumen, Asistencia por servicio, Unidades,
+Desde la página se exporta a **Excel** (hojas Resumen, Asistencia por servicio, Congregaciones,
 Alertas) y **PDF** (resumen, indicadores, servicios y alertas) con los mismos filtros
 aplicados.
 

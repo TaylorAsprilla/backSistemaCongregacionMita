@@ -11,10 +11,16 @@ import { calcularVariacion, formatearNumero } from "./variacion";
 
 const claveUnidad = (unidad: UnidadRef) => `${unidad.tipo}-${unidad.id}`;
 
-const nombreUnidad = (unidad: UnidadRef) =>
-  unidad.tipo === "CAMPO"
-    ? `el campo ${unidad.nombre}`
-    : `la congregación ${unidad.nombre}`;
+const nombreUnidad = (unidad: UnidadRef) => {
+  switch (unidad.tipo) {
+    case "PAIS":
+      return `la congregación país ${unidad.nombre}`;
+    case "CAMPO":
+      return `la congregación campo ${unidad.nombre}`;
+    default:
+      return `la congregación ciudad ${unidad.nombre}`;
+  }
+};
 
 export const ORDEN_TIPOS_ALERTA: TipoAlerta[] = [
   "INFORME_PENDIENTE",
