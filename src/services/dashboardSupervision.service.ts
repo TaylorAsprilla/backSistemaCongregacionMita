@@ -576,8 +576,15 @@ const variacionesUnidad = (
 
 const INDICADORES_SERVICIO = SERVICIOS_VARIACION.map((s) => s.indicador);
 
+/** Las alertas del dashboard se limitan a las Congregaciones Ciudad. */
+const TIPO_UNIDAD_ALERTAS = "CONGREGACION";
+
 const todasLasAlertas = (ds: Dataset) =>
-  ordenarAlertas(ds.unidades.flatMap((u) => ds.alertasPorUnidad.get(u.clave) ?? []));
+  ordenarAlertas(
+    ds.unidades
+      .filter((u) => u.ref.tipo === TIPO_UNIDAD_ALERTAS)
+      .flatMap((u) => ds.alertasPorUnidad.get(u.clave) ?? []),
+  );
 
 /* ------------------------------------------------------------------ */
 /* API pública del servicio                                            */

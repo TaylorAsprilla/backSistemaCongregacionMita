@@ -120,6 +120,9 @@ orden `MAYOR_INCREMENTO` / `MAYOR_DISMINUCION` usa el promedio de ese servicio. 
 
 ### Alertas
 
+Las alertas del dashboard (`/alertas` y `resumen.alertas`) solo incluyen **Congregaciones Ciudad**
+(tipo `CONGREGACION`).
+
 | Tipo                    | Nivel        | Regla                                                                 |
 | ----------------------- | ------------ | --------------------------------------------------------------------- |
 | `INFORME_PENDIENTE`     | Atención     | Unidad con obrero y sin informe en el periodo                         |
