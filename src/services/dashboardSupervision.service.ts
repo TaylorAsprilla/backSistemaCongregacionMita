@@ -606,6 +606,11 @@ export const obtenerFiltrosDisponibles = async (): Promise<FiltrosDisponiblesDTO
       congregacion_id: k.congregacion_id,
     })),
     umbrales: { ...DASHBOARD_SUPERVISION_CONFIG.umbrales },
+    reglasAlertas: {
+      trimestresTendencia: DASHBOARD_SUPERVISION_CONFIG.tendencia.periodosConsecutivos,
+      trimestresAsuntoRecurrente: DASHBOARD_SUPERVISION_CONFIG.asuntosRecurrentes.trimestresConsecutivos,
+      trimestresHistorico: DASHBOARD_SUPERVISION_CONFIG.trimestresHistorico,
+    },
   };
 };
 

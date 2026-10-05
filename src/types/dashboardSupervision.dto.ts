@@ -252,4 +252,10 @@ export interface FiltrosDisponiblesDTO {
   congregaciones: OpcionFiltroDTO[];
   campos: OpcionFiltroDTO[];
   umbrales: { significativo: number; moderado: number };
+  /** Reglas usadas para generar alertas (para explicarlas en pantalla). */
+  reglasAlertas: {
+    trimestresTendencia: number;
+    trimestresAsuntoRecurrente: number;
+    trimestresHistorico: number;
+  };
 }
