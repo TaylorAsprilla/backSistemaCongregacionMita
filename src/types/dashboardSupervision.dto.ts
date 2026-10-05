@@ -128,9 +128,24 @@ export interface ResumenDTO {
   asistenciaPorServicio: AsistenciaServicioDTO[];
   /** Cantidad de congregaciones por tipo de variación del promedio de asistencia de cada servicio. */
   variacionPorServicio: VariacionServicioDTO[];
+  /** Estado del informe trimestral de las Congregaciones Ciudad, agrupado por país. */
+  entregaPorPais: EntregaPaisDTO[];
   actividadesEspiritualesPorCategoria: CategoriaEspiritualDTO[];
   actividadEconomica: MonedaDTO;
   alertas: { total: number; porTipo: Record<string, number> };
+}
+
+export interface EntregaPaisDTO {
+  pais_id: number | null;
+  pais: string;
+  /** Total de Congregaciones Ciudad del país. */
+  total: number;
+  entregados: number;
+  enElaboracion: number;
+  pendientes: number;
+  sinObrero: number;
+  /** % de congregaciones con informe (entregado o en elaboración) sobre el total. */
+  porcentajeConInforme: number | null;
 }
 
 export interface VariacionServicioDTO {

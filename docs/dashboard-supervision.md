@@ -118,6 +118,13 @@ orden `MAYOR_INCREMENTO` / `MAYOR_DISMINUCION` usa el promedio de ese servicio. 
 `promedioAsistenciaServicio`, `promedioServicioMartes`, `promedioServicioJueves`,
 `promedioServicioDomingo` y `promedioServicioOtrosDias`.
 
+### Entrega del informe por país
+
+`/resumen` incluye `entregaPorPais`: por cada país del alcance (orden alfabético), el total de
+**Congregaciones Ciudad** y cuántas tienen el informe del periodo `entregados` (cerrado),
+`enElaboracion` (abierto), `pendientes` (con obrero, sin informe) o `sinObrero`.
+`porcentajeConInforme` = (entregados + en elaboración) ÷ total × 100.
+
 ### Alertas
 
 Las alertas del dashboard (`/alertas` y `resumen.alertas`) solo incluyen **Congregaciones Ciudad**
