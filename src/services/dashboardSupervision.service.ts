@@ -6,6 +6,7 @@ import {
   AsistenciaServicioDTO,
   ContextoDashboard,
   DetalleUnidadDTO,
+  EntregaPaisDTO,
   EstadoEntrega,
   FiltrosDashboard,
   FiltrosDisponiblesDTO,
@@ -586,6 +587,51 @@ const todasLasAlertas = (ds: Dataset) =>
       .flatMap((u) => ds.alertasPorUnidad.get(u.clave) ?? []),
   );
 
+/** Estado del informe trimestral de las Congregaciones Ciudad, agrupado por país (orden alfabético). */
+const construirEntregaPorPais = (ds: Dataset): EntregaPaisDTO[] => {
+  const grupos = new Map<string, EntregaPaisDTO>();
+  for (const unidad of ds.unidades) {
+    if (unidad.ref.tipo !== "CONGREGACION") continue;
+    const clave = String(unidad.ref.pais_id ?? "sin-pais");
+    let grupo = grupos.get(clave);
+    if (!grupo) {
+      grupo = {
+        pais_id: unidad.ref.pais_id,
+        pais: unidad.ref.pais ?? "Sin país",
+        total: 0,
+        entregados: 0,
+        enElaboracion: 0,
+        pendientes: 0,
+        sinObrero: 0,
+        porcentajeConInforme: null,
+      };
+      grupos.set(clave, grupo);
+    }
+    grupo.total++;
+    switch (estadoUnidad(ds, unidad)) {
+      case "ENTREGADO":
+        grupo.entregados++;
+        break;
+      case "EN_ELABORACION":
+        grupo.enElaboracion++;
+        break;
+      case "PENDIENTE":
+        grupo.pendientes++;
+        break;
+      default:
+        grupo.sinObrero++;
+    }
+  }
+
+  return [...grupos.values()]
+    .map((g) => ({
+      ...g,
+      porcentajeConInforme:
+        g.total > 0 ? Math.round(((g.entregados + g.enElaboracion) / g.total) * 1000) / 10 : null,
+    }))
+    .sort((a, b) => a.pais.localeCompare(b.pais, "es"));
+};
+
 /* ------------------------------------------------------------------ */
 /* API pública del servicio                                            */
 /* ------------------------------------------------------------------ */
@@ -665,6 +711,7 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
         conteo: contarPorGrupo(porUnidad.map((v) => v[s.indicador])),
       }));
     })(),
+    entregaPorPais: construirEntregaPorPais(ds),
     actividadesEspiritualesPorCategoria: ds.categoriasEspirituales.map((cat) => {
       const leer = (ag: AgregadoMetricas) =>
         ag.informes > 0 ? ag.valores[`esp.cat.${cat.id}`] ?? 0 : null;
