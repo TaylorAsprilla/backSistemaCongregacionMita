@@ -13,7 +13,6 @@ import config from "../config/config";
 import { ROLES_ID } from "../enum/roles.enum";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 import { Op } from "sequelize";
-import { obtenerContextoObreroPais } from "../services/supervisionPais.authorization";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -40,10 +39,7 @@ const emailTemplatePaisAdministradorAsignado = fs.readFileSync(
 
 export const getPaises = async (req: Request, res: Response) => {
   try {
-    const usuarioId = (req as CustomRequest).id;
-    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
     const pais = await Pais.findAll({
-      ...(contexto ? { where: { id: { [Op.in]: contexto.paises } } } : {}),
       include: [
         {
           model: Usuario,
@@ -74,15 +70,6 @@ export const getPaises = async (req: Request, res: Response) => {
 export const getPais = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const usuarioId = (req as CustomRequest).id;
-    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
-    if (contexto && !contexto.paises.includes(Number(id))) {
-      return res.status(404).json({
-        ok: false,
-        msg: "No existe el país solicitado.",
-      });
-    }
-
     const pais = await Pais.findByPk(id, {
       include: [
         {
