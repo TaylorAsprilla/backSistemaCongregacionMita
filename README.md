@@ -17,10 +17,32 @@ Sistema de gestión integral para la Congregación Mita Inc., desarrollado con N
 
 ### Conexiones MySQL
 
-El pool de Sequelize tiene un máximo de 10 conexiones por proceso y un mínimo de
-0. Al desplegar varias instancias, el presupuesto total es de hasta
-`10 × número de procesos`, además de las conexiones de otros servicios.
-Debe quedar por debajo de `max_connections` de MySQL con margen operativo.
+Distintos usuarios pueden iniciar sesión simultáneamente. Se mantiene una sola
+sesión NORMAL activa por cuenta; iniciar sesión en esa misma cuenta reemplaza
+su sesión NORMAL anterior, no las sesiones de otros usuarios. Las sesiones QR
+mantienen su comportamiento independiente.
+
+Las conexiones MySQL se reutilizan entre peticiones: el tamaño del pool no es
+un límite de usuarios conectados. El pool de Sequelize está configurado
+directamente en [connection.ts](src/database/connection.ts), sin nuevas
+variables de entorno:
+
+| Opción | Valor | Uso |
+| --- | --- | --- |
+| `max` | `30` | Máximo de conexiones por proceso |
+| `min` | `0` | Mínimo de conexiones |
+| `acquire` | `60000` | Espera máxima para obtener una conexión, en milisegundos |
+| `idle` | `10000` | Tiempo de inactividad antes de liberar una conexión, en milisegundos |
+
+El presupuesto total es `30 × número de procesos`, más las conexiones de
+otros servicios, y debe quedar por debajo de `max_connections` de MySQL con
+margen operativo. En Elastic Beanstalk, desplegar el backend compilado y
+reiniciar los procesos de forma controlada para aplicar el cambio.
+
+Ante `SequelizeConnectionAcquireTimeoutError`, revisar conexiones, consultas
+lentas, bloqueos y conectividad con la base de datos antes de aumentar el pool.
+Aumentar el tiempo de espera no soluciona conexiones retenidas o una base de
+datos inaccesible.
 
 La consulta de informes por país carga sus relaciones por lotes, en lugar de
 abrir cinco consultas por cada informe. Estos cambios no requieren migraciones.

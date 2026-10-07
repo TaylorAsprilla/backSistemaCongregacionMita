@@ -13,7 +13,7 @@ const db = new Sequelize(
     dialect: "mysql",
     logging: process.env.NODE_ENV === "development" ? console.log : false,
     pool: {
-      max: 10,
+      max: 30,
       min: 0,
       acquire: 60000, // Tiempo máximo de espera para adquirir una conexión antes de lanzar un error (ms)
       idle: 10000, // Tiempo máximo que una conexión puede estar inactiva antes de ser liberada (ms)
