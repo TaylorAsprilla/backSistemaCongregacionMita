@@ -15,6 +15,20 @@ Sistema de gestión integral para la Congregación Mita Inc., desarrollado con N
 
 ## 📋 Requisitos Previos
 
+### Conexiones MySQL
+
+El pool de Sequelize tiene un máximo de 10 conexiones por proceso y un mínimo de
+0. Al desplegar varias instancias, el presupuesto total es de hasta
+`10 × número de procesos`, además de las conexiones de otros servicios.
+Debe quedar por debajo de `max_connections` de MySQL con margen operativo.
+
+La consulta de informes por país carga sus relaciones por lotes, en lugar de
+abrir cinco consultas por cada informe. Estos cambios no requieren migraciones.
+Para aplicarlos en producción, desplegar el backend compilado y reiniciar sus
+procesos de forma controlada. Si persiste `ER_CON_COUNT_ERROR`, revisar las
+conexiones de todas las aplicaciones con el administrador de MySQL; no aumentar
+el límite del servidor sin comprobar su capacidad.
+
 - Node.js >= 14.x
 - MySQL >= 5.7
 - npm >= 6.x

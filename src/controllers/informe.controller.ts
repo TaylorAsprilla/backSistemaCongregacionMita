@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Model, Op } from "sequelize";
 import Actividad from "../models/actividad.model";
 import ActividadEconomica from "../models/actividadEconomica.model";
 import ActividadEspiritual from "../models/actividadEspiritual.model";
@@ -691,57 +691,51 @@ export const getInformesPorTrimestreYPais = async (
         {
           model: Actividad,
           as: "actividades",
+          separate: true,
         },
         {
           model: ActividadEconomica,
           as: "actividadesEconomicas",
+          separate: true,
         },
       ],
       order: [["createdAt", "DESC"]],
     });
 
-    // Obtener relaciones adicionales para cada informe
-    const informesConRelaciones = await Promise.all(
-      informes.map(async (informe: any) => {
-        const [visitas, situacionVisita, aspectoContable, logros, metas] =
-          await Promise.all([
-            Visita.findAll({
-              where: { informe_id: informe.id },
-              order: [
-                ["mes", "DESC"],
-                ["id", "DESC"],
-              ],
-            }),
-            SituacionVisita.findAll({
-              where: { informe_id: informe.id },
-              order: [
-                ["fecha", "DESC"],
-                ["id", "DESC"],
-              ],
-            }),
-            Diezmos.findAll({
-              where: { informe_id: informe.id },
-              order: [
-                ["mes", "DESC"],
-                ["id", "DESC"],
-              ],
-            }),
-            Logro.findAll({
-              where: { informe_id: informe.id },
-              order: [
-                ["fecha", "DESC"],
-                ["id", "DESC"],
-              ],
-            }),
-            Meta.findAll({
-              where: { informe_id: informe.id },
-              order: [
-                ["fecha", "DESC"],
-                ["id", "DESC"],
-              ],
-            }),
-          ]);
-
+    const informeIds = informes.map((informe) => Number(informe.get("id")));
+    const whereRelaciones = { informe_id: { [Op.in]: informeIds } };
+    // Consultas por lote, secuenciales para no multiplicar conexiones por informe.
+    const visitas = informeIds.length ? await Visita.findAll({
+      where: whereRelaciones, order: [["mes", "DESC"], ["id", "DESC"]],
+    }) : [];
+    const situaciones = informeIds.length ? await SituacionVisita.findAll({
+      where: whereRelaciones, order: [["fecha", "DESC"], ["id", "DESC"]],
+    }) : [];
+    const contabilidad = informeIds.length ? await Diezmos.findAll({
+      where: whereRelaciones, order: [["mes", "DESC"], ["id", "DESC"]],
+    }) : [];
+    const logros = informeIds.length ? await Logro.findAll({
+      where: whereRelaciones, order: [["fecha", "DESC"], ["id", "DESC"]],
+    }) : [];
+    const metas = informeIds.length ? await Meta.findAll({
+      where: whereRelaciones, order: [["fecha", "DESC"], ["id", "DESC"]],
+    }) : [];
+    const agruparPorInforme = (registros: Model[]): Map<number, Model[]> => {
+      const grupos = new Map<number, Model[]>();
+      for (const registro of registros) {
+        const id = Number(registro.get("informe_id"));
+        const grupo = grupos.get(id) ?? [];
+        grupo.push(registro);
+        grupos.set(id, grupo);
+      }
+      return grupos;
+    };
+    const visitasPorInforme = agruparPorInforme(visitas);
+    const situacionesPorInforme = agruparPorInforme(situaciones);
+    const contabilidadPorInforme = agruparPorInforme(contabilidad);
+    const logrosPorInforme = agruparPorInforme(logros);
+    const metasPorInforme = agruparPorInforme(metas);
+    const informesConRelaciones = informes.map((informe: any) => {
         return {
           ...informe.toJSON(),
           usuario: informe.usuario ? {
@@ -757,14 +751,13 @@ export const getInformesPorTrimestreYPais = async (
               return unidad ? { id: unidad.get("id"), nombre: unidad.get("campo"), congregacion_id: unidad.get("congregacion_id") } : undefined;
             })(),
           } : null,
-          visitas,
-          situacionVisita,
-          aspectoContable,
-          logros,
-          metas,
+          visitas: visitasPorInforme.get(Number(informe.id)) ?? [],
+          situacionVisita: situacionesPorInforme.get(Number(informe.id)) ?? [],
+          aspectoContable: contabilidadPorInforme.get(Number(informe.id)) ?? [],
+          logros: logrosPorInforme.get(Number(informe.id)) ?? [],
+          metas: metasPorInforme.get(Number(informe.id)) ?? [],
         };
-      }),
-    );
+    });
 
     const informesDelPeriodo = informesConRelaciones.filter((informe) =>
       informe.periodo
