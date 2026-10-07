@@ -194,7 +194,8 @@ export const getInforme = async (req: Request, res: Response) => {
       const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
       if (contexto) {
         const usuarioIds = await obtenerObrerosAsignadosAlPais(contexto.paises);
-        if (!usuarioIds.includes(Number(informe.getDataValue("usuario_id")))) {
+        const propietarioId = Number(informe.getDataValue("usuario_id"));
+        if (propietarioId !== usuarioId && !usuarioIds.includes(propietarioId)) {
           return res.status(404).json({
             ok: false,
             msg: "No existe el informe con el id solicitado.",
