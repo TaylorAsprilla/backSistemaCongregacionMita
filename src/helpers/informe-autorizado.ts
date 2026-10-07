@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from "express";
+import { Op } from "sequelize";
 import Informe from "../models/informe.model";
+import {
+  obtenerContextoObreroPais,
+  obtenerObrerosAsignadosAlPais,
+} from "../services/supervisionPais.authorization";
 
 type AuthenticatedRequest = Request & { id?: number };
 
@@ -13,10 +18,16 @@ export const obtenerInformeAutorizado = async (
     return null;
   }
 
+  const contexto = await obtenerContextoObreroPais(usuarioId);
+  const usuariosAutorizados = contexto
+    ? await obtenerObrerosAsignadosAlPais(contexto.paises)
+    : [usuarioId];
+  if (!usuariosAutorizados.length) return null;
+
   return Informe.findOne({
     where: {
       id: informeId,
-      usuario_id: usuarioId,
+      usuario_id: { [Op.in]: usuariosAutorizados },
     },
   });
 };

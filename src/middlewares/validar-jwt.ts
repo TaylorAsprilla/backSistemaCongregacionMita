@@ -13,6 +13,7 @@ export interface CustomRequest extends Request {
   email?: string;
   sessionType?: "NORMAL" | "QR";
   isLoginCodeQr?: boolean;
+  paisSupervisionId?: number;
 }
 
 /**

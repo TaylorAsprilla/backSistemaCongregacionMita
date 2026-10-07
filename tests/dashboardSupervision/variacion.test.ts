@@ -102,7 +102,7 @@ describe("calcularPromedio", () => {
 });
 
 describe("detectarTendenciaConsecutiva", () => {
-  it("200, 190, 180, 170 es disminución durante 3 trimestres", () => {
+  it("200, 190, 180, 170 son 3 cambios descendentes consecutivos entre 4 trimestres", () => {
     const t = detectarTendenciaConsecutiva([200, 190, 180, 170], 3, 0);
     assert.ok(t);
     assert.equal(t.direccion, "DISMINUCION");

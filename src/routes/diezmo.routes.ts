@@ -8,6 +8,7 @@ import { check } from "express-validator";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
+import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
 import {
   actualizarDiezmo,
   crearDiezmo,
@@ -26,8 +27,8 @@ router.get(
   getDiezmosPorInforme,
 );
 router.get("/informe/:informeId", validarJWT, getDiezmosPorInforme);
-router.get("/", validarJWT, getDiezmos);
-router.get("/:id", validarJWT, getUnDiezmo);
+router.get("/", validarJWT, bloquearLecturaGlobalInforme, getDiezmos);
+router.get("/:id", validarJWT, bloquearLecturaGlobalInforme, getUnDiezmo);
 router.post(
   "/",
   [

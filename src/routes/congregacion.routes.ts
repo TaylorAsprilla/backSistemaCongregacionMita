@@ -47,7 +47,7 @@ router.get("/congregacionesporpais", validarApiKey, getCongregacionesPorPais);
 //                  ENDPOINTS LEGACY (con autenticación JWT)
 // =======================================================================
 
-router.get("/", getCongregaciones);
+router.get("/", validarJWT, getCongregaciones);
 router.get("/:id", validarJWT, getCongregacion);
 router.post(
   "/",

@@ -334,3 +334,14 @@ export const obtenerPermisosUsuario = async (usuarioId: number): Promise<string[
       { usuarioId },
     )
   ).map((f) => String(f.permiso_id));
+
+export const obtenerNombresPermisosUsuario = async (usuarioId: number): Promise<string[]> =>
+  (
+    await seleccionar<any>(
+      `SELECT p.permiso
+         FROM usuarioPermiso up
+         INNER JOIN permiso p ON p.id = up.permiso_id
+        WHERE up.usuario_id = :usuarioId`,
+      { usuarioId },
+    )
+  ).map((f) => String(f.permiso ?? ""));
