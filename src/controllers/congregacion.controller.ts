@@ -17,6 +17,7 @@ import eliminarPermisoUsuario from "../helpers/eliminarPermisoUsuario";
 import config from "../config/config";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 import { ROLES_ID } from "../enum/roles.enum";
+import { obtenerContextoObreroPais } from "../services/supervisionPais.authorization";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -33,9 +34,12 @@ const emailTemplateCongregacionAsignada = fs.readFileSync(
 
 export const getCongregaciones = async (req: Request, res: Response) => {
   try {
+    const usuarioId = (req as CustomRequest).id;
+    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
     const congregacion = await Congregacion.findAll({
       where: {
         estado: true,
+        ...(contexto ? { pais_id: { [Op.in]: contexto.paises } } : {}),
       },
       order: db.col("congregacion"),
     });
@@ -54,19 +58,26 @@ export const getCongregaciones = async (req: Request, res: Response) => {
 
 export const getCongregacion = async (req: Request, res: Response) => {
   const { id } = req.params;
+  try {
+    const usuarioId = (req as CustomRequest).id;
+    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+    const congregacion = await Congregacion.findByPk(id);
 
-  const congregacion = await Congregacion.findByPk(id);
+    if (
+      contexto &&
+      (!congregacion ||
+        !contexto.paises.includes(Number(congregacion.getDataValue("pais_id"))))
+    ) {
+      return res.status(404).json({ ok: false, msg: "No existe la congregación solicitada." });
+    }
 
-  if (congregacion) {
-    res.json({
-      ok: true,
-      congregacion,
-      id,
-    });
-  } else {
-    res.status(404).json({
-      msg: `No existe la congregación con el id ${id}`,
-    });
+    if (congregacion) {
+      return res.json({ ok: true, congregacion, id });
+    }
+    return res.status(404).json({ msg: `No existe la congregación con el id ${id}` });
+  } catch (error) {
+    console.error("Error obteniendo congregación:", error);
+    return res.status(500).json({ ok: false, msg: "No fue posible obtener la congregación." });
   }
 };
 

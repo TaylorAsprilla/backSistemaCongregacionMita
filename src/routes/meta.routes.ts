@@ -19,11 +19,12 @@ import {
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
+import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
 
 const router = Router();
 
-router.get("/", validarJWT, getMetas);
-router.get("/:id", validarJWT, getMeta);
+router.get("/", validarJWT, bloquearLecturaGlobalInforme, getMetas);
+router.get("/:id", validarJWT, bloquearLecturaGlobalInforme, getMeta);
 
 // Nuevas rutas para seguimiento de metas
 router.get(
@@ -36,6 +37,7 @@ router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,
+  bloquearLecturaGlobalInforme,
   getMetasPendientesPorUsuario,
 );
 

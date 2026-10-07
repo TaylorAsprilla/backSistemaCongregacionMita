@@ -15,6 +15,7 @@ import {
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
+import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get(
   getLogrosPorInforme,
 );
 router.get("/informe/:informeId", validarJWT, getLogrosPorInforme);
-router.get("/", validarJWT, getLogros);
+router.get("/", validarJWT, bloquearLecturaGlobalInforme, getLogros);
 router.post(
   "/",
   [

@@ -144,7 +144,7 @@ export interface EntregaPaisDTO {
   enElaboracion: number;
   pendientes: number;
   sinObrero: number;
-  /** % de congregaciones con informe (entregado o en elaboración) sobre el total. */
+  /** % de ciudades con informe (entregado o en elaboración) sobre las ciudades con obrero asignado. */
   porcentajeConInforme: number | null;
 }
 
@@ -240,7 +240,15 @@ export interface DetalleUnidadDTO {
   contexto: ContextoDashboard;
   unidad: UnidadRef;
   obreros: ObreroDTO[];
-  estadoEntrega: EstadoEntrega;
+  estadoEntrega: EstadoEntrega | null;
+  /** Delivery breakdown when a country or field detail aggregates city units. */
+  entregaAgregada?: {
+    ciudades: number;
+    entregados: number;
+    enElaboracion: number;
+    pendientes: number;
+    sinObrero: number;
+  };
   informes: InformeResumenDTO[];
   indicadores: IndicadorDTO[];
   asistenciaPorServicio: AsistenciaServicioDTO[];

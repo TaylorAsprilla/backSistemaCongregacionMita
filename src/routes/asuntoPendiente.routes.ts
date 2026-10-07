@@ -19,11 +19,12 @@ import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import { TIPO_ASUNTO_PENDIENTE_ENUM } from "../enum/asuntoPendiente.enum";
+import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
 
 const router = Router();
 
-router.get("/", validarJWT, getAsuntosPendientes);
-router.get("/:id", validarJWT, getAsuntoPendiente);
+router.get("/", validarJWT, bloquearLecturaGlobalInforme, getAsuntosPendientes);
+router.get("/:id", validarJWT, bloquearLecturaGlobalInforme, getAsuntoPendiente);
 
 // Rutas para seguimiento de asuntos pendientes
 router.get(
@@ -36,6 +37,7 @@ router.get("/informe/:informeId", validarJWT, getAsuntosPorInforme);
 router.get(
   "/pendientes/usuario/:usuarioId",
   validarJWT,
+  bloquearLecturaGlobalInforme,
   getAsuntosPendientesPorUsuario,
 );
 

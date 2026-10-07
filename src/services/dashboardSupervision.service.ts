@@ -38,6 +38,7 @@ import {
   normalizarTexto,
 } from "./dashboardSupervision/clasificacion";
 import * as consultas from "./dashboardSupervision/consultas";
+import { ciudadesDelDetalle, unidadesInformantes } from "./dashboardSupervision/alcance";
 import { CatalogoJerarquia, parsearFiltros, validarJerarquia } from "./dashboardSupervision/jerarquia";
 import {
   agregarInformes,
@@ -218,29 +219,35 @@ const unidadesEnAlcance = (filtros: FiltrosDashboard, catalogo: Catalogo): Unida
     };
   };
 
-  if (filtros.campo_id !== null) {
-    const campo = catalogo.listaCampos.find((k) => k.id === filtros.campo_id);
-    return campo ? [campoRef(campo)] : [];
-  }
+  const campoSeleccionado =
+    filtros.campo_id !== null
+      ? catalogo.listaCampos.find((campo) => campo.id === filtros.campo_id)
+      : undefined;
 
   const congregaciones = catalogo.listaCongregaciones.filter(
     (c) =>
       (filtros.congregacion_id === null || c.id === filtros.congregacion_id) &&
+      (campoSeleccionado === undefined || c.id === campoSeleccionado.congregacion_id) &&
       (filtros.pais_id === null || c.pais_id === filtros.pais_id),
   );
   const idsCongregacion = new Set(congregaciones.map((c) => c.id));
   const campos = catalogo.listaCampos.filter(
-    (k) => k.congregacion_id !== null && idsCongregacion.has(k.congregacion_id),
+    (k) =>
+      k.congregacion_id !== null &&
+      idsCongregacion.has(k.congregacion_id) &&
+      (filtros.campo_id === null || k.id === filtros.campo_id),
   );
 
-  // La congregación país solo entra en el alcance cuando no se filtra una congregación ciudad.
+  // Los países y campos describen la jerarquía, pero solo las ciudades entregan informes.
   const paises =
-    filtros.congregacion_id === null
+    filtros.congregacion_id === null && filtros.campo_id === null
       ? catalogo.listaPaises.filter((p) => filtros.pais_id === null || p.id === filtros.pais_id)
       : [];
 
   return [...paises.map(paisRef), ...congregaciones.map(congregacionRef), ...campos.map(campoRef)];
 };
+
+
 
 const nombreObreros = (unidad: Unidad, usuarios: Map<number, consultas.FilaUsuario>) =>
   unidad.obreros.map((id) => usuarios.get(id)?.nombre || `Usuario ${id}`);
@@ -590,8 +597,7 @@ const todasLasAlertas = (ds: Dataset) =>
 /** Estado del informe trimestral de las Congregaciones Ciudad, agrupado por país (orden alfabético). */
 const construirEntregaPorPais = (ds: Dataset): EntregaPaisDTO[] => {
   const grupos = new Map<string, EntregaPaisDTO>();
-  for (const unidad of ds.unidades) {
-    if (unidad.ref.tipo !== "CONGREGACION") continue;
+  for (const unidad of unidadesInformantes(ds.unidades)) {
     const clave = String(unidad.ref.pais_id ?? "sin-pais");
     let grupo = grupos.get(clave);
     if (!grupo) {
@@ -624,11 +630,16 @@ const construirEntregaPorPais = (ds: Dataset): EntregaPaisDTO[] => {
   }
 
   return [...grupos.values()]
-    .map((g) => ({
-      ...g,
-      porcentajeConInforme:
-        g.total > 0 ? Math.round(((g.entregados + g.enElaboracion) / g.total) * 1000) / 10 : null,
-    }))
+    .map((g) => {
+      const esperadas = g.total - g.sinObrero;
+      return {
+        ...g,
+        porcentajeConInforme:
+          esperadas > 0
+            ? Math.round(((g.entregados + g.enElaboracion) / esperadas) * 1000) / 10
+            : null,
+      };
+    })
     .sort((a, b) => a.pais.localeCompare(b.pais, "es"));
 };
 
@@ -669,13 +680,14 @@ export const obtenerFiltrosDisponibles = async (): Promise<FiltrosDisponiblesDTO
 
 export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<ResumenDTO> => {
   const ds = await obtenerDataset(filtros);
-  const estados = ds.unidades.map((u) => estadoUnidad(ds, u));
+  const ciudades = unidadesInformantes(ds.unidades);
+  const estados = ciudades.map((u) => estadoUnidad(ds, u));
   const contar = (estado: EstadoEntrega) => estados.filter((e) => e === estado).length;
-  const conObrero = ds.unidades.length - contar("SIN_OBRERO");
+  const conObrero = ciudades.length - contar("SIN_OBRERO");
   const conInforme = contar("ENTREGADO") + contar("EN_ELABORACION");
 
-  const total = agregadoDeInformes(ds, informesPeriodo(ds, ds.unidades, ds.periodo));
-  const { actual, anterior, unidadesComparadas } = conjuntosComparables(ds, ds.unidades);
+  const total = agregadoDeInformes(ds, informesPeriodo(ds, ciudades, ds.periodo));
+  const { actual, anterior, unidadesComparadas } = conjuntosComparables(ds, ciudades);
   const alertas = todasLasAlertas(ds);
 
   const unSoloPais =
@@ -703,7 +715,7 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
     indicadores: construirIndicadores(total, actual, anterior),
     asistenciaPorServicio: construirAsistenciaPorServicio(total, actual, anterior),
     variacionPorServicio: (() => {
-      const porUnidad = ds.unidades.map((u) => variacionesUnidad(ds, u, INDICADORES_SERVICIO));
+      const porUnidad = ciudades.map((u) => variacionesUnidad(ds, u, INDICADORES_SERVICIO));
       return SERVICIOS_VARIACION.map((s) => ({
         clave: s.clave,
         etiqueta: s.etiqueta,
@@ -740,8 +752,9 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
 
 export const obtenerTendencias = async (filtros: FiltrosDashboard): Promise<TendenciasDTO> => {
   const ds = await obtenerDataset(filtros);
+  const ciudades = unidadesInformantes(ds.unidades);
   const agregados = ds.historico.map((p) =>
-    agregadoDeInformes(ds, informesPeriodo(ds, ds.unidades, p)),
+    agregadoDeInformes(ds, informesPeriodo(ds, ciudades, p)),
   );
 
   return {
@@ -904,9 +917,17 @@ export const obtenerDetalleUnidad = async (
   const unidad = ds.unidades.find((u) => u.clave === `${tipo as TipoUnidad}-${id}`);
   if (!unidad) throw new ErrorDashboard("La unidad solicitada no existe o está inactiva.", 404);
 
-  const total = agregadoUnidad(ds, unidad, ds.periodo);
-  const anterior = agregadoUnidad(ds, unidad, ds.comparacion);
-  const informesActuales = informesDe(ds, unidad, ds.periodo);
+  const ciudades = tipo === "CONGREGACION" ? [unidad] : ciudadesDelDetalle(ds.unidades, tipo, id);
+  const informesDeCiudades = (periodo: Periodo) => {
+    const informes = new Map<number, consultas.FilaInforme>();
+    for (const ciudad of ciudades) {
+      for (const informe of informesDe(ds, ciudad, periodo)) informes.set(informe.id, informe);
+    }
+    return [...informes.values()];
+  };
+  const total = agregadoDeInformes(ds, informesDeCiudades(ds.periodo));
+  const anterior = agregadoDeInformes(ds, informesDeCiudades(ds.comparacion));
+  const informesActuales = informesDeCiudades(ds.periodo);
   const idsActuales = [...new Set(informesActuales.map((i) => i.id))];
 
   const [logros, metas] = await Promise.all([
@@ -914,7 +935,9 @@ export const obtenerDetalleUnidad = async (
     consultas.obtenerMetas(idsActuales),
   ]);
 
-  const alertas = ordenarAlertas(ds.alertasPorUnidad.get(unidad.clave) ?? []);
+  const alertas = ordenarAlertas(
+    ciudades.flatMap((ciudad) => ds.alertasPorUnidad.get(ciudad.clave) ?? []),
+  );
   const recurrentes = new Set(
     alertas
       .filter((a) => a.tipo === "ASUNTO_RECURRENTE" && a.detalle.asunto)
@@ -922,18 +945,31 @@ export const obtenerDetalleUnidad = async (
   );
 
   const informesHistorico = ds.historico
-    .flatMap((p) => informesDe(ds, unidad, p))
+    .flatMap((p) => informesDeCiudades(p))
     .sort((a, b) => b.periodo.localeCompare(a.periodo) || b.id - a.id);
+  const estados = ciudades.map((ciudad) => estadoUnidad(ds, ciudad));
+  const contarEstado = (estado: EstadoEntrega) => estados.filter((valor) => valor === estado).length;
+  const entregaAgregada =
+    tipo === "CONGREGACION"
+      ? undefined
+      : {
+          ciudades: ciudades.length,
+          entregados: contarEstado("ENTREGADO"),
+          enElaboracion: contarEstado("EN_ELABORACION"),
+          pendientes: contarEstado("PENDIENTE"),
+          sinObrero: contarEstado("SIN_OBRERO"),
+        };
 
   return {
     contexto: ds.contexto,
     unidad: unidad.ref,
-    obreros: unidad.obreros.map((idObrero) => ({
+    obreros: [...new Set(ciudades.flatMap((ciudad) => ciudad.obreros))].map((idObrero) => ({
       id: idObrero,
       nombre: ds.usuarios.get(idObrero)?.nombre || `Usuario ${idObrero}`,
       email: ds.usuarios.get(idObrero)?.email ?? null,
     })),
-    estadoEntrega: estadoUnidad(ds, unidad),
+    estadoEntrega: entregaAgregada ? null : estadoUnidad(ds, unidad),
+    entregaAgregada,
     informes: informesHistorico.map((i) => ({
       id: i.id,
       periodo: etiquetaPeriodo(periodoDesdeFecha(i.periodo) as Periodo),

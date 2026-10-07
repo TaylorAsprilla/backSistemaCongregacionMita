@@ -16,6 +16,12 @@ import Usuario from "../models/usuario.model";
 import Visita from "../models/visita.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 import { obtenerPeriodoInformeActivo } from "../helpers/periodoInforme";
+import {
+  obtenerContextoObreroPais,
+  obtenerObrerosAsignadosAlPais,
+  obtenerObrerosResponsablesPais,
+} from "../services/supervisionPais.authorization";
+import { paisPerteneceAlAlcance } from "../services/supervisionPais.scope";
 
 type AuthenticatedRequest = Request & { id?: number };
 
@@ -150,7 +156,17 @@ export const getResumenInforme = async (req: Request, res: Response) => {
 
 export const getInformes = async (req: Request, res: Response) => {
   try {
+    const usuarioId = (req as AuthenticatedRequest).id;
+    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+    const usuarioIds =
+      contexto !== null ? await obtenerObrerosAsignadosAlPais(contexto.paises) : undefined;
+    if (usuarioIds?.length === 0) {
+      return res.json({ ok: true, informes: [], msg: "No hay informes en el país asignado." });
+    }
     const informes = await Informe.findAll({
+      ...(usuarioIds !== undefined
+        ? { where: { usuario_id: { [Op.in]: usuarioIds } } }
+        : {}),
       order: [["createdAt", "DESC"]],
     });
 
@@ -174,6 +190,18 @@ export const getInforme = async (req: Request, res: Response) => {
     const informe = await Informe.findByPk(id);
 
     if (!!informe) {
+      const usuarioId = (req as AuthenticatedRequest).id;
+      const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+      if (contexto) {
+        const usuarioIds = await obtenerObrerosAsignadosAlPais(contexto.paises);
+        if (!usuarioIds.includes(Number(informe.getDataValue("usuario_id")))) {
+          return res.status(404).json({
+            ok: false,
+            msg: "No existe el informe con el id solicitado.",
+          });
+        }
+      }
+
       const actividades = await Actividad.findAll({
         where: {
           informe_id: id,
@@ -298,6 +326,22 @@ export const getInforme = async (req: Request, res: Response) => {
 export const crearInforme = async (req: Request, res: Response) => {
   const { body } = req;
   const periodo = body.periodo || obtenerPeriodoInformeActivo();
+  const usuarioAutenticado = (req as AuthenticatedRequest).id;
+
+  try {
+    const contexto = usuarioAutenticado
+      ? await obtenerContextoObreroPais(usuarioAutenticado)
+      : null;
+    if (contexto && Number(body.usuario_id) !== usuarioAutenticado) {
+      return res.status(403).json({
+        ok: false,
+        msg: "El Obrero País solo puede crear sus propios informes.",
+      });
+    }
+  } catch (error) {
+    console.error("Error validando permisos para crear informe:", error);
+    return res.status(500).json({ ok: false, msg: "No fue posible validar los permisos." });
+  }
 
   if (!esFechaISO(periodo) || periodo !== obtenerPeriodoInformeActivo()) {
     return res.status(400).json({
@@ -353,6 +397,15 @@ export const actualizarInforme = async (req: Request, res: Response) => {
       });
     }
 
+    const usuarioId = (req as AuthenticatedRequest).id;
+    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+    if (contexto && Number(informe.getDataValue("usuario_id")) !== usuarioId) {
+      return res.status(403).json({
+        ok: false,
+        msg: "Los informes de otras congregaciones son de solo lectura.",
+      });
+    }
+
     const informeActualizado = await informe.update(body, { new: true });
 
     res.json({
@@ -376,6 +429,15 @@ export const eliminarInforme = async (req: Request, res: Response) => {
   try {
     const informe = await Informe.findByPk(id);
     if (informe) {
+      const usuarioId = (req as AuthenticatedRequest).id;
+      const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+      if (contexto && Number(informe.getDataValue("usuario_id")) !== usuarioId) {
+        return res.status(403).json({
+          ok: false,
+          msg: "Los informes de otras congregaciones son de solo lectura.",
+        });
+      }
+
       await informe.update({ estado: false });
 
       res.json({
@@ -401,13 +463,22 @@ export const eliminarInforme = async (req: Request, res: Response) => {
 export const verificarInformeAbierto = async (req: Request, res: Response) => {
   const { usuario_id, fechaInicio, fechaFin } = req.query;
 
-  console.log(usuario_id, fechaInicio, fechaFin);
-
   try {
     if (!usuario_id || !fechaInicio || !fechaFin) {
       return res.status(400).json({
         ok: false,
         msg: "Se requiere usuario_id, fechaInicio y fechaFin",
+      });
+    }
+
+    const usuarioAutenticado = (req as AuthenticatedRequest).id;
+    const contexto = usuarioAutenticado
+      ? await obtenerContextoObreroPais(usuarioAutenticado)
+      : null;
+    if (contexto && Number(usuario_id) !== usuarioAutenticado) {
+      return res.status(403).json({
+        ok: false,
+        msg: "No tiene permiso para consultar informes de otros obreros.",
       });
     }
 
@@ -447,7 +518,7 @@ export const getInformesPorTrimestreYPais = async (
   req: Request,
   res: Response,
 ) => {
-  const { trimestre, año, pais_id } = req.query;
+  const { trimestre, año, pais_id, todos_periodos } = req.query;
 
   try {
     // Validar parámetros requeridos
@@ -458,9 +529,39 @@ export const getInformesPorTrimestreYPais = async (
       });
     }
 
-    const trimestreNum = parseInt(trimestre as string);
-    const añoNum = parseInt(año as string);
-    const paisId = parseInt(pais_id as string);
+    if (
+      typeof trimestre !== "string" ||
+      !/^[1-4]$/.test(trimestre) ||
+      typeof año !== "string" ||
+      !/^\d{4}$/.test(año) ||
+      typeof pais_id !== "string" ||
+      !/^\d+$/.test(pais_id) ||
+      (todos_periodos !== undefined && todos_periodos !== "true")
+    ) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El año, trimestre y país deben tener un formato válido.",
+      });
+    }
+    const trimestreNum = Number(trimestre);
+    const añoNum = Number(año);
+    const paisId = Number(pais_id);
+
+    const usuarioId = (req as AuthenticatedRequest).id;
+    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+    if (contexto && !paisPerteneceAlAlcance(paisId, contexto.paises)) {
+      return res.status(403).json({
+        ok: false,
+        msg: "No tiene permiso para consultar informes de ese país.",
+      });
+    }
+
+    if (contexto && contexto.paises.length === 0) {
+      return res.status(403).json({
+        ok: false,
+        msg: "No tiene un país activo asignado para supervisar.",
+      });
+    }
 
     // Validar trimestre
     if (trimestreNum < 1 || trimestreNum > 4) {
@@ -504,7 +605,9 @@ export const getInformesPorTrimestreYPais = async (
     });
 
     // Recopilar todos los IDs de obreros encargados
-    const obrerosIds = new Set<number>();
+    const obrerosIds = new Set<number>(
+      contexto ? await obtenerObrerosAsignadosAlPais([paisId]) : [],
+    );
 
     // Agregar obreros de congregaciones
     congregaciones.forEach((congregacion: any) => {
@@ -532,15 +635,22 @@ export const getInformesPorTrimestreYPais = async (
       return res.json({
         ok: true,
         informes: [],
+        pendientes: [],
         msg: "No hay obreros encargados en las congregaciones y campos del país especificado",
         estadisticas: {
           trimestre: trimestreNum,
           año: añoNum,
           pais: (pais as any).pais,
+          fechaInicio,
+          fechaFin,
           totalCongregaciones: congregaciones.length,
           totalCampos: campos.length,
           totalObreros: 0,
           totalInformes: 0,
+          unidadesConInforme: 0,
+          unidadesPendientes: 0,
+          unidadesSinObrero: congregaciones.length + campos.length,
+          porcentajeEntregado: null,
         },
       });
     }
@@ -553,7 +663,8 @@ export const getInformesPorTrimestreYPais = async (
         usuario_id: {
           [Op.in]: obrerosArray,
         },
-        [Op.or]: [
+        estado: { [Op.ne]: ESTADO_INFORME_ENUM.ELIMINADO },
+        ...(!todos_periodos ? { [Op.or]: [
           { periodo },
           {
             periodo: null,
@@ -561,7 +672,7 @@ export const getInformesPorTrimestreYPais = async (
               [Op.between]: [fechaInicio, fechaFin],
             },
           },
-        ],
+        ] } : {}),
       },
       include: [
         {
@@ -633,6 +744,19 @@ export const getInformesPorTrimestreYPais = async (
 
         return {
           ...informe.toJSON(),
+          usuario: informe.usuario ? {
+            ...informe.usuario.toJSON(),
+            congregacion: (() => {
+              const unidad = congregaciones.find((c: any) =>
+                [c.idObreroEncargado, c.idObreroEncargadoDos].includes(informe.usuario_id));
+              return unidad ? { id: unidad.get("id"), nombre: unidad.get("congregacion") } : undefined;
+            })(),
+            campo: (() => {
+              const unidad = campos.find((c: any) =>
+                [c.idObreroEncargado, c.idObreroEncargadoDos].includes(informe.usuario_id));
+              return unidad ? { id: unidad.get("id"), nombre: unidad.get("campo"), congregacion_id: unidad.get("congregacion_id") } : undefined;
+            })(),
+          } : null,
           visitas,
           situacionVisita,
           aspectoContable,
@@ -642,9 +766,65 @@ export const getInformesPorTrimestreYPais = async (
       }),
     );
 
+    const informesDelPeriodo = informesConRelaciones.filter((informe) =>
+      informe.periodo
+        ? String(informe.periodo).slice(0, 10) === periodo
+        : new Date(informe.createdAt) >= fechaInicio && new Date(informe.createdAt) <= fechaFin,
+    );
+    const usuariosConInforme = new Set(
+      informesDelPeriodo.map((informe) => Number(informe.usuario_id)),
+    );
+    const responsables = await Usuario.findAll({
+      where: { id: { [Op.in]: obrerosArray } },
+      attributes: ["id", "primerNombre", "segundoNombre", "primerApellido", "segundoApellido", "numeroCelular"],
+    });
+    const responsablesPorId = new Map(responsables.map((usuario) => [Number(usuario.get("id")), usuario.toJSON()]));
+    const unidades = [
+      ...congregaciones.map((congregacion: any) => ({
+        id: Number(congregacion.id),
+        nombre: String(congregacion.congregacion),
+        tipo: "CONGREGACION" as const,
+        congregacion_id: Number(congregacion.id),
+        campo_id: null,
+        obreros: [
+          Number(congregacion.idObreroEncargado),
+          Number(congregacion.idObreroEncargadoDos),
+        ].filter((id) => id > 0),
+      })),
+      ...campos.map((campo: any) => ({
+        id: Number(campo.id),
+        nombre: String(campo.campo),
+        tipo: "CAMPO" as const,
+        congregacion_id: Number(campo.congregacion_id),
+        campo_id: Number(campo.id),
+        obreros: [
+          Number(campo.idObreroEncargado),
+          Number(campo.idObreroEncargadoDos),
+        ].filter((id) => id > 0),
+      })),
+    ];
+    const pendientes = unidades
+      .filter(
+        (unidad) =>
+          unidad.obreros.length > 0 &&
+          !unidad.obreros.some((obreroId) => usuariosConInforme.has(obreroId)),
+      )
+      .map(({ obreros, ...unidad }) => ({
+        ...unidad,
+        responsables: obreros.map((id) => responsablesPorId.get(id)).filter(Boolean),
+      }));
+    const unidadesConInforme = unidades.filter(
+      (unidad) =>
+        unidad.obreros.length > 0 &&
+        unidad.obreros.some((obreroId) => usuariosConInforme.has(obreroId)),
+    ).length;
+    const unidadesSinObrero = unidades.filter((unidad) => unidad.obreros.length === 0).length;
+    const unidadesConResponsable = unidades.length - unidadesSinObrero;
+
     res.json({
       ok: true,
       informes: informesConRelaciones,
+      pendientes,
       msg: `Informes del trimestre ${trimestreNum} del año ${añoNum} para el país ${(pais as any).pais}`,
       estadisticas: {
         trimestre: trimestreNum,
@@ -655,7 +835,14 @@ export const getInformesPorTrimestreYPais = async (
         totalCongregaciones: congregaciones.length,
         totalCampos: campos.length,
         totalObreros: obrerosArray.length,
-        totalInformes: informesConRelaciones.length,
+        totalInformes: informesDelPeriodo.length,
+        unidadesConInforme,
+        unidadesPendientes: pendientes.length,
+        unidadesSinObrero,
+        porcentajeEntregado:
+          unidadesConResponsable > 0
+            ? Math.round((unidadesConInforme / unidadesConResponsable) * 1000) / 10
+            : null,
       },
     });
   } catch (error) {

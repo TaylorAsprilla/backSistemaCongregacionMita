@@ -119,7 +119,7 @@ export const alertasTendencia = (
       unidad,
       indicador: indicador.clave,
       etiquetaIndicador: indicador.etiqueta,
-      mensaje: `${indicador.etiqueta} muestra ${descripcion} durante ${tendencia.periodos} trimestres consecutivos hasta ${etiquetaPeriodo}.`,
+      mensaje: `${indicador.etiqueta} muestra ${descripcion} durante ${tendencia.periodos} cambios trimestrales consecutivos (${tendencia.periodos + 1} trimestres con datos) hasta ${etiquetaPeriodo}.`,
       periodo: etiquetaPeriodo,
       detalle: {
         variaciones: tendencia.variaciones,
