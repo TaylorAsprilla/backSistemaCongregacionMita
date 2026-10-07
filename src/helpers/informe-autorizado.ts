@@ -20,7 +20,7 @@ export const obtenerInformeAutorizado = async (
 
   const contexto = await obtenerContextoObreroPais(usuarioId);
   const usuariosAutorizados = contexto
-    ? await obtenerObrerosAsignadosAlPais(contexto.paises)
+    ? [usuarioId, ...await obtenerObrerosAsignadosAlPais(contexto.paises)]
     : [usuarioId];
   if (!usuariosAutorizados.length) return null;
 
