@@ -8,25 +8,12 @@ import Congregacion from "../models/congregacion.model";
 import agregarPermisoUsuario from "../helpers/agregarPermisoUsuario";
 import eliminarPermisoUsuario from "../helpers/eliminarPermisoUsuario";
 import { ROLES_ID } from "../enum/roles.enum";
-import { obtenerContextoObreroPais } from "../services/supervisionPais.authorization";
 
 export const getCampos = async (req: Request, res: Response) => {
   try {
-    const usuarioId = (req as CustomRequest).id;
-    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
-    const congregaciones = contexto
-      ? await Congregacion.findAll({
-          attributes: ["id"],
-          where: { pais_id: { [Op.in]: contexto.paises } },
-        })
-      : [];
-    const congregacionIds = congregaciones.map((congregacion) =>
-      Number(congregacion.getDataValue("id")),
-    );
     const campo = await Campo.findAll({
       where: {
         estado: true,
-        ...(contexto ? { congregacion_id: { [Op.in]: congregacionIds } } : {}),
       },
       order: db.col("campo"),
     });
@@ -46,22 +33,7 @@ export const getCampos = async (req: Request, res: Response) => {
 export const getCampo = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    const usuarioId = (req as CustomRequest).id;
-    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
     const campo = await Campo.findByPk(id);
-
-    if (contexto) {
-      const congregacionId = campo ? Number(campo.getDataValue("congregacion_id")) : 0;
-      const congregacion = congregacionId
-        ? await Congregacion.findByPk(congregacionId, { attributes: ["pais_id"] })
-        : null;
-      if (
-        !congregacion ||
-        !contexto.paises.includes(Number(congregacion.getDataValue("pais_id")))
-      ) {
-        return res.status(404).json({ ok: false, msg: "No existe el campo solicitado." });
-      }
-    }
 
     if (campo) {
       return res.json({ ok: true, campo, id });
