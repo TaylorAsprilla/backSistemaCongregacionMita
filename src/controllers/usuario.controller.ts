@@ -13,7 +13,7 @@ import {
   crearCongregacionUsuario,
   eliminarAsociacionesUsuario,
 } from "../database/usuario.associations";
-import { col, fn, Op, Transaction, where } from "sequelize";
+import { col, fn, Model, Op, Transaction, where } from "sequelize";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import Congregacion from "../models/congregacion.model";
 import Pais from "../models/pais.model";
@@ -498,6 +498,78 @@ export const getUsuariosCompleto = async (req: Request, res: Response) => {
       ok: false,
       msg: "Error al obtener usuarios completos. Por favor contacta al administrador.",
       error: process.env.NODE_ENV === "development" ? error : undefined,
+    });
+  }
+};
+
+export const getResponsabilidadesObrero = async (req: Request, res: Response) => {
+  const usuarioId = Number(req.params.id);
+  if (!Number.isSafeInteger(usuarioId) || usuarioId <= 0) {
+    return res.status(400).json({ ok: false, msg: "El ID del usuario debe ser un entero positivo." });
+  }
+
+  try {
+    const usuario = await Usuario.findByPk(usuarioId, { attributes: ["id"] });
+    if (!usuario) {
+      return res.status(404).json({ ok: false, msg: "No se encuentra el usuario solicitado." });
+    }
+
+    const [paises, congregaciones, campos] = await Promise.all([
+      Pais.findAll({
+        attributes: ["id", "pais", "estado"],
+        where: { idObreroEncargado: usuarioId },
+        order: [["pais", "ASC"]],
+      }),
+      Congregacion.findAll({
+        attributes: ["id", "congregacion", "estado", "idObreroEncargado", "idObreroEncargadoDos"],
+        where: { [Op.or]: [{ idObreroEncargado: usuarioId }, { idObreroEncargadoDos: usuarioId }] },
+        order: [["congregacion", "ASC"]],
+      }),
+      Campo.findAll({
+        attributes: ["id", "campo", "estado", "idObreroEncargado", "idObreroEncargadoDos"],
+        where: { [Op.or]: [{ idObreroEncargado: usuarioId }, { idObreroEncargadoDos: usuarioId }] },
+        order: [["campo", "ASC"]],
+      }),
+    ]);
+    const responsabilidades: {
+      id: number;
+      nombre: string;
+      tipo: "PAIS" | "CIUDAD" | "CAMPO";
+      rol: "PRINCIPAL" | "SEGUNDO";
+      activo: boolean;
+    }[] = [];
+    const agregar = (
+      unidad: Model,
+      tipo: "PAIS" | "CIUDAD" | "CAMPO",
+      nombreCampo: string,
+      rol: "PRINCIPAL" | "SEGUNDO",
+    ) => responsabilidades.push({
+      id: Number(unidad.getDataValue("id")),
+      nombre: String(unidad.getDataValue(nombreCampo)),
+      tipo,
+      rol,
+      activo: Boolean(unidad.getDataValue("estado")),
+    });
+    paises.forEach((pais) => agregar(pais, "PAIS", "pais", "PRINCIPAL"));
+    for (const [unidades, tipo, nombreCampo] of [
+      [congregaciones, "CIUDAD", "congregacion"],
+      [campos, "CAMPO", "campo"],
+    ] as const) {
+      for (const unidad of unidades) {
+        if (Number(unidad.getDataValue("idObreroEncargado")) === usuarioId) {
+          agregar(unidad, tipo, nombreCampo, "PRINCIPAL");
+        }
+        if (Number(unidad.getDataValue("idObreroEncargadoDos")) === usuarioId) {
+          agregar(unidad, tipo, nombreCampo, "SEGUNDO");
+        }
+      }
+    }
+    return res.json({ ok: true, responsabilidades });
+  } catch (error) {
+    console.error("Error al obtener responsabilidades del obrero:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "No se pudieron consultar las congregaciones a cargo del usuario.",
     });
   }
 };
