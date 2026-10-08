@@ -24,12 +24,24 @@ export const obtenerInformeAutorizado = async (
     : [usuarioId];
   if (!usuariosAutorizados.length) return null;
 
-  return Informe.findOne({
+  const informe = await Informe.findOne({
     where: {
       id: informeId,
       usuario_id: { [Op.in]: usuariosAutorizados },
     },
   });
+
+  if (!informe) {
+    console.warn("[INFORME_AUTH] DENEGADO", {
+      usuarioId,
+      informeId,
+      esObreroPais: contexto !== null,
+      paises: contexto?.paises ?? [],
+      totalUsuariosAutorizados: usuariosAutorizados.length,
+    });
+  }
+
+  return informe;
 };
 
 export const cargarInformeIdDesdeQuery = (
