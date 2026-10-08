@@ -6,6 +6,8 @@ const Informe = require("../build/src/models/informe.model").default;
 const Congregacion = require("../build/src/models/congregacion.model").default;
 const Campo = require("../build/src/models/campo.model").default;
 const UsuarioCongregacion = require("../build/src/models/usuarioCongregacion.model").default;
+const Pais = require("../build/src/models/pais.model").default;
+const consultas = require("../build/src/services/dashboardSupervision/consultas");
 const { obtenerInformeAutorizado } = require("../build/src/helpers/informe-autorizado");
 
 test("Obrero País puede leer sus informes y los de su alcance, no los ajenos", async () => {
@@ -76,4 +78,69 @@ test("El alcance del país incluye usuarios asignados a congregaciones y campos 
     Campo.findAll = originalCampoFindAll;
     UsuarioCongregacion.findAll = originalUsuarioCongregacionFindAll;
   }
+});
+
+test("El obrero 2182 de Colombia puede leer los informes 36, 55 y 74 por la asignacion de sus propietarios", async (t) => {
+  const fila = (datos) => ({ getDataValue: (campo) => datos[campo] });
+  t.mock.method(consultas, "obtenerPermisosUsuario", async (id) => {
+    assert.equal(id, 2182);
+    return ["2"];
+  });
+  t.mock.method(consultas, "obtenerNombresPermisosUsuario", async () => []);
+  t.mock.method(Pais, "findAll", async ({ where }) => {
+    assert.deepEqual(where, { idObreroEncargado: 2182, estado: true });
+    return [fila({ id: 2 })];
+  });
+  t.mock.method(Congregacion, "findAll", async ({ where }) => {
+    assert.deepEqual(where, { pais_id: { [Op.in]: [2] }, estado: true });
+    return [
+      fila({ id: 43, idObreroEncargado: 3419 }),
+      fila({ id: 40, idObreroEncargado: 2593 }),
+      fila({ id: 5, idObreroEncargado: 3559, idObreroEncargadoDos: 56 }),
+    ];
+  });
+  t.mock.method(Campo, "findAll", async () => [fila({ id: 139 })]);
+  t.mock.method(UsuarioCongregacion, "findAll", async ({ where }) => {
+    const asignaciones = [
+      { usuario_id: 2281, pais_id: 2, congregacion_id: 43, campo_id: 1 },
+      { usuario_id: 2593, pais_id: 2, congregacion_id: 40, campo_id: 1 },
+      { usuario_id: 2087, pais_id: 2, congregacion_id: 5, campo_id: 139 },
+      { usuario_id: 9999, pais_id: 3, congregacion_id: 99, campo_id: 999 },
+    ];
+    return asignaciones.filter((asignacion) =>
+      where[Op.or].some((condicion) =>
+        Object.entries(condicion).every(([campo, filtro]) =>
+          filtro[Op.in].includes(asignacion[campo]),
+        ),
+      ),
+    ).map(fila);
+  });
+  const propietarios = { 36: 2281, 55: 2593, 74: 2087, 99: 9999 };
+  t.mock.method(Informe, "findOne", async ({ where }) => {
+    const propietario = propietarios[where.id];
+    return where.usuario_id[Op.in].includes(propietario)
+      ? { id: Number(where.id), usuario_id: propietario }
+      : null;
+  });
+  const advertencias = t.mock.method(console, "warn", () => {});
+
+  for (const id of ["36", "55", "74"]) {
+    assert.deepEqual(await obtenerInformeAutorizado({ id: 2182 }, id), {
+      id: Number(id),
+      usuario_id: propietarios[id],
+    });
+  }
+  assert.equal(advertencias.mock.callCount(), 0);
+  assert.equal(await obtenerInformeAutorizado({ id: 2182 }, "99"), null);
+  assert.equal(advertencias.mock.callCount(), 1);
+  assert.deepEqual(advertencias.mock.calls[0].arguments, [
+    "[INFORME_AUTH] DENEGADO",
+    {
+      usuarioId: 2182,
+      informeId: "99",
+      esObreroPais: true,
+      paises: [2],
+      totalUsuariosAutorizados: 7,
+    },
+  ]);
 });
