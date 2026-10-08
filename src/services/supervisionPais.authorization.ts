@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Model, Op } from "sequelize";
 import { ROLES_ID } from "../enum/roles.enum";
 import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
@@ -35,9 +35,8 @@ export const obtenerContextoObreroPais = async (
   };
 };
 
-export const obtenerObrerosResponsablesPais = async (paisIds: number[]): Promise<number[]> => {
-  if (!paisIds.length) return [];
-
+const obtenerUnidadesActivasDelPais = async (paisIds: number[]) => {
+  if (!paisIds.length) return { congregaciones: [], campos: [] };
   const congregaciones = await Congregacion.findAll({
     attributes: ["id", "idObreroEncargado", "idObreroEncargadoDos"],
     where: { pais_id: { [Op.in]: paisIds }, estado: true },
@@ -47,37 +46,57 @@ export const obtenerObrerosResponsablesPais = async (paisIds: number[]): Promise
   );
   const campos = congregacionIds.length
     ? await Campo.findAll({
-        attributes: ["idObreroEncargado", "idObreroEncargadoDos"],
+        attributes: ["id", "idObreroEncargado", "idObreroEncargadoDos"],
         where: { congregacion_id: { [Op.in]: congregacionIds }, estado: true },
       })
     : [];
+  return { congregaciones, campos };
+};
 
-  return [
-    ...new Set(
-      [...congregaciones, ...campos]
-        .flatMap((unidad) => [
-          Number(unidad.getDataValue("idObreroEncargado")),
-          Number(unidad.getDataValue("idObreroEncargadoDos")),
-        ])
-        .filter((id) => Number.isInteger(id) && id > 0),
-    ),
-  ];
+const extraerResponsables = (unidades: Model[]): number[] =>
+  unidades
+    .flatMap((unidad) => [
+      Number(unidad.getDataValue("idObreroEncargado")),
+      Number(unidad.getDataValue("idObreroEncargadoDos")),
+    ])
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+export const obtenerObrerosResponsablesPais = async (paisIds: number[]): Promise<number[]> => {
+  const { congregaciones, campos } = await obtenerUnidadesActivasDelPais(paisIds);
+  return [...new Set([
+    ...extraerResponsables(congregaciones),
+    ...extraerResponsables(campos),
+  ])];
 };
 
 export const obtenerObrerosAsignadosAlPais = async (paisIds: number[]): Promise<number[]> => {
   if (!paisIds.length) return [];
 
-  const [asignaciones, responsables] = await Promise.all([
-    UsuarioCongregacion.findAll({
-      attributes: ["usuario_id"],
-      where: { pais_id: { [Op.in]: paisIds } },
-    }),
-    obtenerObrerosResponsablesPais(paisIds),
-  ]);
+  const { congregaciones, campos } = await obtenerUnidadesActivasDelPais(paisIds);
+  const asignaciones = await UsuarioCongregacion.findAll({
+    attributes: ["usuario_id"],
+    where: {
+      [Op.or]: [
+        { pais_id: { [Op.in]: paisIds } },
+        ...(congregaciones.length
+          ? [{
+              congregacion_id: {
+                [Op.in]: congregaciones.map((congregacion) =>
+                  Number(congregacion.getDataValue("id")),
+                ),
+              },
+            }]
+          : []),
+        ...(campos.length
+          ? [{ campo_id: { [Op.in]: campos.map((campo) => Number(campo.getDataValue("id"))) } }]
+          : []),
+      ],
+    },
+  });
 
   return [
     ...new Set([
-      ...responsables,
+      ...extraerResponsables([...congregaciones, ...campos]),
       ...asignaciones
         .map((asignacion) => Number(asignacion.getDataValue("usuario_id")))
         .filter((id) => Number.isInteger(id) && id > 0),
