@@ -58,6 +58,27 @@ x-token: YOUR_JWT_TOKEN
 
 ## Usuarios
 
+### Congregaciones a cargo de un obrero
+
+`GET /api/usuarios/:id/responsabilidades-obrero` requiere `x-token` y devuelve
+`{ "ok": true, "responsabilidades": [] }`. Cada responsabilidad contiene `id`,
+`nombre`, `tipo` (`PAIS`, `CIUDAD`, `CAMPO`), `rol` (`PRINCIPAL`, `SEGUNDO`) y
+`activo`. Incluye unidades activas e inactivas. Se consulta el encargado principal
+y segundo de las unidades, no la congregación de pertenencia del usuario ni sus
+permisos. País solo dispone de encargado principal.
+
+La página Asignar Permisos muestra estas responsabilidades al seleccionar un
+usuario, incluso si todavía no tiene credenciales de acceso. Un ID inválido
+devuelve 400, un usuario inexistente 404 y un fallo de consulta 500.
+Las asignaciones se muestran junto a Congregación y Contacto en el bloque
+«Congregación a cargo», agrupadas por país, ciudad y campo; los niveles sin
+responsabilidades muestran «Sin asignación». Las tres tarjetas comparten una
+fila en pantallas amplias y se reorganizan en pantallas pequeñas.
+Si el usuario no tiene ninguna responsabilidad, se oculta «Congregación a cargo»
+y se mantienen las dos columnas de Congregación y Contacto. Los estados de carga
+y error de consulta permanecen visibles para no confundir un fallo con la ausencia
+de asignaciones.
+
 ### Obtener un Usuario
 
 ```http

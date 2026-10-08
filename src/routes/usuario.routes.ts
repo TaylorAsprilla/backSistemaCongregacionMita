@@ -8,6 +8,7 @@ import {
   transferirUsuario,
   getTodosLosUsuarios,
   getUsuario,
+  getResponsabilidadesObrero,
   getUsuarios,
   getUsuariosCompleto,
   eliminarUsuario,
@@ -56,6 +57,7 @@ router.get(
 
 router.get("/buscarnumeromita", buscarPorNumeroMita);
 
+router.get("/:id/responsabilidades-obrero", validarJWT, getResponsabilidadesObrero);
 router.get("/:id", validarJWT, getUsuario);
 
 // ==========================================
