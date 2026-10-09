@@ -17,14 +17,21 @@ describe("clasificarActividad", () => {
     assert.equal(clasificarActividad("Servicio Martes", 1), "SERVICIO_MARTES");
     assert.equal(clasificarActividad("Servicio Jueves", null), "SERVICIO_JUEVES");
     assert.equal(clasificarActividad("Servicio domingo", 4), "SERVICIO_DOMINGO");
-    assert.equal(clasificarActividad("Servicio Sábado", 7), "SERVICIO_OTROS_DIAS");
+    assert.equal(clasificarActividad("Servicio Sábado", 7), "SERVICIO_SABADO");
+    assert.equal(clasificarActividad("Servicio lunes", 1), "SERVICIO_LUNES");
+    assert.equal(clasificarActividad("Servicio miércoles", 1), "SERVICIO_MIERCOLES");
+    assert.equal(clasificarActividad("Servicio viernes", 1), "SERVICIO_VIERNES");
   });
 
   it("usa el día de la fecha cuando el nombre no lo indica", () => {
     assert.equal(clasificarActividad("Servicio", 3), "SERVICIO_MARTES");
     assert.equal(clasificarActividad("Servicio", 5), "SERVICIO_JUEVES");
     assert.equal(clasificarActividad("Servicio", 1), "SERVICIO_DOMINGO");
-    assert.equal(clasificarActividad("Servicio", 6), "SERVICIO_OTROS_DIAS");
+    assert.equal(clasificarActividad("Servicio", 2), "SERVICIO_LUNES");
+    assert.equal(clasificarActividad("Servicio", 4), "SERVICIO_MIERCOLES");
+    assert.equal(clasificarActividad("Servicio", 6), "SERVICIO_VIERNES");
+    assert.equal(clasificarActividad("Servicio", 7), "SERVICIO_SABADO");
+    assert.equal(clasificarActividad("Servicio", null), "SERVICIO_OTROS_DIAS");
   });
 
   it("separa consejeros y vigilias de los servicios", () => {
@@ -151,5 +158,22 @@ describe("indicadores", () => {
     };
     assert.equal(INDICADORES_POR_CLAVE.get("asistenciaGeneral")!.extraer(ag), 100);
     assert.equal(INDICADORES_POR_CLAVE.get("promedioAsistenciaServicio")!.extraer(ag), 25);
+  });
+
+  it("el promedio de otros días combina lunes, miércoles y viernes", () => {
+    const ag = {
+      ...crearAgregado(),
+      informes: 1,
+      secciones: { act: 1, vis: 0 },
+      valores: {
+        "act.SERVICIO_LUNES.asistencia": 20,
+        "act.SERVICIO_LUNES.cantidad": 1,
+        "act.SERVICIO_MIERCOLES.asistencia": 60,
+        "act.SERVICIO_MIERCOLES.cantidad": 3,
+        "act.SERVICIO_VIERNES.asistencia": 100,
+        "act.SERVICIO_VIERNES.cantidad": 2,
+      },
+    };
+    assert.equal(INDICADORES_POR_CLAVE.get("promedioServicioOtrosDias")!.extraer(ag), 30);
   });
 });

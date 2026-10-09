@@ -88,10 +88,15 @@ export interface DefinicionIndicador {
   extraer: (ag: AgregadoMetricas) => number | null;
 }
 
-const promedioCategoria = (cat: CategoriaActividad) => (ag: AgregadoMetricas) =>
+const promedioCategorias = (categorias: CategoriaActividad[]) => (ag: AgregadoMetricas) =>
   siHay(ag, "act", () =>
-    calcularPromedio(valor(ag, `act.${cat}.asistencia`), valor(ag, `act.${cat}.cantidad`)),
+    calcularPromedio(
+      categorias.reduce((total, cat) => total + valor(ag, `act.${cat}.asistencia`), 0),
+      categorias.reduce((total, cat) => total + valor(ag, `act.${cat}.cantidad`), 0),
+    ),
   );
+
+const promedioCategoria = (cat: CategoriaActividad) => promedioCategorias([cat]);
 
 export const INDICADORES: DefinicionIndicador[] = [
   {
@@ -130,12 +135,44 @@ export const INDICADORES: DefinicionIndicador[] = [
     extraer: promedioCategoria("SERVICIO_MARTES"),
   },
   {
+    clave: "promedioServicioLunes",
+    etiqueta: "Promedio servicio lunes",
+    grupo: "ASISTENCIA",
+    alertable: true,
+    formato: "DECIMAL",
+    extraer: promedioCategoria("SERVICIO_LUNES"),
+  },
+  {
+    clave: "promedioServicioMiercoles",
+    etiqueta: "Promedio servicio miércoles",
+    grupo: "ASISTENCIA",
+    alertable: true,
+    formato: "DECIMAL",
+    extraer: promedioCategoria("SERVICIO_MIERCOLES"),
+  },
+  {
     clave: "promedioServicioJueves",
     etiqueta: "Promedio servicio jueves",
     grupo: "ASISTENCIA",
     alertable: true,
     formato: "DECIMAL",
     extraer: promedioCategoria("SERVICIO_JUEVES"),
+  },
+  {
+    clave: "promedioServicioViernes",
+    etiqueta: "Promedio servicio viernes",
+    grupo: "ASISTENCIA",
+    alertable: true,
+    formato: "DECIMAL",
+    extraer: promedioCategoria("SERVICIO_VIERNES"),
+  },
+  {
+    clave: "promedioServicioSabado",
+    etiqueta: "Promedio servicio sábado",
+    grupo: "ASISTENCIA",
+    alertable: true,
+    formato: "DECIMAL",
+    extraer: promedioCategoria("SERVICIO_SABADO"),
   },
   {
     clave: "promedioServicioDomingo",
@@ -151,7 +188,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ASISTENCIA",
     alertable: false,
     formato: "DECIMAL",
-    extraer: promedioCategoria("SERVICIO_OTROS_DIAS"),
+    extraer: promedioCategorias(["SERVICIO_LUNES", "SERVICIO_MIERCOLES", "SERVICIO_VIERNES"]),
   },
   {
     clave: "consejeros",
@@ -304,7 +341,11 @@ export const INDICADORES_TENDENCIA = [
   "promedioAsistenciaServicio",
   "promedioServicioMartes",
   "promedioServicioJueves",
+  "promedioServicioSabado",
   "promedioServicioDomingo",
+  "promedioServicioLunes",
+  "promedioServicioMiercoles",
+  "promedioServicioViernes",
   "asistenciaConsejeros",
   "participacionVigilias",
   "actividadesEspirituales",

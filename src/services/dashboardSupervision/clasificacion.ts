@@ -1,8 +1,12 @@
 import { DASHBOARD_SUPERVISION_CONFIG } from "../../config/dashboardSupervision.config";
 
 export type CategoriaActividad =
+  | "SERVICIO_LUNES"
   | "SERVICIO_MARTES"
+  | "SERVICIO_MIERCOLES"
   | "SERVICIO_JUEVES"
+  | "SERVICIO_VIERNES"
+  | "SERVICIO_SABADO"
   | "SERVICIO_DOMINGO"
   | "SERVICIO_OTROS_DIAS"
   | "CONSEJERO"
@@ -12,15 +16,23 @@ export type CategoriaActividad =
 export const CATEGORIAS_SERVICIO: CategoriaActividad[] = [
   "SERVICIO_MARTES",
   "SERVICIO_JUEVES",
+  "SERVICIO_SABADO",
   "SERVICIO_DOMINGO",
+  "SERVICIO_LUNES",
+  "SERVICIO_MIERCOLES",
+  "SERVICIO_VIERNES",
   "SERVICIO_OTROS_DIAS",
 ];
 
 export const ETIQUETAS_CATEGORIA_ACTIVIDAD: Record<CategoriaActividad, string> = {
-  SERVICIO_MARTES: "Servicio martes",
-  SERVICIO_JUEVES: "Servicio jueves",
-  SERVICIO_DOMINGO: "Servicio domingo",
-  SERVICIO_OTROS_DIAS: "Servicios otros días",
+  SERVICIO_LUNES: "Servicio del lunes",
+  SERVICIO_MARTES: "Servicio del martes",
+  SERVICIO_MIERCOLES: "Servicio del miércoles",
+  SERVICIO_JUEVES: "Servicio del jueves",
+  SERVICIO_VIERNES: "Servicio del viernes",
+  SERVICIO_SABADO: "Servicio del sábado",
+  SERVICIO_DOMINGO: "Servicio del domingo",
+  SERVICIO_OTROS_DIAS: "Servicio con día no especificado",
   CONSEJERO: "Consejeros",
   VIGILIA: "Vigilias",
   OTRA: "Otras actividades",
@@ -77,8 +89,12 @@ export const clasificarActividad = (
   if (!contieneAlguna(nombre, palabrasServicio)) return "OTRA";
 
   const dia = diaEnNombre(nombre) ?? diaSemana ?? null;
+  if (dia === 2) return "SERVICIO_LUNES";
   if (dia === 3) return "SERVICIO_MARTES";
+  if (dia === 4) return "SERVICIO_MIERCOLES";
   if (dia === 5) return "SERVICIO_JUEVES";
+  if (dia === 6) return "SERVICIO_VIERNES";
+  if (dia === 7) return "SERVICIO_SABADO";
   if (dia === 1) return "SERVICIO_DOMINGO";
   return "SERVICIO_OTROS_DIAS";
 };
