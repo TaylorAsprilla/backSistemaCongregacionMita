@@ -6,16 +6,19 @@ import { TendenciaVariacion, Variacion } from "./variacion";
  * la variación; no califica ni ordena congregaciones.
  */
 
-export type ClaveServicio = "general" | "martes" | "jueves" | "domingo" | "otros";
+export type ClaveServicio = "general" | "lunes" | "martes" | "miercoles" | "jueves" | "viernes" | "sabado" | "domingo";
 
 export type GrupoVariacion = TendenciaVariacion | "SIN_COMPARACION";
 
 export const SERVICIOS_VARIACION: { clave: ClaveServicio; etiqueta: string; indicador: string }[] = [
   { clave: "general", etiqueta: "Todos los servicios", indicador: "promedioAsistenciaServicio" },
-  { clave: "martes", etiqueta: "Servicio martes", indicador: "promedioServicioMartes" },
-  { clave: "jueves", etiqueta: "Servicio jueves", indicador: "promedioServicioJueves" },
-  { clave: "domingo", etiqueta: "Servicio domingo", indicador: "promedioServicioDomingo" },
-  { clave: "otros", etiqueta: "Servicios otros días", indicador: "promedioServicioOtrosDias" },
+  { clave: "martes", etiqueta: "Servicio del martes", indicador: "promedioServicioMartes" },
+  { clave: "jueves", etiqueta: "Servicio del jueves", indicador: "promedioServicioJueves" },
+  { clave: "sabado", etiqueta: "Servicio del sábado", indicador: "promedioServicioSabado" },
+  { clave: "domingo", etiqueta: "Servicio del domingo", indicador: "promedioServicioDomingo" },
+  { clave: "lunes", etiqueta: "Servicio del lunes", indicador: "promedioServicioLunes" },
+  { clave: "miercoles", etiqueta: "Servicio del miércoles", indicador: "promedioServicioMiercoles" },
+  { clave: "viernes", etiqueta: "Servicio del viernes", indicador: "promedioServicioViernes" },
 ];
 
 export const GRUPOS_VARIACION: GrupoVariacion[] = [
