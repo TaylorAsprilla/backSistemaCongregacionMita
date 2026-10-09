@@ -17,6 +17,11 @@ import {
   getDiezmosPorInforme,
   getUnDiezmo,
 } from "../controllers/diezmoscontroller";
+import Diezmos from "../models/diezmos.model";
+import {
+  bloquearInformeCerradoEnCreacion,
+  bloquearInformeCerradoEnEdicion,
+} from "../middlewares/bloquear-informe-cerrado";
 
 const router = Router();
 
@@ -54,9 +59,10 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion(),
   crearDiezmo,
 );
-router.put("/:id", validarJWT, actualizarDiezmo);
-router.delete("/:id", validarJWT, eliminarDiezmo);
+router.put("/:id", validarJWT, bloquearInformeCerradoEnEdicion(Diezmos), actualizarDiezmo);
+router.delete("/:id", validarJWT, bloquearInformeCerradoEnEdicion(Diezmos), eliminarDiezmo);
 
 export default router;

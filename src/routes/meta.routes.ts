@@ -20,6 +20,11 @@ import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
+import Meta from "../models/meta.model";
+import {
+  bloquearInformeCerradoEnCreacion,
+  bloquearInformeCerradoEnEdicion,
+} from "../middlewares/bloquear-informe-cerrado";
 
 const router = Router();
 
@@ -53,6 +58,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion(),
   crearMeta,
 );
 
@@ -70,13 +76,19 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion("nuevo_informe_id"),
   copiarMetaANuevoInforme,
 );
 
-router.put("/:id", validarJWT, actualizarMeta);
+router.put("/:id", validarJWT, bloquearInformeCerradoEnEdicion(Meta), actualizarMeta);
 
-router.put("/:id/cumplir", validarJWT, marcarMetaComoCumplida);
+router.put(
+  "/:id/cumplir",
+  validarJWT,
+  bloquearInformeCerradoEnEdicion(Meta),
+  marcarMetaComoCumplida,
+);
 
-router.delete("/:id", validarJWT, eliminarMeta);
+router.delete("/:id", validarJWT, bloquearInformeCerradoEnEdicion(Meta), eliminarMeta);
 
 export default router;

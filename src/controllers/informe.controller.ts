@@ -21,6 +21,7 @@ import {
   obtenerObrerosAsignadosAlPais,
   obtenerObrerosResponsablesPais,
 } from "../services/supervisionPais.authorization";
+import { obtenerContextoObrero } from "../services/supervisionObrero.authorization";
 import { paisPerteneceAlAlcance } from "../services/supervisionPais.scope";
 
 type AuthenticatedRequest = Request & { id?: number };
@@ -183,6 +184,34 @@ export const getInformes = async (req: Request, res: Response) => {
   }
 };
 
+export const getMisInformes = async (req: Request, res: Response) => {
+  const usuarioId = (req as AuthenticatedRequest).id;
+  if (!usuarioId) {
+    return res.status(401).json({ ok: false, msg: "Usuario no autenticado." });
+  }
+
+  try {
+    const informes = await Informe.findAll({
+      attributes: ["id", "usuario_id", "estado", "periodo", "createdAt", "updatedAt"],
+      where: {
+        usuario_id: usuarioId,
+        estado: { [Op.ne]: ESTADO_INFORME_ENUM.ELIMINADO },
+      },
+      order: [
+        ["periodo", "DESC"],
+        ["createdAt", "DESC"],
+      ],
+    });
+    return res.json({ ok: true, informes });
+  } catch (error) {
+    console.error("Error obteniendo los informes propios:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "No fue posible cargar sus informes.",
+    });
+  }
+};
+
 export const getInforme = async (req: Request, res: Response) => {
   const { id } = req.params;
 
@@ -191,7 +220,17 @@ export const getInforme = async (req: Request, res: Response) => {
 
     if (!!informe) {
       const usuarioId = (req as AuthenticatedRequest).id;
+      const contextoObrero = usuarioId ? await obtenerContextoObrero(usuarioId) : null;
       const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+      if (
+        contextoObrero &&
+        Number(informe.getDataValue("usuario_id")) !== usuarioId
+      ) {
+        return res.status(404).json({
+          ok: false,
+          msg: "No existe el informe con el id solicitado.",
+        });
+      }
       if (contexto) {
         const usuarioIds = await obtenerObrerosAsignadosAlPais(contexto.paises);
         const propietarioId = Number(informe.getDataValue("usuario_id"));
@@ -399,11 +438,28 @@ export const actualizarInforme = async (req: Request, res: Response) => {
     }
 
     const usuarioId = (req as AuthenticatedRequest).id;
+    const contextoObrero = usuarioId ? await obtenerContextoObrero(usuarioId) : null;
     const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+    if (
+      contextoObrero &&
+      Number(informe.getDataValue("usuario_id")) !== usuarioId
+    ) {
+      return res.status(403).json({
+        ok: false,
+        msg: "Solo puede modificar sus propios informes.",
+      });
+    }
     if (contexto && Number(informe.getDataValue("usuario_id")) !== usuarioId) {
       return res.status(403).json({
         ok: false,
         msg: "Los informes de otras congregaciones son de solo lectura.",
+      });
+    }
+
+    if (informe.getDataValue("estado") !== ESTADO_INFORME_ENUM.ABIERTO) {
+      return res.status(409).json({
+        ok: false,
+        msg: "Los informes cerrados son de solo lectura.",
       });
     }
 

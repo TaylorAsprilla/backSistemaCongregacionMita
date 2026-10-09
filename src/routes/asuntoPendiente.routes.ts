@@ -20,6 +20,11 @@ import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
 import { TIPO_ASUNTO_PENDIENTE_ENUM } from "../enum/asuntoPendiente.enum";
 import bloquearLecturaGlobalInforme from "../middlewares/bloquear-lectura-global-informe";
+import AsuntoPendiente from "../models/asuntoPendiente.model";
+import {
+  bloquearInformeCerradoEnCreacion,
+  bloquearInformeCerradoEnEdicion,
+} from "../middlewares/bloquear-informe-cerrado";
 
 const router = Router();
 
@@ -53,6 +58,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion(),
   crearAsuntoPendiente,
 );
 
@@ -70,6 +76,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion("nuevo_informe_id"),
   copiarAsuntoANuevoInforme,
 );
 
@@ -82,9 +89,15 @@ router.put(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnEdicion(AsuntoPendiente),
   actualizarAsuntoPendiente,
 );
 
-router.delete("/:id", validarJWT, eliminarAsuntoPendiente);
+router.delete(
+  "/:id",
+  validarJWT,
+  bloquearInformeCerradoEnEdicion(AsuntoPendiente),
+  eliminarAsuntoPendiente,
+);
 
 export default router;

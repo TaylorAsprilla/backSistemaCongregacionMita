@@ -19,6 +19,7 @@ import actividadEconomicaRoutes from "./routes/actividadEconomica.routes";
 import informeRoutes from "./routes/informe.routes";
 import dashboardSupervisionRoutes from "./routes/dashboardSupervision.routes";
 import supervisionPaisRoutes from "./routes/supervisionPais.routes";
+import supervisionObreroRoutes from "./routes/supervisionObrero.routes";
 import contabilidadRoutes from "./routes/diezmo.routes";
 import logroRoutes from "./routes/logro.routes";
 import tipoStatusRoutes from "./routes/tipoStatus.routes";
@@ -89,6 +90,7 @@ class Server {
     informe: "/api/informe",
     dashboardSupervision: "/api/dashboard-supervision",
     supervisionPais: "/api/supervision-pais",
+    supervisionObrero: "/api/supervision-obrero",
     diezmos: "/api/diezmos",
     logro: "/api/logro",
     tipoStatus: "/api/tipostatus",
@@ -201,6 +203,7 @@ class Server {
     this.app.use(this.apiPaths.informe, informeRoutes);
     this.app.use(this.apiPaths.dashboardSupervision, dashboardSupervisionRoutes);
     this.app.use(this.apiPaths.supervisionPais, supervisionPaisRoutes);
+    this.app.use(this.apiPaths.supervisionObrero, supervisionObreroRoutes);
     this.app.use(this.apiPaths.diezmos, contabilidadRoutes);
     this.app.use(this.apiPaths.logro, logroRoutes);
     this.app.use(this.apiPaths.tipoStatus, tipoStatusRoutes);

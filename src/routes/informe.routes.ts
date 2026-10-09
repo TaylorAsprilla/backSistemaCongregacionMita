@@ -10,6 +10,7 @@ import {
   eliminarInforme,
   getInforme,
   getInformes,
+  getMisInformes,
   getInformesPorTrimestreYPais,
   getResumenInforme,
   verificarInformeAbierto,
@@ -21,6 +22,7 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", validarJWT, getInformes);
+router.get("/mios", validarJWT, getMisInformes);
 router.get("/verificar-abierto", validarJWT, verificarInformeAbierto);
 router.get("/resumen", validarJWT, getResumenInforme);
 router.get("/trimestre-pais", validarJWT, getInformesPorTrimestreYPais);

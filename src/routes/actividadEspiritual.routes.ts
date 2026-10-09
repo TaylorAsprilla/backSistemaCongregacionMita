@@ -14,6 +14,11 @@ import {
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
 import { cargarInformeIdDesdeQuery } from "../helpers/informe-autorizado";
+import ActividadEspiritual from "../models/actividadEspiritual.model";
+import {
+  bloquearInformeCerradoEnCreacion,
+  bloquearInformeCerradoEnEdicion,
+} from "../middlewares/bloquear-informe-cerrado";
 
 const router = Router();
 
@@ -38,6 +43,7 @@ router.post(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnCreacion(),
   crearActividadEspiritual,
 );
 
@@ -56,9 +62,15 @@ router.put(
     validarCampos,
     validarJWT,
   ],
+  bloquearInformeCerradoEnEdicion(ActividadEspiritual),
   actualizarActividadEspiritual,
 );
 
-router.delete("/:id", validarJWT, eliminarActividadEspiritual);
+router.delete(
+  "/:id",
+  validarJWT,
+  bloquearInformeCerradoEnEdicion(ActividadEspiritual),
+  eliminarActividadEspiritual,
+);
 
 export default router;
