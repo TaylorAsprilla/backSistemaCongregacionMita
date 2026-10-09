@@ -2,6 +2,14 @@ import cron from "node-cron";
 import Informe from "../models/informe.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 
+const ZONA_HORARIA_COLOMBIA = "America/Bogota";
+
+function obtenerFechaCierre(periodo: string | Date): Date {
+  const fechaInforme = periodo instanceof Date ? periodo : new Date(periodo);
+  const trimestre = Math.floor(fechaInforme.getUTCMonth() / 3);
+  return new Date(Date.UTC(fechaInforme.getUTCFullYear(), (trimestre + 1) * 3, 10, 5, 5));
+}
+
 const closeExpiredQuarterlyReports = async () => {
   try {
     const informesAbiertos = await Informe.findAll({
@@ -14,21 +22,8 @@ const closeExpiredQuarterlyReports = async () => {
     let informesCerrados = 0;
 
     for (const informe of informesAbiertos) {
-      const fechaInforme = informe.getDataValue("periodo")
-        ? new Date(`${informe.getDataValue("periodo")}T00:00:00`)
-        : new Date(informe.getDataValue("createdAt"));
-      const trimestre = Math.floor(fechaInforme.getMonth() / 3);
-      const finTrimestre = new Date(
-        fechaInforme.getFullYear(),
-        (trimestre + 1) * 3,
-        0,
-        23,
-        59,
-        59,
-        999,
-      );
-      const fechaCierre = new Date(finTrimestre);
-      fechaCierre.setDate(fechaCierre.getDate() + 8);
+      const periodo = informe.getDataValue("periodo") || informe.getDataValue("createdAt");
+      const fechaCierre = obtenerFechaCierre(periodo);
 
       if (ahora >= fechaCierre) {
         await Informe.update(
@@ -55,9 +50,11 @@ const closeExpiredQuarterlyReports = async () => {
 const nodeEnv = process.env.NODE_ENV || "development";
 
 if (nodeEnv === "production") {
-  cron.schedule("5 0 * * *", closeExpiredQuarterlyReports);
+  cron.schedule("5 0 * * *", closeExpiredQuarterlyReports, {
+    timezone: ZONA_HORARIA_COLOMBIA,
+  });
   console.info(
-    "Cron de cierre de informes configurado para ejecutarse diariamente a las 00:05.",
+    "Cron de cierre de informes configurado para ejecutarse diariamente a las 00:05, hora de Colombia.",
   );
 } else {
   console.info(`Cron de cierre de informes desactivado en entorno: ${nodeEnv}`);
