@@ -1,5 +1,6 @@
 import { QueryTypes } from "sequelize";
 import db from "../../database/connection";
+import { InformeSupervisionDTO, InformesSupervisionDTO } from "../../types/dashboardSupervision.dto";
 
 /**
  * Capa de acceso a datos del dashboard. Todas las consultas son agregadas (GROUP BY)
@@ -115,6 +116,36 @@ export interface FilaInforme {
   periodo: string;
   createdAt: string | null;
 }
+
+export const obtenerListadoInformes = async (
+  inicio: string,
+  fin: string,
+  busqueda: string,
+  pagina: number,
+  porPagina: number,
+  usuarios?: number[],
+): Promise<InformesSupervisionDTO> => {
+  const nombre = "TRIM(CONCAT_WS(' ', NULLIF(TRIM(u.primerNombre), ''), NULLIF(TRIM(u.segundoNombre), ''), NULLIF(TRIM(u.primerApellido), ''), NULLIF(TRIM(u.segundoApellido), '')))";
+  const desde = `FROM informe i
+    LEFT JOIN usuario u ON u.id = i.usuario_id
+    WHERE i.estado <> 'Eliminado'
+      ${usuarios !== undefined ? (usuarios.length ? "AND i.usuario_id IN (:usuarios)" : "AND 1 = 0") : ""}
+      AND ${SQL_PERIODO_INFORME} >= :inicio AND ${SQL_PERIODO_INFORME} < :fin
+      AND (:busqueda = '' OR LOCATE(LOWER(:busqueda), LOWER(${nombre})) > 0
+        OR CAST(i.id AS CHAR) = :busqueda)`;
+  const replacements = { inicio, fin, busqueda, usuarios };
+  const conteo = await seleccionar<{ total: number }>(`SELECT COUNT(*) AS total ${desde}`, replacements);
+  const total = Number(conteo[0].total);
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const informes = await seleccionar<InformeSupervisionDTO>(
+    `SELECT i.id, i.usuario_id, ${nombre} AS obrero, i.estado,
+       DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d') AS periodo
+     ${desde} ORDER BY obrero, i.id DESC LIMIT :limite OFFSET :offset`,
+    { ...replacements, limite: porPagina, offset: (paginaActual - 1) * porPagina },
+  );
+  return { informes, total, pagina: paginaActual, porPagina, totalPaginas };
+};
 
 /** Informes no eliminados de los usuarios indicados cuyo periodo está en [inicio, fin). */
 export const obtenerInformes = async (
