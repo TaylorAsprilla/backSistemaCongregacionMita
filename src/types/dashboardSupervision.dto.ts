@@ -20,6 +20,22 @@ export type TipoUnidad = "PAIS" | "CONGREGACION" | "CAMPO";
  */
 export type EstadoEntrega = "ENTREGADO" | "EN_ELABORACION" | "PENDIENTE" | "SIN_OBRERO";
 
+export interface InformeSupervisionDTO {
+  id: number;
+  usuario_id: number;
+  obrero: string;
+  estado: string;
+  periodo: string;
+}
+
+export interface InformesSupervisionDTO {
+  informes: InformeSupervisionDTO[];
+  total: number;
+  pagina: number;
+  porPagina: number;
+  totalPaginas: number;
+}
+
 export type OrdenUnidades =
   | "NOMBRE"
   | "PAIS"

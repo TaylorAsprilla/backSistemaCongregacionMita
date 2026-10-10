@@ -8,6 +8,7 @@ import {
   obtenerResumen,
   obtenerTendencias,
   obtenerUnidades,
+  obtenerListadoInformes,
 } from "../services/dashboardSupervision.service";
 
 const texto = (valor: unknown) =>
@@ -36,6 +37,14 @@ const manejar =
   };
 
 export const getFiltros = manejar(async () => ({ filtros: await obtenerFiltrosDisponibles() }));
+
+export const getInformes = manejar(async (req) => ({
+  informes: await obtenerListadoInformes(leerFiltros(req.query), {
+    busqueda: texto(req.query.busqueda),
+    pagina: entero(req.query.pagina),
+    porPagina: entero(req.query.porPagina),
+  }),
+}));
 
 export const getResumen = manejar(async (req) => ({
   resumen: await obtenerResumen(leerFiltros(req.query)),

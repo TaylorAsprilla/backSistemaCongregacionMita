@@ -22,6 +22,8 @@ import {
   obtenerObrerosResponsablesPais,
 } from "../services/supervisionPais.authorization";
 import { obtenerContextoObrero } from "../services/supervisionObrero.authorization";
+import { ROLES_ID } from "../enum/roles.enum";
+import { obtenerPermisosUsuario } from "../services/dashboardSupervision/consultas";
 import { paisPerteneceAlAlcance } from "../services/supervisionPais.scope";
 
 type AuthenticatedRequest = Request & { id?: number };
@@ -220,8 +222,10 @@ export const getInforme = async (req: Request, res: Response) => {
 
     if (!!informe) {
       const usuarioId = (req as AuthenticatedRequest).id;
-      const contextoObrero = usuarioId ? await obtenerContextoObrero(usuarioId) : null;
-      const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
+      const permisos = usuarioId ? await obtenerPermisosUsuario(usuarioId) : [];
+      const esAdministrador = permisos.includes(ROLES_ID.ADMINISTRADOR);
+      const contextoObrero = usuarioId && !esAdministrador ? await obtenerContextoObrero(usuarioId) : null;
+      const contexto = usuarioId && !esAdministrador ? await obtenerContextoObreroPais(usuarioId) : null;
       if (
         contextoObrero &&
         Number(informe.getDataValue("usuario_id")) !== usuarioId

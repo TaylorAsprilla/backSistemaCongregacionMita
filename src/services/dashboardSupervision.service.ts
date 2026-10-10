@@ -474,6 +474,30 @@ export const leerFiltros = (query: Record<string, unknown>): FiltrosDashboard =>
   return resultado.valor;
 };
 
+export const obtenerListadoInformes = async (
+  filtros: FiltrosDashboard,
+  consulta: { busqueda?: string; pagina?: number; porPagina?: number },
+) => {
+  const catalogo = await obtenerCatalogo();
+  const jerarquia = validarJerarquia(filtros, catalogo);
+  if (jerarquia) throw new ErrorDashboard(jerarquia);
+  const unidades = unidadesEnAlcance(filtros, catalogo).filter(
+    (unidad) => filtros.campo_id === null || unidad.ref.tipo === "CAMPO",
+  );
+  const usuarios = [...new Set(unidades.flatMap((unidad) => unidad.obreros))];
+  return consultas.obtenerListadoInformes(
+  fechaInicioPeriodo(filtros),
+  fechaFinExclusivaPeriodo(filtros),
+  consulta.busqueda ?? "",
+  consulta.pagina ?? 1,
+  Math.min(
+    consulta.porPagina ?? DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaDefecto,
+    DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaMaximo,
+  ),
+  usuarios,
+  );
+};
+
 /* ------------------------------------------------------------------ */
 /* Cálculos compartidos                                                */
 /* ------------------------------------------------------------------ */

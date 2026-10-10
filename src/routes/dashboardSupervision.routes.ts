@@ -10,6 +10,7 @@ import {
   getResumen,
   getTendencias,
   getUnidades,
+  getInformes,
 } from "../controllers/dashboardSupervision.controller";
 import { DASHBOARD_SUPERVISION_CONFIG } from "../config/dashboardSupervision.config";
 import validarJWT from "../middlewares/validar-jwt";
@@ -26,6 +27,7 @@ const validarRolSupervision = crearValidadorRoles(
 router.use(validarJWT, validarRolSupervision);
 
 router.get("/filtros", getFiltros);
+router.get("/informes", getInformes);
 router.get("/resumen", getResumen);
 router.get("/tendencias", getTendencias);
 router.get("/alertas", getAlertas);

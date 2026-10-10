@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { Op } from "sequelize";
 import Informe from "../models/informe.model";
+import { ROLES_ID } from "../enum/roles.enum";
+import { obtenerPermisosUsuario } from "../services/dashboardSupervision/consultas";
 import {
   obtenerContextoObreroPais,
   obtenerObrerosAsignadosAlPais,
@@ -16,6 +18,11 @@ export const obtenerInformeAutorizado = async (
 
   if (!usuarioId) {
     return null;
+  }
+
+  const permisos = await obtenerPermisosUsuario(usuarioId);
+  if (permisos.includes(ROLES_ID.ADMINISTRADOR)) {
+    return Informe.findOne({ where: { id: informeId } });
   }
 
   const contexto = await obtenerContextoObreroPais(usuarioId);

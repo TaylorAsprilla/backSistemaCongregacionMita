@@ -38,6 +38,23 @@ menú sólo se muestra a administradores.
   - `TRIMESTRE_ANTERIOR` (por defecto): Q3 2026 vs Q2 2026.
   - `MISMO_TRIMESTRE_ANIO_ANTERIOR`: Q3 2026 vs Q3 2025.
 
+### Listado de informes de todos los obreros
+
+La sección **Informes de todos los obreros**, exclusiva del dashboard del administrador,
+consulta `GET /api/dashboard-supervision/informes` con `anio`, `trimestre`, `busqueda`,
+`pagina` y `porPagina` (máximo 100). Devuelve `{ ok, informes: { informes, total,
+pagina, porPagina, totalPaginas } }`.
+
+Incluye los informes no eliminados del trimestre seleccionado, abiertos y cerrados, de los
+responsables asignados a congregaciones activas (país, ciudad o campo). Los parámetros
+`pais_id`, `congregacion_id` y `campo_id` aplican la misma jerarquía del Dashboard:
+país incluye sus ciudades y campos; ciudad incluye sus campos; campo incluye exclusivamente
+sus responsables. Se consideran ambos responsables cuando la unidad permite dos.
+El informe se vincula por su autor, ya que no almacena una congregación propia ni una
+asignación histórica. Permite buscar por nombre del obrero o número de informe y abrir
+el informe completo. Al regresar se conservan el periodo y los filtros geográficos.
+El endpoint usa los mismos controles JWT y de rol administrador que el resto del dashboard.
+
 ### Congregaciones (unidades) y estado de entrega
 
 En la interfaz cada unidad se muestra como **congregación**, discriminada por tipo:
