@@ -41,6 +41,9 @@ menú sólo se muestra a administradores.
 ### Listado de informes de todos los obreros
 
 La sección **Informes de todos los obreros**, exclusiva del dashboard del administrador,
+se abre desde una pestaña junto a **Resumen de supervisión**. Ambas comparten los filtros
+del Dashboard. Al regresar del informe completo se abre la pestaña de informes.
+El listado
 consulta `GET /api/dashboard-supervision/informes` con `anio`, `trimestre`, `busqueda`,
 `pagina` y `porPagina` (máximo 100). Devuelve `{ ok, informes: { informes, total,
 pagina, porPagina, totalPaginas } }`.
