@@ -124,7 +124,9 @@ export const obtenerListadoInformes = async (
   pagina: number,
   porPagina: number,
   usuarios?: number[],
-): Promise<InformesSupervisionDTO> => {
+): Promise<Omit<InformesSupervisionDTO, "informes"> & {
+  informes: Omit<InformeSupervisionDTO, "pais" | "ciudad" | "campo">[];
+}> => {
   const nombre = "TRIM(CONCAT_WS(' ', NULLIF(TRIM(u.primerNombre), ''), NULLIF(TRIM(u.segundoNombre), ''), NULLIF(TRIM(u.primerApellido), ''), NULLIF(TRIM(u.segundoApellido), '')))";
   const desde = `FROM informe i
     LEFT JOIN usuario u ON u.id = i.usuario_id
@@ -138,7 +140,7 @@ export const obtenerListadoInformes = async (
   const total = Number(conteo[0].total);
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const paginaActual = Math.min(pagina, totalPaginas);
-  const informes = await seleccionar<InformeSupervisionDTO>(
+  const informes = await seleccionar<Omit<InformeSupervisionDTO, "pais" | "ciudad" | "campo">>(
     `SELECT i.id, i.usuario_id, ${nombre} AS obrero, i.estado,
        DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d') AS periodo
      ${desde} ORDER BY obrero, i.id DESC LIMIT :limite OFFSET :offset`,

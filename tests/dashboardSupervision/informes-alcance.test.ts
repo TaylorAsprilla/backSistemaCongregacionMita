@@ -6,7 +6,7 @@ import { runInNewContext } from "node:vm";
 import type * as Servicio from "../../src/services/dashboardSupervision.service";
 import type { FiltrosDashboard } from "../../src/types/dashboardSupervision.dto";
 
-const preparar = () => {
+const preparar = (autores: number[] = []) => {
   const ruta = require.resolve("../../src/services/dashboardSupervision.service");
   const requireServicio = createRequire(ruta);
   const exports: Partial<typeof Servicio> = {};
@@ -30,7 +30,12 @@ const preparar = () => {
       obtenerCategoriasEspirituales: async () => [],
       obtenerListadoInformes: async (...argumentos: unknown[]) => {
         usuarios = argumentos[5] as number[];
-        return { informes: [], total: 0, pagina: 1, porPagina: 10, totalPaginas: 1 };
+        return {
+          informes: autores.map((usuario_id) => ({
+            id: usuario_id, usuario_id, obrero: `Obrero ${usuario_id}`, estado: "Abierto", periodo: "2026-07-01",
+          })),
+          total: autores.length, pagina: 1, porPagina: 10, totalPaginas: 1,
+        };
       },
     } : requireServicio(nombre),
   });
@@ -41,6 +46,8 @@ const preparar = () => {
     comparacion: "TRIMESTRE_ANTERIOR",
   };
   return {
+    informes: async (seleccion: Partial<FiltrosDashboard> = {}) =>
+      (await consultar({ ...filtros, ...seleccion }, {})).informes,
     consultar: async (seleccion: Partial<FiltrosDashboard>) => {
       await consultar({ ...filtros, ...seleccion }, {});
       return Array.from(usuarios).sort((a, b) => a - b);
@@ -66,5 +73,25 @@ describe("alcance geográfico del listado de informes", () => {
   });
   it("rechaza un campo de otro país", async () => {
     await assert.rejects(preparar().consultar({ pais_id: 2, campo_id: 111 }), /no pertenece/);
+  });
+  it("muestra la ciudad y el país del responsable sin inventar un campo", async () => {
+    const [informe] = await preparar([11]).informes();
+    assert.equal(informe.pais, "País A");
+    assert.equal(informe.ciudad, "Ciudad A");
+    assert.equal(informe.campo, null);
+    assert.equal(informe.obrero, "Obrero 11");
+    assert.equal(informe.estado, "Abierto");
+  });
+  it("muestra la jerarquía completa de un responsable de campo", async () => {
+    const [informe] = await preparar([13]).informes({ campo_id: 111 });
+    assert.equal(informe.pais, "País A");
+    assert.equal(informe.ciudad, "Ciudad A");
+    assert.equal(informe.campo, "Campo A");
+  });
+  it("no asigna ciudad ni campo al responsable del país", async () => {
+    const [informe] = await preparar([10]).informes();
+    assert.equal(informe.pais, "País A");
+    assert.equal(informe.ciudad, null);
+    assert.equal(informe.campo, null);
   });
 });

@@ -56,6 +56,10 @@ sus responsables. Se consideran ambos responsables cuando la unidad permite dos.
 El informe se vincula por su autor, ya que no almacena una congregación propia ni una
 asignación histórica. Permite buscar por nombre del obrero o número de informe y abrir
 el informe completo. Al regresar se conservan el periodo y los filtros geográficos.
+La tabla muestra el nombre del obrero, estado, país, ciudad y campo de sus congregaciones
+a cargo dentro del alcance seleccionado. Si tiene varias asignaciones, los nombres se
+muestran sin duplicados. El campo se devuelve como `null` y la celda queda vacía cuando
+el obrero no tiene una Congregación Campo a cargo.
 El endpoint usa los mismos controles JWT y de rol administrador que el resto del dashboard.
 
 ### Congregaciones (unidades) y estado de entrega
