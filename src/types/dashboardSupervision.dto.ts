@@ -24,6 +24,9 @@ export interface InformeSupervisionDTO {
   id: number;
   usuario_id: number;
   obrero: string;
+  pais: string | null;
+  ciudad: string | null;
+  campo: string | null;
   estado: string;
   periodo: string;
 }

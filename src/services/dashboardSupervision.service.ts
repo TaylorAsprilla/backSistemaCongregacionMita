@@ -485,17 +485,39 @@ export const obtenerListadoInformes = async (
     (unidad) => filtros.campo_id === null || unidad.ref.tipo === "CAMPO",
   );
   const usuarios = [...new Set(unidades.flatMap((unidad) => unidad.obreros))];
-  return consultas.obtenerListadoInformes(
-  fechaInicioPeriodo(filtros),
-  fechaFinExclusivaPeriodo(filtros),
-  consulta.busqueda ?? "",
-  consulta.pagina ?? 1,
-  Math.min(
-    consulta.porPagina ?? DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaDefecto,
-    DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaMaximo,
-  ),
-  usuarios,
+  const resultado = await consultas.obtenerListadoInformes(
+    fechaInicioPeriodo(filtros),
+    fechaFinExclusivaPeriodo(filtros),
+    consulta.busqueda ?? "",
+    consulta.pagina ?? 1,
+    Math.min(
+      consulta.porPagina ?? DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaDefecto,
+      DASHBOARD_SUPERVISION_CONFIG.paginacion.porPaginaMaximo,
+    ),
+    usuarios,
   );
+  const unidadesPorObrero = new Map<number, UnidadRef[]>();
+  for (const unidad of unidades) {
+    for (const obrero of unidad.obreros) {
+      const asignaciones = unidadesPorObrero.get(obrero) ?? [];
+      asignaciones.push(unidad.ref);
+      unidadesPorObrero.set(obrero, asignaciones);
+    }
+  }
+  const nombres = (valores: (string | null)[]): string | null =>
+    [...new Set(valores.filter((valor): valor is string => !!valor))].join(" · ") || null;
+  return {
+    ...resultado,
+    informes: resultado.informes.map((informe) => {
+      const asignaciones = unidadesPorObrero.get(Number(informe.usuario_id)) ?? [];
+      return {
+        ...informe,
+        pais: nombres(asignaciones.map((unidad) => unidad.pais)),
+        ciudad: nombres(asignaciones.map((unidad) => unidad.congregacion)),
+        campo: nombres(asignaciones.filter((unidad) => unidad.tipo === "CAMPO").map((unidad) => unidad.nombre)),
+      };
+    }),
+  };
 };
 
 /* ------------------------------------------------------------------ */
