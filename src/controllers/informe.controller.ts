@@ -197,7 +197,7 @@ export const getMisInformes = async (req: Request, res: Response) => {
       attributes: ["id", "usuario_id", "estado", "periodo", "createdAt", "updatedAt"],
       where: {
         usuario_id: usuarioId,
-        estado: { [Op.ne]: ESTADO_INFORME_ENUM.ELIMINADO },
+        estado: ESTADO_INFORME_ENUM.CERRADO,
       },
       order: [
         ["periodo", "DESC"],
