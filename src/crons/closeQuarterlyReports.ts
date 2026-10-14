@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import Informe from "../models/informe.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
+import { obtenerFechaCierreInforme } from "../helpers/periodoInforme";
 
 const ZONA_HORARIA_UTC = "UTC";
 
@@ -8,8 +9,7 @@ function obtenerFechaCierre(periodo: string | Date): Date {
   const fechaInforme = periodo instanceof Date ? periodo : new Date(periodo);
   const anio = fechaInforme.getUTCFullYear();
   const trimestre = Math.floor(fechaInforme.getUTCMonth() / 3) + 1;
-  const diaCierre = trimestre === 3 && anio === 2026 ? 14 : 8;
-  return new Date(Date.UTC(anio, trimestre * 3, diaCierre, 5, 5));
+  return obtenerFechaCierreInforme(trimestre, anio);
 }
 
 const closeExpiredQuarterlyReports = async () => {

@@ -369,7 +369,8 @@ export const getInforme = async (req: Request, res: Response) => {
 
 export const crearInforme = async (req: Request, res: Response) => {
   const { body } = req;
-  const periodo = body.periodo || obtenerPeriodoInformeActivo();
+  const periodoActivo = obtenerPeriodoInformeActivo();
+  const periodo = body.periodo || periodoActivo;
   const usuarioAutenticado = (req as AuthenticatedRequest).id;
 
   try {
@@ -387,7 +388,7 @@ export const crearInforme = async (req: Request, res: Response) => {
     return res.status(500).json({ ok: false, msg: "No fue posible validar los permisos." });
   }
 
-  if (!esFechaISO(periodo) || periodo !== obtenerPeriodoInformeActivo()) {
+  if (!esFechaISO(periodo) || periodo !== periodoActivo) {
     return res.status(400).json({
       ok: false,
       msg: "El periodo del informe debe ser el trimestre abierto actualmente",
@@ -413,7 +414,11 @@ export const crearInforme = async (req: Request, res: Response) => {
       });
     }
 
-    const informe = Informe.build({ ...body, periodo });
+    const informe = Informe.build({
+      usuario_id: body.usuario_id,
+      estado: body.estado,
+      periodo,
+    });
     await informe.save();
 
     res.json({ ok: true, msg: "Informe creado ", informe });
