@@ -14,6 +14,7 @@ import Genero from "../models/genero.model";
 import GradoAcademico from "../models/gradoAcademico.model";
 import GrupoGemelos from "../models/grupoGemelos.model";
 import Informe from "../models/informe.model";
+import InformeResponsable from "../models/informeResponsable.model";
 import Meta from "../models/meta.model";
 import Ministerio from "../models/ministerio.model";
 import Nacionalidad from "../models/nacionalidad.model";
@@ -299,6 +300,16 @@ Informe.belongsTo(Usuario, {
 Usuario.hasMany(Informe, {
   foreignKey: "usuario_id",
   as: "informes",
+});
+
+Informe.hasMany(InformeResponsable, {
+  foreignKey: "informe_id",
+  as: "responsablesHistoricos",
+});
+
+InformeResponsable.belongsTo(Informe, {
+  foreignKey: "informe_id",
+  as: "informe",
 });
 
 Informe.hasMany(Actividad, {

@@ -1,6 +1,6 @@
 import "./crons/notifyExpiration";
 import "./crons/notifyPendingRequests";
-import "./crons/closeQuarterlyReports";
+import { runReportClosureStartupCatchup } from "./crons/closeQuarterlyReports";
 
 import express, { Application } from "express";
 import usuarioRoutes from "./routes/usuario.routes";
@@ -153,6 +153,7 @@ class Server {
     try {
       await db.authenticate();
       console.info("Database Online");
+      await runReportClosureStartupCatchup();
     } catch (error) {
       console.error(error);
     }

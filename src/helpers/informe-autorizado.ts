@@ -1,12 +1,15 @@
 import { NextFunction, Request, Response } from "express";
 import { Op } from "sequelize";
 import Informe from "../models/informe.model";
+import InformeResponsable from "../models/informeResponsable.model";
 import { ROLES_ID } from "../enum/roles.enum";
+import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 import { obtenerPermisosUsuario } from "../services/dashboardSupervision/consultas";
 import {
   obtenerContextoObreroPais,
   obtenerObrerosAsignadosAlPais,
 } from "../services/supervisionPais.authorization";
+import { obtenerAmbitosResponsabilidad } from "../services/informeResponsables";
 
 type AuthenticatedRequest = Request & { id?: number };
 
@@ -29,26 +32,85 @@ export const obtenerInformeAutorizado = async (
   const usuariosAutorizados = contexto
     ? [usuarioId, ...await obtenerObrerosAsignadosAlPais(contexto.paises)]
     : [usuarioId];
-  if (!usuariosAutorizados.length) return null;
-
-  const informe = await Informe.findOne({
+  const informePorPropietario = await Informe.findOne({
     where: {
       id: informeId,
       usuario_id: { [Op.in]: usuariosAutorizados },
     },
   });
+  if (informePorPropietario) return informePorPropietario;
 
-  if (!informe) {
-    console.warn("[INFORME_AUTH] DENEGADO", {
-      usuarioId,
-      informeId,
-      esObreroPais: contexto !== null,
-      paises: contexto?.paises ?? [],
-      totalUsuariosAutorizados: usuariosAutorizados.length,
-    });
+  const informe = await Informe.findOne({ where: { id: informeId } });
+  if (!informe) return null;
+
+  const tipoCongregacion = informe.getDataValue("tipo_congregacion");
+  const congregacionId = Number(informe.getDataValue("congregacion_id"));
+  if (
+    (tipoCongregacion === "PAIS" ||
+      tipoCongregacion === "CONGREGACION" ||
+      tipoCongregacion === "CAMPO") &&
+    Number.isInteger(congregacionId)
+  ) {
+    const ambitos = await obtenerAmbitosResponsabilidad(usuarioId);
+    if (
+      ambitos.some(
+        (ambito) =>
+          ambito.tipo_congregacion === tipoCongregacion &&
+          ambito.congregacion_id === congregacionId,
+      )
+    ) {
+      return informe;
+    }
   }
 
-  return informe;
+  if (
+    informe.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO &&
+    (await InformeResponsable.findOne({
+      where: {
+        informe_id: informe.getDataValue("id"),
+        usuario_id: usuarioId,
+      },
+    }))
+  ) {
+    return informe;
+  }
+
+  console.warn("[INFORME_AUTH] DENEGADO", {
+    usuarioId,
+    informeId,
+    esObreroPais: contexto !== null,
+    paises: contexto?.paises ?? [],
+    totalUsuariosAutorizados: usuariosAutorizados.length,
+  });
+  return null;
+};
+
+export const esResponsableActualDelInforme = async (
+  usuarioId: number,
+  informe: Awaited<ReturnType<typeof Informe.findByPk>>,
+): Promise<boolean> => {
+  if (!informe) return false;
+  if (Number(informe.getDataValue("usuario_id")) === usuarioId) return true;
+  const permisos = await obtenerPermisosUsuario(usuarioId);
+  if (permisos.includes(ROLES_ID.ADMINISTRADOR)) return true;
+
+  const tipoCongregacion = informe.getDataValue("tipo_congregacion");
+  const congregacionId = Number(informe.getDataValue("congregacion_id"));
+  if (
+    (tipoCongregacion !== "PAIS" &&
+      tipoCongregacion !== "CONGREGACION" &&
+      tipoCongregacion !== "CAMPO") ||
+    !Number.isInteger(congregacionId) ||
+    congregacionId <= 0
+  ) {
+    return false;
+  }
+  const ambitos = await obtenerAmbitosResponsabilidad(usuarioId);
+  return ambitos.some(
+    (ambito) =>
+      ambito.tipo_congregacion === tipoCongregacion &&
+      ambito.congregacion_id === congregacionId,
+  );
 };
 
 export const cargarInformeIdDesdeQuery = (

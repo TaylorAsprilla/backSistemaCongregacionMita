@@ -8,18 +8,32 @@ const Campo = require("../build/src/models/campo.model").default;
 const UsuarioCongregacion = require("../build/src/models/usuarioCongregacion.model").default;
 const Pais = require("../build/src/models/pais.model").default;
 const consultas = require("../build/src/services/dashboardSupervision/consultas");
+const informeResponsables = require("../build/src/services/informeResponsables");
 const { obtenerInformeAutorizado } = require("../build/src/helpers/informe-autorizado");
 
 test("Obrero País puede leer sus informes y los de su alcance, no los ajenos", async () => {
   const originalContexto = autorizacion.obtenerContextoObreroPais;
   const originalAsignados = autorizacion.obtenerObrerosAsignadosAlPais;
   const originalFindOne = Informe.findOne;
+  const originalAmbitos = informeResponsables.obtenerAmbitosResponsabilidad;
   try {
     autorizacion.obtenerContextoObreroPais = async () => ({ paises: [2] });
     autorizacion.obtenerObrerosAsignadosAlPais = async () => [7];
+    informeResponsables.obtenerAmbitosResponsabilidad = async () => [];
     let propietario = 77;
-    Informe.findOne = async ({ where }) =>
-      where.usuario_id[Op.in].includes(propietario) ? { id: 18, usuario_id: propietario } : null;
+    Informe.findOne = async ({ where }) => {
+      if (!where.usuario_id) {
+        return { id: 18, usuario_id: propietario, getDataValue: (campo) => ({
+          id: 18,
+          usuario_id: propietario,
+          tipo_congregacion: null,
+          congregacion_id: null,
+        })[campo] };
+      }
+      return where.usuario_id[Op.in].includes(propietario)
+        ? { id: 18, usuario_id: propietario }
+        : null;
+    };
     assert.ok(await obtenerInformeAutorizado({ id: 77 }, "18"));
     propietario = 7;
     assert.ok(await obtenerInformeAutorizado({ id: 77 }, "18"));
@@ -35,6 +49,7 @@ test("Obrero País puede leer sus informes y los de su alcance, no los ajenos", 
   } finally {
     autorizacion.obtenerContextoObreroPais = originalContexto;
     autorizacion.obtenerObrerosAsignadosAlPais = originalAsignados;
+    informeResponsables.obtenerAmbitosResponsabilidad = originalAmbitos;
     Informe.findOne = originalFindOne;
   }
 });
@@ -118,8 +133,20 @@ test("El obrero 2182 de Colombia puede leer los informes 36, 55 y 74 por la asig
   const propietarios = { 36: 2281, 55: 2593, 74: 2087, 99: 9999 };
   t.mock.method(Informe, "findOne", async ({ where }) => {
     const propietario = propietarios[where.id];
+    const informe = {
+      id: Number(where.id),
+      usuario_id: propietario,
+      getDataValue: (campo) => ({
+        id: Number(where.id),
+        usuario_id: propietario,
+        tipo_congregacion: null,
+        congregacion_id: null,
+        estado: "Abierto",
+      })[campo],
+    };
+    if (!where.usuario_id) return informe;
     return where.usuario_id[Op.in].includes(propietario)
-      ? { id: Number(where.id), usuario_id: propietario }
+      ? informe
       : null;
   });
   const advertencias = t.mock.method(console, "warn", () => {});

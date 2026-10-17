@@ -2,16 +2,43 @@ import { NextFunction, Request, Response } from "express";
 import { Model, ModelStatic } from "sequelize";
 import Informe from "../models/informe.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
+import { obtenerFechaCierreInforme } from "../helpers/periodoInforme";
+import { cerrarInformeTransaccional } from "../services/cerrarInforme";
+
+export function informeVencido(
+  informe: Model,
+  ahora: Date = new Date(),
+): boolean {
+  const valorPeriodo =
+    informe.getDataValue("periodo") ?? informe.getDataValue("createdAt");
+  if (!valorPeriodo) return false;
+  const fechaPeriodo =
+    valorPeriodo instanceof Date ? valorPeriodo : new Date(String(valorPeriodo));
+  if (!Number.isFinite(fechaPeriodo.getTime())) return false;
+  const trimestre = Math.floor(fechaPeriodo.getUTCMonth() / 3) + 1;
+  return ahora >= obtenerFechaCierreInforme(trimestre, fechaPeriodo.getUTCFullYear());
+}
 
 const responderSiInformeCerrado = async (
   informeId: string | number,
   res: Response,
   next: NextFunction,
 ) => {
-  const informe = await Informe.findByPk(informeId);
+  let informe = await Informe.findByPk(informeId);
+  if (informe && informe.getDataValue("estado") === ESTADO_INFORME_ENUM.ABIERTO &&
+      informeVencido(informe)) {
+    informe = await cerrarInformeTransaccional(Number(informeId), null);
+    res.status(409).json({
+      ok: false,
+      code: "INFORME_VENCIDO",
+      msg: "El periodo del informe venció y se cerró automáticamente.",
+    });
+    return;
+  }
   if (informe && informe.getDataValue("estado") !== ESTADO_INFORME_ENUM.ABIERTO) {
     res.status(409).json({
       ok: false,
+      code: "INFORME_CERRADO",
       msg: "Los informes cerrados son de solo lectura.",
     });
     return;

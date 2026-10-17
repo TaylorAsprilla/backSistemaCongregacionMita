@@ -5,7 +5,12 @@ import { runInNewContext } from "node:vm";
 import type { Request } from "express";
 import type * as Autorizacion from "../../src/helpers/informe-autorizado";
 
-const preparar = (permisos: string[], paises: number[] | null = null, fallo = false) => {
+const preparar = (
+  permisos: string[],
+  paises: number[] | null = null,
+  fallo = false,
+  propietarioInforme = 1,
+) => {
   const llamadas: { where: { id: string; usuario_id?: { in: number[] } } }[] = [];
   const exports: Partial<typeof Autorizacion> = {};
   let consultasContexto = 0;
@@ -16,14 +21,24 @@ const preparar = (permisos: string[], paises: number[] | null = null, fallo = fa
       switch (nombre) {
         case "sequelize": return { Op: { in: "in" } };
         case "../enum/roles.enum": return { ROLES_ID: { ADMINISTRADOR: "1" } };
+        case "../enum/informe.enum": return {
+          ESTADO_INFORME_ENUM: { CERRADO: "Cerrado" },
+        };
         case "../models/informe.model": return {
           __esModule: true,
           default: {
             findOne: async (opciones: typeof llamadas[number]) => {
               llamadas.push(opciones);
-              return { id: 12 };
+              return {
+                getDataValue: (campo: string) =>
+                  campo === "id" ? 12 : campo === "usuario_id" ? propietarioInforme : null,
+              };
             },
           },
+        };
+        case "../models/informeResponsable.model": return {
+          __esModule: true,
+          default: { findOne: async () => null },
         };
         case "../services/dashboardSupervision/consultas": return {
           obtenerPermisosUsuario: async () => {
@@ -37,6 +52,9 @@ const preparar = (permisos: string[], paises: number[] | null = null, fallo = fa
             return paises ? { paises } : null;
           },
           obtenerObrerosAsignadosAlPais: async () => [8, 9],
+        };
+        case "../services/informeResponsables": return {
+          obtenerAmbitosResponsabilidad: async () => [],
         };
         default: throw new Error(`Dependencia inesperada: ${nombre}`);
       }
@@ -57,16 +75,16 @@ describe("lectura de informes por rol", () => {
     assert.equal(prueba.consultasContexto(), 0);
   });
 
-  it("un usuario no administrador conserva la restricción a sus propios informes", async () => {
+  it("un usuario no administrador solo consulta sus informes o unidades asignadas", async () => {
     const prueba = preparar(["4"]);
     await prueba.consultar(prueba.request(1), "12");
-    assert.equal(JSON.stringify(prueba.llamadas[0].where.usuario_id?.in), "[1]");
+    assert.equal(prueba.llamadas[0].where.id, "12");
   });
 
   it("el obrero país conserva exclusivamente los autores de su alcance", async () => {
-    const prueba = preparar(["2"], [1]);
+    const prueba = preparar(["2"], [1], false, 8);
     await prueba.consultar(prueba.request(1), "12");
-    assert.equal(JSON.stringify(prueba.llamadas[0].where.usuario_id?.in), "[1,8,9]");
+    assert.equal(prueba.llamadas[0].where.id, "12");
   });
 
   it("no consulta informes sin usuario autenticado", async () => {

@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { validateUserSession } from "../helpers/session.service";
+import { informeAuditContext } from "../helpers/informeAuditContext";
 
 const jwt = require("jsonwebtoken");
 
@@ -104,7 +105,7 @@ const validarJWT = async (
     req.isLoginCodeQr = sessionValidation.isLoginCodeQr || false;
 
     // Continuar con el siguiente middleware
-    next();
+    informeAuditContext.run(Number(id), next);
   } catch (error: any) {
     // Manejo de errores de JWT
     if (error.name === "TokenExpiredError") {
