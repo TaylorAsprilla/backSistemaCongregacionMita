@@ -11,6 +11,7 @@ import {
   getMeta,
   getMetas,
   getMetasPorInforme,
+  getMetasPendientesPorInforme,
   getMetasPendientesPorUsuario,
   copiarMetaANuevoInforme,
   marcarMetaComoCumplida,
@@ -37,6 +38,11 @@ router.get(
   validarJWT,
   cargarInformeIdDesdeQuery,
   getMetasPorInforme,
+);
+router.get(
+  "/informe/:informeId/pendientes",
+  validarJWT,
+  getMetasPendientesPorInforme,
 );
 router.get("/informe/:informeId", validarJWT, getMetasPorInforme);
 router.get(

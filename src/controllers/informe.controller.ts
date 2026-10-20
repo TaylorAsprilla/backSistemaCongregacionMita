@@ -8,6 +8,7 @@ import Campo from "../models/campo.model";
 import Congregacion from "../models/congregacion.model";
 import Diezmos from "../models/diezmos.model";
 import Informe from "../models/informe.model";
+import InformeResponsable from "../models/informeResponsable.model";
 import Logro from "../models/logro.model";
 import Meta from "../models/meta.model";
 import Pais from "../models/pais.model";
@@ -25,6 +26,19 @@ import { obtenerContextoObrero } from "../services/supervisionObrero.authorizati
 import { ROLES_ID } from "../enum/roles.enum";
 import { obtenerPermisosUsuario } from "../services/dashboardSupervision/consultas";
 import { paisPerteneceAlAlcance } from "../services/supervisionPais.scope";
+import {
+  esResponsableActualDelInforme,
+  obtenerInformeAutorizado,
+} from "../helpers/informe-autorizado";
+import {
+  AmbitoInforme,
+  obtenerAmbitosResponsabilidad,
+  obtenerUnidadYResponsablesActuales,
+  TipoCongregacionInforme,
+} from "../services/informeResponsables";
+import { cerrarInformeTransaccional } from "../services/cerrarInforme";
+import { obtenerAuditoriaAutorizada } from "../helpers/informeAuditoria";
+import { informeVencido } from "../middlewares/bloquear-informe-cerrado";
 
 type AuthenticatedRequest = Request & { id?: number };
 
@@ -65,7 +79,6 @@ export const getResumenInforme = async (req: Request, res: Response) => {
 
   try {
     const whereInforme: any = {
-      usuario_id: Number(usuarioId),
       estado: ESTADO_INFORME_ENUM.ABIERTO,
       [Op.or]: [
         { periodo: fechaInicio },
@@ -80,13 +93,37 @@ export const getResumenInforme = async (req: Request, res: Response) => {
 
     if (typeof informeId === "string") {
       whereInforme.id = Number(informeId);
+    } else {
+      whereInforme.usuario_id = Number(usuarioId);
     }
 
-    const informe = await Informe.findOne({
-      attributes: ["id", "usuario_id", "estado", "periodo", "createdAt", "updatedAt"],
-      where: whereInforme,
-      order: [["createdAt", "DESC"]],
-    });
+    const informe = typeof informeId === "string"
+      ? await obtenerInformeAutorizado(req, informeId)
+      : await Informe.findOne({
+          attributes: [
+            "id",
+            "usuario_id",
+            "estado",
+            "periodo",
+            "tipo_congregacion",
+            "congregacion_id",
+            "nombre_unidad",
+            "createdAt",
+            "updatedAt",
+          ],
+          where: whereInforme,
+          order: [["createdAt", "DESC"]],
+        });
+
+    if (
+      typeof informeId === "string" &&
+      informe?.getDataValue("estado") !== ESTADO_INFORME_ENUM.ABIERTO
+    ) {
+      return res.status(409).json({
+        ok: false,
+        msg: "El informe no está abierto para edición.",
+      });
+    }
 
     if (!informe) {
       return res.json({
@@ -193,12 +230,57 @@ export const getMisInformes = async (req: Request, res: Response) => {
   }
 
   try {
+    const ambitos = await obtenerAmbitosResponsabilidad(usuarioId);
+    const accesoAmbitos = ambitos.map((ambito) => ({
+      tipo_congregacion: ambito.tipo_congregacion,
+      congregacion_id: ambito.congregacion_id,
+    }));
+    const informesHistoricosResponsable = await InformeResponsable.findAll({
+      attributes: ["informe_id"],
+      where: { usuario_id: usuarioId },
+    });
     const informes = await Informe.findAll({
-      attributes: ["id", "usuario_id", "estado", "periodo", "createdAt", "updatedAt"],
+      attributes: [
+        "id",
+        "usuario_id",
+        "estado",
+        "periodo",
+        "tipo_congregacion",
+        "congregacion_id",
+        "nombre_unidad",
+        "nombre_pais",
+        "nombre_congregacion",
+        "nombre_campo",
+        "fecha_cierre",
+        "createdAt",
+        "updatedAt",
+      ],
       where: {
-        usuario_id: usuarioId,
         estado: ESTADO_INFORME_ENUM.CERRADO,
+        [Op.or]: [
+          { usuario_id: usuarioId },
+          ...accesoAmbitos,
+          {
+            id: {
+              [Op.in]: informesHistoricosResponsable.map((registro) =>
+                Number(registro.getDataValue("informe_id")),
+              ),
+            },
+          },
+        ],
       },
+      include: [
+        {
+          model: InformeResponsable,
+          as: "responsablesHistoricos",
+          attributes: [
+            "usuario_id",
+            "nombre_responsable",
+            "tipo_responsabilidad",
+          ],
+          required: false,
+        },
+      ],
       order: [
         ["periodo", "DESC"],
         ["createdAt", "DESC"],
@@ -214,38 +296,132 @@ export const getMisInformes = async (req: Request, res: Response) => {
   }
 };
 
+export const getMisResponsabilidades = async (req: Request, res: Response) => {
+  const usuarioId = (req as AuthenticatedRequest).id;
+  if (!usuarioId) {
+    return res.status(401).json({ ok: false, msg: "Usuario no autenticado." });
+  }
+
+  const periodo =
+    typeof req.query.periodo === "string"
+      ? req.query.periodo
+      : obtenerPeriodoInformeActivo();
+  if (!esFechaISO(periodo)) {
+    return res.status(400).json({
+      ok: false,
+      msg: "El periodo debe estar en formato YYYY-MM-DD.",
+    });
+  }
+
+  try {
+    const ambitos = await obtenerAmbitosResponsabilidad(usuarioId);
+    const informesLegados = await Informe.findAll({
+      where: {
+        usuario_id: usuarioId,
+        periodo,
+        tipo_congregacion: null,
+        congregacion_id: null,
+        estado: ESTADO_INFORME_ENUM.ABIERTO,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    if (!ambitos.length) {
+      return res.json({
+        ok: true,
+        periodo,
+        ambitos: [],
+        legados: informesLegados.map((informe) => informe.get({ plain: true })),
+      });
+    }
+    const informes = await Informe.findAll({
+      where: {
+        periodo,
+        [Op.or]: ambitos.map(({ tipo_congregacion, congregacion_id }) => ({
+          tipo_congregacion,
+          congregacion_id,
+        })),
+      },
+    });
+    const idsCerrados = informes
+      .filter(
+        (informe) =>
+          informe.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO,
+      )
+      .map((informe) => Number(informe.getDataValue("id")));
+    const responsablesHistoricos = idsCerrados.length
+      ? await InformeResponsable.findAll({
+          attributes: [
+            "informe_id",
+            "usuario_id",
+            "nombre_responsable",
+            "tipo_responsabilidad",
+          ],
+          where: { informe_id: { [Op.in]: idsCerrados } },
+        })
+      : [];
+    const snapshotPorInforme = new Map<number, Array<Record<string, unknown>>>();
+    for (const responsable of responsablesHistoricos) {
+      const informeId = Number(responsable.getDataValue("informe_id"));
+      const lista = snapshotPorInforme.get(informeId) ?? [];
+      lista.push({
+        usuario_id: responsable.getDataValue("usuario_id"),
+        nombre_responsable: responsable.getDataValue("nombre_responsable"),
+        tipo_responsabilidad: responsable.getDataValue("tipo_responsabilidad"),
+      });
+      snapshotPorInforme.set(informeId, lista);
+    }
+    const informePorAmbito = new Map(
+      informes.map((informe) => [
+        `${informe.getDataValue("tipo_congregacion")}:${informe.getDataValue("congregacion_id")}`,
+        informe,
+      ]),
+    );
+    const resultado = ambitos.map((ambito) => {
+      const informe = informePorAmbito.get(
+        `${ambito.tipo_congregacion}:${ambito.congregacion_id}`,
+      );
+      const informePlano = informe?.get({ plain: true }) ?? null;
+      const cerrado =
+        informe?.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO;
+      return {
+        ...ambito,
+        ...(cerrado && informe
+          ? {
+              nombre_unidad: informe.getDataValue("nombre_unidad"),
+              nombre_pais: informe.getDataValue("nombre_pais"),
+              nombre_congregacion: informe.getDataValue("nombre_congregacion"),
+              nombre_campo: informe.getDataValue("nombre_campo"),
+            }
+          : {}),
+        informe: informePlano,
+        responsables:
+          cerrado && informe
+            ? snapshotPorInforme.get(Number(informe.getDataValue("id"))) ?? []
+            : ambito.responsables,
+      };
+    });
+    return res.json({
+      ok: true,
+      periodo,
+      ambitos: resultado,
+      legados: informesLegados.map((informe) => informe.get({ plain: true })),
+    });
+  } catch (error) {
+    console.error("Error obteniendo las responsabilidades del informe:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "No fue posible cargar las responsabilidades del informe.",
+    });
+  }
+};
+
 export const getInforme = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const informe = await Informe.findByPk(id);
+    const informe = await obtenerInformeAutorizado(req, id);
 
     if (!!informe) {
-      const usuarioId = (req as AuthenticatedRequest).id;
-      const permisos = usuarioId ? await obtenerPermisosUsuario(usuarioId) : [];
-      const esAdministrador = permisos.includes(ROLES_ID.ADMINISTRADOR);
-      const contextoObrero = usuarioId && !esAdministrador ? await obtenerContextoObrero(usuarioId) : null;
-      const contexto = usuarioId && !esAdministrador ? await obtenerContextoObreroPais(usuarioId) : null;
-      if (
-        contextoObrero &&
-        Number(informe.getDataValue("usuario_id")) !== usuarioId
-      ) {
-        return res.status(404).json({
-          ok: false,
-          msg: "No existe el informe con el id solicitado.",
-        });
-      }
-      if (contexto) {
-        const usuarioIds = await obtenerObrerosAsignadosAlPais(contexto.paises);
-        const propietarioId = Number(informe.getDataValue("usuario_id"));
-        if (propietarioId !== usuarioId && !usuarioIds.includes(propietarioId)) {
-          return res.status(404).json({
-            ok: false,
-            msg: "No existe el informe con el id solicitado.",
-          });
-        }
-      }
-
       const actividades = await Actividad.findAll({
         where: {
           informe_id: id,
@@ -337,11 +513,54 @@ export const getInforme = async (req: Request, res: Response) => {
         },
       });
 
+      const estadoInforme = informe.getDataValue("estado");
+      const tipoCongregacion = informe.getDataValue("tipo_congregacion") as
+        | TipoCongregacionInforme
+        | null;
+      const congregacionId = Number(informe.getDataValue("congregacion_id"));
+      const responsables =
+        estadoInforme === ESTADO_INFORME_ENUM.CERRADO
+          ? await InformeResponsable.findAll({
+              attributes: [
+                "usuario_id",
+                "nombre_responsable",
+                "tipo_responsabilidad",
+              ],
+              where: { informe_id: id },
+            }).then((registros) =>
+              registros.map((registro) => ({
+                usuario_id: registro.getDataValue("usuario_id"),
+                nombre_responsable: registro.getDataValue("nombre_responsable"),
+                tipo_responsabilidad: registro.getDataValue("tipo_responsabilidad"),
+              })),
+            )
+          : tipoCongregacion &&
+              ["PAIS", "CONGREGACION", "CAMPO"].includes(tipoCongregacion) &&
+              Number.isInteger(congregacionId)
+            ? (
+                await obtenerUnidadYResponsablesActuales(
+                  tipoCongregacion,
+                  congregacionId,
+                )
+              ).responsables
+            : [];
+      const informeConUnidad = informe.get({ plain: true });
+      informeConUnidad.responsables = responsables;
+      informeConUnidad.unidad = {
+        tipo_congregacion: informe.getDataValue("tipo_congregacion") ?? null,
+        congregacion_id: informe.getDataValue("congregacion_id") ?? null,
+        nombre_unidad: informe.getDataValue("nombre_unidad") ?? null,
+        nombre_pais: informe.getDataValue("nombre_pais") ?? null,
+        nombre_congregacion:
+          informe.getDataValue("nombre_congregacion") ?? null,
+        nombre_campo: informe.getDataValue("nombre_campo") ?? null,
+      };
+
       res.json({
         ok: true,
         msg: `Informe identificado con el ID: ${id}`,
         informe: {
-          informacioninforme: informe,
+          informacioninforme: informeConUnidad,
           actividades,
           actividadesEspirituales,
           actividadesEconomicas,
@@ -373,19 +592,8 @@ export const crearInforme = async (req: Request, res: Response) => {
   const periodo = body.periodo || periodoActivo;
   const usuarioAutenticado = (req as AuthenticatedRequest).id;
 
-  try {
-    const contexto = usuarioAutenticado
-      ? await obtenerContextoObreroPais(usuarioAutenticado)
-      : null;
-    if (contexto && Number(body.usuario_id) !== usuarioAutenticado) {
-      return res.status(403).json({
-        ok: false,
-        msg: "El Obrero País solo puede crear sus propios informes.",
-      });
-    }
-  } catch (error) {
-    console.error("Error validando permisos para crear informe:", error);
-    return res.status(500).json({ ok: false, msg: "No fue posible validar los permisos." });
+  if (!usuarioAutenticado) {
+    return res.status(401).json({ ok: false, msg: "Usuario no autenticado." });
   }
 
   if (!esFechaISO(periodo) || periodo !== periodoActivo) {
@@ -399,33 +607,76 @@ export const crearInforme = async (req: Request, res: Response) => {
   //                          Guardar Informe
   // =======================================================================
   try {
-    const informeAbierto = await Informe.findOne({
-      where: {
-        usuario_id: body.usuario_id,
-        estado: ESTADO_INFORME_ENUM.ABIERTO,
-      },
-    });
-
-    if (informeAbierto) {
-      return res.status(409).json({
+    const tipoCongregacion = body.tipo_congregacion as TipoCongregacionInforme;
+    const congregacionId = Number(body.congregacion_id);
+    const tiposValidos: TipoCongregacionInforme[] = [
+      "PAIS",
+      "CONGREGACION",
+      "CAMPO",
+    ];
+    if (
+      !tiposValidos.includes(tipoCongregacion) ||
+      !Number.isInteger(congregacionId) ||
+      congregacionId <= 0
+    ) {
+      return res.status(400).json({
         ok: false,
-        msg: "El obrero ya tiene un informe abierto",
-        informe: informeAbierto,
+        msg: "Se requiere una responsabilidad válida (tipo_congregacion y congregacion_id).",
       });
     }
 
-    const informe = Informe.build({
-      usuario_id: body.usuario_id,
-      estado: body.estado,
-      periodo,
-    });
-    await informe.save();
+    const ambitos = await obtenerAmbitosResponsabilidad(usuarioAutenticado);
+    const ambito = ambitos.find(
+      (item) =>
+        item.tipo_congregacion === tipoCongregacion &&
+        item.congregacion_id === congregacionId,
+    );
+    if (!ambito) {
+      return res.status(403).json({
+        ok: false,
+        msg: "No tiene una responsabilidad vigente sobre esta Congregación.",
+      });
+    }
 
-    res.json({ ok: true, msg: "Informe creado ", informe });
+    const informeExistente = await Informe.findOne({
+      where: {
+        periodo,
+        tipo_congregacion: tipoCongregacion,
+        congregacion_id: congregacionId,
+      },
+    });
+    if (informeExistente) {
+      return res.status(409).json({
+        ok: false,
+        msg: "Ya existe un informe para esta Congregación y periodo.",
+        informe: informeExistente,
+      });
+    }
+
+    const informe = await Informe.create({
+      usuario_id: usuarioAutenticado,
+      estado: ESTADO_INFORME_ENUM.ABIERTO,
+      periodo,
+      tipo_congregacion: tipoCongregacion,
+      congregacion_id: congregacionId,
+      nombre_unidad: ambito.nombre_unidad,
+      nombre_pais: ambito.nombre_pais,
+      nombre_congregacion: ambito.nombre_congregacion,
+      nombre_campo: ambito.nombre_campo,
+    });
+
+    return res.json({ ok: true, msg: "Informe creado.", informe });
   } catch (error) {
-    res.status(500).json({
+    if ((error as { name?: string }).name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        ok: false,
+        msg: "Ya existe un informe para esta Congregación y periodo.",
+      });
+    }
+    console.error("Error creando informe trimestral:", error);
+    return res.status(500).json({
+      ok: false,
       msg: "Hable con el administrador",
-      error,
     });
   }
 };
@@ -438,30 +689,21 @@ export const actualizarInforme = async (req: Request, res: Response) => {
   //                          Actualizar Informe
   // =======================================================================
   try {
-    const informe = await Informe.findByPk(id);
+    const informe = await obtenerInformeAutorizado(req, id);
     if (!informe) {
       return res.status(404).json({
         ok: false,
         msg: `No existe un informe con el id ${id}`,
       });
     }
-
     const usuarioId = (req as AuthenticatedRequest).id;
-    const contextoObrero = usuarioId ? await obtenerContextoObrero(usuarioId) : null;
-    const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
     if (
-      contextoObrero &&
-      Number(informe.getDataValue("usuario_id")) !== usuarioId
+      !usuarioId ||
+      !(await esResponsableActualDelInforme(usuarioId, informe))
     ) {
       return res.status(403).json({
         ok: false,
-        msg: "Solo puede modificar sus propios informes.",
-      });
-    }
-    if (contexto && Number(informe.getDataValue("usuario_id")) !== usuarioId) {
-      return res.status(403).json({
-        ok: false,
-        msg: "Los informes de otras congregaciones son de solo lectura.",
+        msg: "Solo un responsable vigente puede modificar este informe.",
       });
     }
 
@@ -471,19 +713,104 @@ export const actualizarInforme = async (req: Request, res: Response) => {
         msg: "Los informes cerrados son de solo lectura.",
       });
     }
+    if (informeVencido(informe)) {
+      await cerrarInformeTransaccional(Number(informe.getDataValue("id")), null);
+      return res.status(409).json({
+        ok: false,
+        code: "INFORME_VENCIDO",
+        msg: "El periodo del informe venció y se cerró automáticamente.",
+      });
+    }
 
-    const informeActualizado = await informe.update(body, { new: true });
+    if (body.estado && body.estado !== ESTADO_INFORME_ENUM.ABIERTO) {
+      return res.status(409).json({
+        ok: false,
+        msg: "Use la acción de cierre para enviar definitivamente el informe.",
+      });
+    }
 
-    res.json({
+    return res.json({
       ok: true,
-      msg: "Informe Actualizado",
-      informeActualizado,
+      msg: "Informe abierto y editable.",
+      informeActualizado: informe,
     });
   } catch (error) {
+    console.error("Error actualizando informe:", error);
     res.status(500).json({
       ok: false,
       msg: "Hable con el administrador",
       error,
+    });
+  }
+};
+
+export const cerrarInforme = async (req: Request, res: Response) => {
+  const usuarioId = (req as AuthenticatedRequest).id;
+  if (!usuarioId) {
+    return res.status(401).json({ ok: false, msg: "Usuario no autenticado." });
+  }
+
+  try {
+    const informe = await obtenerInformeAutorizado(req, req.params.id);
+    if (!informe) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No existe un informe autorizado con ese identificador.",
+      });
+    }
+    if (informe.getDataValue("estado") !== ESTADO_INFORME_ENUM.ABIERTO) {
+      return res.status(409).json({
+        ok: false,
+        msg: "El informe ya está cerrado.",
+      });
+    }
+
+    if (!(await esResponsableActualDelInforme(usuarioId, informe))) {
+      return res.status(403).json({
+        ok: false,
+        msg: "Solo un responsable vigente o administrador puede cerrar este informe.",
+      });
+    }
+
+    const informeCerrado = await cerrarInformeTransaccional(
+      Number(informe.getDataValue("id")),
+      usuarioId,
+    );
+    if (!informeCerrado) {
+      return res.status(404).json({
+        ok: false,
+        msg: "No existe el informe solicitado.",
+      });
+    }
+    return res.json({
+      ok: true,
+      msg: "Informe cerrado y responsables históricos guardados.",
+      informe: informeCerrado,
+    });
+  } catch (error) {
+    console.error("Error cerrando informe trimestral:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "No fue posible cerrar el informe.",
+    });
+  }
+};
+
+export const getAuditoriaInforme = async (req: Request, res: Response) => {
+  try {
+    const informe = await obtenerInformeAutorizado(req, req.params.id);
+    if (!informe) {
+      return res.status(404).json({ ok: false, msg: "Informe no encontrado." });
+    }
+    const registros = await obtenerAuditoriaAutorizada(
+      Number(informe.getDataValue("id")),
+    );
+    return res.json({ ok: true, registros });
+  } catch (error) {
+    console.error("Error consultando auditoría del informe:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "No fue posible cargar la auditoría del informe.",
     });
   }
 };
@@ -495,6 +822,13 @@ export const eliminarInforme = async (req: Request, res: Response) => {
   try {
     const informe = await Informe.findByPk(id);
     if (informe) {
+      if (informe.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO) {
+        return res.status(409).json({
+          ok: false,
+          msg: "Los informes cerrados son registros históricos y no se pueden eliminar.",
+        });
+      }
+
       const usuarioId = (req as AuthenticatedRequest).id;
       const contexto = usuarioId ? await obtenerContextoObreroPais(usuarioId) : null;
       if (contexto && Number(informe.getDataValue("usuario_id")) !== usuarioId) {
@@ -504,7 +838,7 @@ export const eliminarInforme = async (req: Request, res: Response) => {
         });
       }
 
-      await informe.update({ estado: false });
+      await informe.update({ estado: ESTADO_INFORME_ENUM.ELIMINADO });
 
       res.json({
         ok: true,

@@ -2,6 +2,7 @@ import cron from "node-cron";
 import Informe from "../models/informe.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 import { obtenerFechaCierreInforme } from "../helpers/periodoInforme";
+import { cerrarInformeTransaccional } from "../services/cerrarInforme";
 
 const ZONA_HORARIA_UTC = "UTC";
 
@@ -28,16 +29,22 @@ const closeExpiredQuarterlyReports = async () => {
       const fechaCierre = obtenerFechaCierre(periodo);
 
       if (ahora >= fechaCierre) {
-        await Informe.update(
-          { estado: ESTADO_INFORME_ENUM.CERRADO },
-          {
-            where: {
-              id: informe.getDataValue("id"),
-              estado: ESTADO_INFORME_ENUM.ABIERTO,
-            },
-          },
-        );
-        informesCerrados += 1;
+        try {
+          const cerrado = await cerrarInformeTransaccional(
+            Number(informe.getDataValue("id")),
+            null,
+          );
+          if (
+            cerrado?.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO
+          ) {
+            informesCerrados += 1;
+          }
+        } catch (error) {
+          console.error(
+            `Error cerrando el informe ${informe.getDataValue("id")}:`,
+            error,
+          );
+        }
       }
     }
 
@@ -48,6 +55,12 @@ const closeExpiredQuarterlyReports = async () => {
     console.error("Error cerrando informes trimestrales:", error);
   }
 };
+
+export async function runReportClosureStartupCatchup(
+  closeExpired = closeExpiredQuarterlyReports,
+) {
+  await closeExpired();
+}
 
 const nodeEnv = process.env.NODE_ENV || "development";
 

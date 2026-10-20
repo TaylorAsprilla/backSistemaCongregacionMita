@@ -14,6 +14,30 @@ const Informe = db.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    tipo_congregacion: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    congregacion_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    nombre_unidad: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    nombre_pais: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    nombre_congregacion: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    nombre_campo: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     estado: {
       type: DataTypes.ENUM(...Object.values(ESTADO_INFORME_ENUM)),
       allowNull: false,
@@ -23,10 +47,25 @@ const Informe = db.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
     },
+    fecha_cierre: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    usuario_cierre_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,
     tableName: "informe",
+    indexes: [
+      {
+        name: "uq_informe_periodo_congregacion",
+        unique: true,
+        fields: ["periodo", "tipo_congregacion", "congregacion_id"],
+      },
+    ],
   },
 );
 
