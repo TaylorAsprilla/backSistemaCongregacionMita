@@ -1023,6 +1023,10 @@ export const getActiveSessionsByEntity = async (
   try {
     const whereClause: any = {
       isActive: true,
+      sessionType: "NORMAL",
+      expiresAt: {
+        [Op.gt]: new Date(),
+      },
     };
 
     if (idUsuario) {
