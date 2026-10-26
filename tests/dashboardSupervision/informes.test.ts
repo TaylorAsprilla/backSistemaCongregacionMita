@@ -29,7 +29,7 @@ const preparar = (total: number, filas: unknown[] = [], fallo = false) => {
   );
   const consultar = exports.obtenerListadoInformes;
   if (!consultar) throw new Error("Falta obtenerListadoInformes");
-  return { consultar, llamadas };
+  return { consultar, llamadas, consultas: exports as typeof Consultas };
 };
 
 describe("listado administrativo de informes", () => {
@@ -42,6 +42,9 @@ describe("listado administrativo de informes", () => {
     const resultado = await consultar("2026-07-01", "2026-10-01", "", 1, 10);
     assert.equal(resultado.total, 2);
     assert.equal(resultado.informes, filas);
+    for (const columna of ["tipo_congregacion", "congregacion_id", "nombre_pais", "nombre_congregacion", "nombre_campo"]) {
+      assert.ok(llamadas[1].sql.includes(`i.${columna}`));
+    }
     for (const llamada of llamadas) {
       assert.match(llamada.sql, /i\.estado <> 'Eliminado'/);
       assert.match(llamada.sql, /COALESCE\(i\.periodo/);
@@ -51,6 +54,36 @@ describe("listado administrativo de informes", () => {
       assert.equal(llamada.replacements.inicio, "2026-07-01");
       assert.equal(llamada.replacements.fin, "2026-10-01");
     }
+  });
+
+  describe("consultas del dataset de supervision", () => {
+    it("cuenta legados globales agrupando la expresion seleccionada para ONLY_FULL_GROUP_BY", async () => {
+      const { consultas, llamadas } = preparar(0);
+      await consultas.obtenerInformesSinAmbito("2026-07-01", "2027-01-01");
+      assert.match(llamadas[0].sql, /i\.tipo_congregacion IS NULL OR i\.congregacion_id IS NULL/);
+      assert.match(llamadas[0].sql, /i\.estado <> 'Eliminado'/);
+      assert.ok(llamadas[0].sql.includes(`GROUP BY DATE_FORMAT(${consultas.SQL_PERIODO_INFORME}, '%Y-%m-%d')`));
+      assert.doesNotMatch(llamadas[0].sql, /usuario_id IN/);
+    });
+
+    it("selecciona por ambito aunque la unidad no tenga responsable actual", async () => {
+      const { consultas, llamadas } = preparar(0);
+      await consultas.obtenerInformes([], "2026-07-01", "2027-01-01", [{ tipo: "CONGREGACION", id: 59 }]);
+      assert.equal(llamadas.length, 1);
+      assert.match(llamadas[0].sql, /i\.tipo_congregacion = :tipo0/);
+      assert.match(llamadas[0].sql, /i\.congregacion_id = :unidad0/);
+      assert.doesNotMatch(llamadas[0].sql, /usuario_id IN/);
+      assert.equal(llamadas[0].replacements.tipo0, "CONGREGACION");
+      assert.equal(llamadas[0].replacements.unidad0, 59);
+    });
+
+    it("usa el mes de la actividad, no la fecha de creacion del informe", async () => {
+      const { consultas, llamadas } = preparar(0);
+      await consultas.obtenerActividades([113]);
+      assert.match(llamadas[0].sql, /DATE_FORMAT\(a\.fecha, '%Y-%m'\) AS mes/);
+      assert.match(llamadas[0].sql, /GROUP BY a\.informe_id, DATE_FORMAT\(a\.fecha, '%Y-%m'\)/);
+      assert.doesNotMatch(llamadas[0].sql, /createdAt/);
+    });
   });
 
   it("pagina y parametriza la búsqueda sin interpolar el texto en SQL", async () => {

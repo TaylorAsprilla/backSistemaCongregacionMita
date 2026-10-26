@@ -16,6 +16,7 @@ export interface UmbralesVariacion {
 }
 
 export const DASHBOARD_SUPERVISION_CONFIG = {
+  inicioCobertura: "2026-07-01",
   /** Permisos (tabla `permiso`) autorizados para consultar el dashboard y sus alertas. */
   rolesAutorizados: [ROLES_ID.ADMINISTRADOR] as string[],
 

@@ -135,6 +135,10 @@ describe("indicadores", () => {
   it("una sección sin registros es null y no 0", () => {
     const ag = { ...crearAgregado(), informes: 1 };
     assert.equal(INDICADORES_POR_CLAVE.get("asistenciaGeneral")!.extraer(ag), null);
+    for (const clave of ["logros", "metas", "asuntosPendientes", "actividadesEspirituales", "actividadesEconomicas", "situacionesAtendidas"]) {
+      assert.equal(INDICADORES_POR_CLAVE.get(clave)!.extraer(ag), null);
+    }
+    ag.valores["logros"] = 0;
     assert.equal(INDICADORES_POR_CLAVE.get("logros")!.extraer(ag), 0);
   });
 

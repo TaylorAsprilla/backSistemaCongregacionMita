@@ -228,7 +228,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "VIDA_ESPIRITUAL",
     alertable: true,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "esp.total")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["esp.total"] ?? null),
   },
   {
     clave: "visitasHogares",
@@ -281,7 +281,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "TRABAJO_PASTORAL",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "sit.total")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["sit.total"] ?? null),
   },
   {
     clave: "situacionesEnSeguimiento",
@@ -289,7 +289,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "TRABAJO_PASTORAL",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "sit.seguimiento")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["sit.seguimiento"] ?? null),
   },
   {
     clave: "actividadesEconomicas",
@@ -297,7 +297,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ADMINISTRACION",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "eco.cantidad")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["eco.cantidad"] ?? null),
   },
   {
     clave: "asistenciaActividadesEconomicas",
@@ -305,7 +305,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ADMINISTRACION",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "eco.asistencia")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["eco.asistencia"] ?? null),
   },
   {
     clave: "logros",
@@ -313,7 +313,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ADMINISTRACION",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "logros")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["logros"] ?? null),
   },
   {
     clave: "metas",
@@ -321,7 +321,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ADMINISTRACION",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "metas")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["metas"] ?? null),
   },
   {
     clave: "asuntosPendientes",
@@ -329,7 +329,7 @@ export const INDICADORES: DefinicionIndicador[] = [
     grupo: "ADMINISTRACION",
     alertable: false,
     formato: "ENTERO",
-    extraer: (ag) => siHay(ag, null, () => valor(ag, "asuntos")),
+    extraer: (ag) => siHay(ag, null, () => ag.valores["asuntos"] ?? null),
   },
 ];
 

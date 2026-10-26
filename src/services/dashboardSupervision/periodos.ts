@@ -104,3 +104,32 @@ export const descripcionComparacion = (
   modo === "MISMO_TRIMESTRE_ANIO_ANTERIOR"
     ? `mismo trimestre del año anterior (${etiquetaPeriodo(comparacion)})`
     : `trimestre anterior (${etiquetaPeriodo(comparacion)})`;
+
+export const coberturaTemporal = (
+  periodo: Periodo,
+  comparacion: Periodo,
+  inicioCobertura: string,
+  fecha = new Date(),
+) => {
+  const hoy = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(fecha);
+  const sinCobertura = fechaFinExclusivaPeriodo(periodo) <= inicioCobertura;
+  const enCurso = fechaFinExclusivaPeriodo(periodo) > hoy;
+  const comparable = !sinCobertura && !enCurso &&
+    fechaInicioPeriodo(periodo) >= inicioCobertura &&
+    fechaInicioPeriodo(comparacion) >= inicioCobertura;
+  return {
+    inicioCobertura,
+    sinCobertura,
+    enCurso,
+    comparable,
+    mensaje: sinCobertura
+      ? "Periodo anterior al inicio de cobertura; no representa cero actividad."
+      : enCurso
+        ? "Periodo en curso o futuro: datos provisionales, sin porcentajes de crecimiento."
+        : !comparable
+          ? "Historial insuficiente: el periodo de comparación no tiene cobertura completa."
+          : "Comparaciones entre informes cerrados de la misma Congregación en ambos periodos.",
+  };
+};

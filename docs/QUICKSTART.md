@@ -65,22 +65,22 @@ PORT=3000
 # Base de datos
 DB_HOST_DEV=localhost
 DB_USERNAME_DEV=root
-DB_PASSWORD_DEV=taylor89
+DB_PASSWORD_DEV=REEMPLAZA_CON_PASSWORD_LOCAL
 DB_DATABASE_DEV=sistemaCMI_dev
 DB_PORT_DEV=3306
 
 # JWT
-JWT_SECRET=tu_secreto_super_seguro_aqui_12345
+JWT_SECRET=REEMPLAZA_CON_SECRETO_ALEATORIO_LOCAL
 
 # API Key
-API_KEY=tu_api_key_aqui
+API_KEY=REEMPLAZA_CON_API_KEY_DE_DESARROLLO
 
 # Email (opcional para desarrollo)
 USER_EMAIL_DEVELOPMENT=email@example.com
-PASS_EMAIL_DEVELOPMENT=password
+PASS_EMAIL_DEVELOPMENT=REEMPLAZA_CON_PASSWORD_DE_APLICACION
 ```
 
-**⚠️ IMPORTANTE:** Cambia `tu_secreto_super_seguro_aqui_12345` por un valor único.
+**⚠️ IMPORTANTE:** Reemplaza todos los valores `REEMPLAZA_...` por credenciales exclusivas de desarrollo local. No reutilices credenciales de producción.
 
 ---
 
