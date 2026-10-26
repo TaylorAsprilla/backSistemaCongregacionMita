@@ -15,8 +15,11 @@
    cp .env.docker .env.local
    ```
 
-2. Edita `.env.local` con tus configuraciones:
+2. Edita `.env.local` y reemplaza los valores `REPLACE_WITH_...` por credenciales exclusivas para desarrollo local. No uses credenciales de producción ni reutilices contraseñas:
    ```bash
+   DB_USERNAME_DEV=tu-usuario-local
+   DB_PASSWORD_DEV=tu-contraseña-local
+   JWT_SECRET_RESET=un-secreto-aleatorio-local
    # Configuración de email (opcional para desarrollo)
    USER_EMAIL_DEVELOPMENT=tu-email@gmail.com
    PASS_EMAIL_DEVELOPMENT=tu-contraseña-de-aplicación

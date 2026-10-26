@@ -37,6 +37,14 @@ menú sólo se muestra a administradores.
 - Modos de comparación (`comparacion`):
   - `TRIMESTRE_ANTERIOR` (por defecto): Q3 2026 vs Q2 2026.
   - `MISMO_TRIMESTRE_ANIO_ANTERIOR`: Q3 2026 vs Q3 2025.
+- Inicio de cobertura: **1 de julio de 2026** (`inicioCobertura` en la configuración).
+  Aunque el registro comenzó en septiembre, se ingresaron las actividades de julio a
+  septiembre: Q3 2026 es el primer trimestre completo, no un trimestre parcial.
+- `contexto.coberturaTemporal` informa el inicio, si el periodo carece de cobertura,
+  si está en curso o es futuro, y si admite comparación. No se calculan crecimientos
+  contra periodos anteriores a la cobertura ni para trimestres en curso.
+  La interfaz oculta estadísticas de periodos sin cobertura, en lugar de mostrarlos
+  como cero actividad o incumplimientos.
 
 ### Listado de informes de todos los obreros
 
@@ -53,13 +61,14 @@ responsables asignados a congregaciones activas (país, ciudad o campo). Los par
 `pais_id`, `congregacion_id` y `campo_id` aplican la misma jerarquía del Dashboard:
 país incluye sus ciudades y campos; ciudad incluye sus campos; campo incluye exclusivamente
 sus responsables. Se consideran ambos responsables cuando la unidad permite dos.
-El informe se vincula por su autor, ya que no almacena una congregación propia ni una
-asignación histórica. Permite buscar por nombre del obrero o número de informe y abrir
+El alcance del listado se selecciona por los responsables. Permite buscar por nombre del obrero o número de informe y abrir
 el informe completo. Al regresar se conservan el periodo y los filtros geográficos.
-La tabla muestra el nombre del obrero, estado, país, ciudad y campo de sus congregaciones
-a cargo dentro del alcance seleccionado. Si tiene varias asignaciones, los nombres se
-muestran sin duplicados. El campo se devuelve como `null` y la celda queda vacía cuando
-el obrero no tiene una Congregación Campo a cargo.
+La tabla muestra exclusivamente la jerarquía de la Congregación del informe, identificada
+por `tipo_congregacion` y `congregacion_id`, sin combinar otras asignaciones del autor.
+Un informe País muestra solo país; uno Ciudad muestra país y ciudad; uno Campo muestra
+país, ciudad y campo. Los abiertos usan la jerarquía actual de esa unidad cuando está
+disponible; los cerrados conservan los nombres guardados en el informe. Los informes
+legados sin ámbito no infieren ubicaciones desde el autor. Las celdas no aplicables quedan vacías.
 El endpoint usa los mismos controles JWT y de rol administrador que el resto del dashboard.
 
 ### Congregaciones (unidades) y estado de entrega
@@ -72,9 +81,28 @@ En la interfaz cada unidad se muestra como **congregación**, discriminada por t
 | `CONGREGACION` | Congregación Ciudad  | `congregacion` | `idObreroEncargado` / `idObreroEncargadoDos`  |
 | `CAMPO`        | Congregación Campo   | `campo`    | `idObreroEncargado` / `idObreroEncargadoDos`      |
 
-Un informe no tiene llave hacia la congregación: se asocia por `informe.usuario_id` = obrero
-encargado. La Congregación País entra en el alcance cuando no se filtra una Congregación
+Los cálculos asocian cada informe exclusivamente por `tipo_congregacion` +
+`congregacion_id`, independientemente de su autor y de cambios de responsable.
+Un mismo obrero encargado de Chile y Tuluá no comparte los datos de ambos informes.
+Los informes legados sin ámbito no se atribuyen automáticamente a ninguna unidad.
+La Congregación País entra en el alcance cuando no se filtra una Congregación
 Ciudad o Campo. `cobertura.porTipo` entrega el conteo por tipo.
+
+La cobertura de entrega y los indicadores del resumen corresponden exclusivamente a
+**Congregaciones Ciudad**. El detalle de un país agrega sus ciudades; el de un campo
+usa su ciudad. Los informes propios de País y Campo no se suman otra vez a esos
+agregados. Los conteos de catálogo por tipo incluyen las unidades del alcance.
+
+`contexto.integridad` cuenta los informes sin ámbito del periodo seleccionado, de la
+comparación y del rango histórico. Son **conteos globales**, no atribuibles al filtro
+geográfico. Si existen, la interfaz y las exportaciones avisan que los indicadores y
+series excluyen esos registros y pueden ser parciales. No se infiere su ubicación
+desde los responsables actuales, ni se modifican los datos históricos.
+Con legados en alguno de los periodos comparados se inhiben los porcentajes de
+crecimiento. Con legados en el periodo seleccionado, los porcentajes de entrega son
+`null`, se ocultan las tarjetas de cumplimiento y se inhiben las alertas de pendientes.
+Sin informe identificado no equivale necesariamente a incumplimiento. Las tendencias
+de crecimiento o disminución se inhiben si el rango histórico contiene legados.
 
 | Estado           | Significado                                      |
 | ---------------- | ------------------------------------------------ |
@@ -85,7 +113,8 @@ Ciudad o Campo. `cobertura.porTipo` entrega el conteo por tipo.
 
 ### Variaciones
 
-`porcentaje = (actual − anterior) / anterior × 100`, redondeado a un decimal.
+`porcentaje = (actual − anterior) / anterior × 100`, redondeado a dos decimales
+(presentado con un decimal en la interfaz).
 
 | Estado                           | Cuándo                                         |
 | -------------------------------- | ---------------------------------------------- |
@@ -109,9 +138,12 @@ Clasificación (umbrales configurables, por defecto 10 % y 3 %):
 En la interfaz cada variación se muestra con flecha **y** texto (nunca sólo color).
 
 **Base de comparación del alcance**: las variaciones agregadas (resumen) usan únicamente las
-unidades que tienen informe en ambos periodos (`cobertura.unidadesComparadas`), para no
+unidades que tienen informe **cerrado en ambos periodos** (`cobertura.unidadesComparadas`), para no
 confundir "más informes" con "más actividad". `valorPeriodo` sí incluye todos los informes
-del periodo.
+del periodo, incluidos los abiertos, cuyos datos son provisionales. Cada indicador compara
+solo las unidades con información de esa métrica en ambos periodos; una sección ausente
+no se sustituye por cero ni altera la base de comparación del otro periodo.
+Los trimestres deben haber terminado en la fecha local de Bogotá y tener cobertura completa.
 
 ### Actividades y servicios
 
@@ -125,6 +157,23 @@ del periodo.
 - en otro caso → `OTRA`.
 
 Las palabras clave están en la configuración.
+
+La asistencia acumulada cuenta participaciones, **no personas únicas**. No existe
+identificación de asistentes para calcular personas distintas.
+
+### Datos ausentes y serie mensual
+
+Una sección sin registros devuelve `null` y se muestra como “—”, no como cero actividad.
+Un cero explícitamente registrado sigue siendo cero. No se añade un mecanismo nuevo
+para confirmar secciones sin actividad.
+
+`/tendencias` conserva las series trimestrales y añade `seriesMensuales`: asistencia
+acumulada a servicios, cantidad de servicios y promedio por servicio. Usa el mes de
+`actividad.fecha`, no la fecha de creación del informe, y únicamente los informes de
+las ciudades del alcance. Los meses sin registros son `null`; no se crean meses
+anteriores a julio de 2026 ni posteriores al mes actual. El mes actual es provisional.
+No incluye una serie mensual de visitas porque sus registros no tienen la misma
+fecha de evento verificable.
 
 ### Variación de asistencia por servicio
 
@@ -147,7 +196,10 @@ orden `MAYOR_INCREMENTO` / `MAYOR_DISMINUCION` usa el promedio de ese servicio. 
 `/resumen` incluye `entregaPorPais`: por cada país del alcance (orden alfabético), el total de
 **Congregaciones Ciudad** y cuántas tienen el informe del periodo `entregados` (cerrado),
 `enElaboracion` (abierto), `pendientes` (con obrero, sin informe) o `sinObrero`.
-`porcentajeConInforme` = (entregados + en elaboración) ÷ total × 100.
+`porcentajeConInforme` = (entregados + en elaboración) ÷ ciudades con responsable × 100.
+Es el porcentaje de **informes iniciados**, no de entregados.
+`cobertura.porcentajeEntregado` = entregados (cerrados) ÷ ciudades con responsable × 100.
+Sin denominador o sin cobertura temporal los porcentajes son `null`.
 
 ### Alertas
 
@@ -163,7 +215,9 @@ Las alertas del dashboard (`/alertas` y `resumen.alertas`) solo incluyen **Congr
 | `TENDENCIA_CRECIMIENTO` | Informativa  | 3 variaciones consecutivas al alza en el histórico                     |
 | `ASUNTO_RECURRENTE`     | Atención     | Mismo asunto pendiente (texto normalizado) en 3 trimestres seguidos    |
 
-Un trimestre sin información interrumpe la racha de una tendencia.
+Un trimestre sin información interrumpe la racha de una tendencia. Las alertas de
+variación y tendencia solo usan informes cerrados de trimestres terminados y cubiertos.
+No se generan alertas de pendientes para periodos anteriores a la cobertura.
 
 ### Actividad económica
 
@@ -202,21 +256,23 @@ desempeño).
       "periodo": { "anio": 2026, "trimestre": 3, "etiqueta": "Q3 2026", "nombre": "tercer trimestre de 2026", "fechaInicio": "2026-07-01" },
       "periodoComparacion": { "anio": 2026, "trimestre": 2, "etiqueta": "Q2 2026", "nombre": "segundo trimestre de 2026", "fechaInicio": "2026-04-01" },
       "descripcionComparacion": "trimestre anterior (Q2 2026)",
-      "generadoEn": "2026-10-04T22:00:00.000Z"
+      "generadoEn": "2026-10-04T22:00:00.000Z",
+      "integridad": { "informesSinAmbitoPeriodo": 0, "informesSinAmbitoComparacion": 0, "informesSinAmbitoHistorico": 0 },
+      "coberturaTemporal": { "inicioCobertura": "2026-07-01", "sinCobertura": false, "enCurso": false, "comparable": false, "mensaje": "Historial insuficiente: el periodo de comparación no tiene cobertura completa." }
     },
-    "cobertura": { "unidades": 349, "porTipo": { "PAIS": 12, "CONGREGACION": 120, "CAMPO": 217 }, "conObrero": 223, "entregados": 0, "enElaboracion": 1, "pendientes": 222, "sinObrero": 126, "porcentajeConInforme": 0.4, "informesPeriodo": 1, "unidadesComparadas": 1 },
+    "cobertura": { "unidades": 349, "porTipo": { "PAIS": 12, "CONGREGACION": 120, "CAMPO": 217 }, "conObrero": 100, "entregados": 0, "enElaboracion": 1, "pendientes": 99, "sinObrero": 20, "porcentajeConInforme": 1, "porcentajeEntregado": 0, "informesPeriodo": 1, "unidadesComparadas": 0 },
     "indicadores": [
       {
         "clave": "asistenciaGeneral", "etiqueta": "Asistencia general", "grupo": "ASISTENCIA", "formato": "ENTERO",
         "valorPeriodo": 7475,
-        "variacion": { "anterior": 8860, "actual": 7475, "diferencia": -1385, "porcentaje": -15.6, "estado": "VARIACION", "tendencia": "DISMINUCION_SIGNIFICATIVA", "direccion": "BAJA", "mensaje": "↓ 15,6 %" }
+        "variacion": { "anterior": null, "actual": null, "diferencia": null, "porcentaje": null, "estado": "SIN_INFORMACION", "tendencia": null, "direccion": null, "mensaje": "Historial insuficiente: el periodo de comparación no tiene cobertura completa." }
       }
     ],
     "asistenciaPorServicio": [],
     "variacionPorServicio": [],
     "actividadesEspiritualesPorCategoria": [],
     "actividadEconomica": { "disponible": false, "montoRecaudado": null, "mensaje": "Seleccione un país para ver montos: cada país registra en su moneda local y no se suman entre sí." },
-    "alertas": { "total": 227, "porTipo": { "INFORME_PENDIENTE": 222 } }
+    "alertas": { "total": 99, "porTipo": { "INFORME_PENDIENTE": 99 } }
   }
 }
 ```
@@ -240,16 +296,17 @@ desempeño).
 ## Exportación
 
 Desde la página se exporta a **Excel** (hojas Resumen, Asistencia por servicio, Congregaciones,
-Alertas) y **PDF** (resumen, indicadores, servicios y alertas) con los mismos filtros
-aplicados.
+Alertas y Servicios mensuales) y **PDF** (resumen, indicadores, servicios, serie mensual y
+alertas) con los mismos filtros aplicados. Ambos formatos incluyen el inicio de cobertura,
+las restricciones de comparación y los porcentajes separados de iniciados y entregados.
 
 ## Limitaciones conocidas
 
-1. **Obrero compartido**: si un mismo usuario es obrero de una congregación y de uno de sus
-   campos, su informe aparece en ambas unidades. Los totales del alcance deduplican por id de
-   informe, pero la fila de cada unidad lo muestra.
-2. **Asignaciones actuales**: el histórico usa los obreros asignados hoy. Si una unidad cambió
-   de obrero, los trimestres anteriores reflejan los informes del obrero actual.
+1. **Legados sin ámbito**: no se infiere la congregación desde el autor; requieren una
+   conciliación explícita si deben incorporarse a las estadísticas.
+2. **Catálogo actual**: las unidades y su jerarquía proceden del catálogo activo actual.
+   El autor histórico no limita los informes consultados, pero una unidad inactiva o
+   un cambio de jerarquía no se reconstruye como un catálogo histórico.
 3. **Monedas**: no se suman montos entre países.
 4. **Comparación semestral/anual**: no implementada; queda como trabajo futuro (los módulos de
    periodos están preparados para agregar nuevos modos).

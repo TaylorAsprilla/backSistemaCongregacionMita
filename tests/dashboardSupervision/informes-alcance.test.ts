@@ -6,7 +6,10 @@ import { runInNewContext } from "node:vm";
 import type * as Servicio from "../../src/services/dashboardSupervision.service";
 import type { FiltrosDashboard } from "../../src/types/dashboardSupervision.dto";
 
-const preparar = (autores: number[] = []) => {
+const preparar = (
+  autores: number[] = [],
+  informes?: Array<Record<string, unknown>>,
+) => {
   const ruta = require.resolve("../../src/services/dashboardSupervision.service");
   const requireServicio = createRequire(ruta);
   const exports: Partial<typeof Servicio> = {};
@@ -31,8 +34,11 @@ const preparar = (autores: number[] = []) => {
       obtenerListadoInformes: async (...argumentos: unknown[]) => {
         usuarios = argumentos[5] as number[];
         return {
-          informes: autores.map((usuario_id) => ({
+          informes: informes ?? autores.map((usuario_id) => ({
             id: usuario_id, usuario_id, obrero: `Obrero ${usuario_id}`, estado: "Abierto", periodo: "2026-07-01",
+            tipo_congregacion: usuario_id === 10 ? "PAIS" : usuario_id === 13 ? "CAMPO" : "CONGREGACION",
+            congregacion_id: usuario_id === 10 ? 1 : usuario_id === 13 ? 111 : 11,
+            nombre_pais: null, nombre_congregacion: null, nombre_campo: null,
           })),
           total: autores.length, pagina: 1, porPagina: 10, totalPaginas: 1,
         };
@@ -91,6 +97,47 @@ describe("alcance geográfico del listado de informes", () => {
   it("no asigna ciudad ni campo al responsable del país", async () => {
     const [informe] = await preparar([10]).informes();
     assert.equal(informe.pais, "País A");
+    assert.equal(informe.ciudad, null);
+    assert.equal(informe.campo, null);
+  });
+  it("separa las congregaciones de dos informes del mismo obrero", async () => {
+    const informes = await preparar([], [
+      {
+        id: 112, usuario_id: 2952, estado: "Abierto",
+        tipo_congregacion: "PAIS", congregacion_id: 2,
+        nombre_pais: "País B", nombre_congregacion: null, nombre_campo: null,
+      },
+      {
+        id: 113, usuario_id: 2952, estado: "Abierto",
+        tipo_congregacion: "CONGREGACION", congregacion_id: 11,
+        nombre_pais: "País A", nombre_congregacion: "Ciudad A", nombre_campo: null,
+      },
+    ]).informes();
+    assert.equal(informes[0].pais, "País B");
+    assert.equal(informes[0].ciudad, null);
+    assert.equal(informes[0].campo, null);
+    assert.equal(informes[1].pais, "País A");
+    assert.equal(informes[1].ciudad, "Ciudad A");
+    assert.equal(informes[1].campo, null);
+  });
+  it("conserva la jerarquía histórica de un informe cerrado", async () => {
+    const [informe] = await preparar([], [{
+      id: 1, usuario_id: 11, estado: "Cerrado",
+      tipo_congregacion: "CONGREGACION", congregacion_id: 11,
+      nombre_pais: "País al cierre", nombre_congregacion: "Ciudad al cierre",
+      nombre_campo: "No corresponde",
+    }]).informes();
+    assert.equal(informe.pais, "País al cierre");
+    assert.equal(informe.ciudad, "Ciudad al cierre");
+    assert.equal(informe.campo, null);
+  });
+  it("no infiere la congregación de un informe legado desde su autor", async () => {
+    const [informe] = await preparar([], [{
+      id: 1, usuario_id: 11, estado: "Cerrado",
+      tipo_congregacion: null, congregacion_id: null,
+      nombre_pais: null, nombre_congregacion: null, nombre_campo: null,
+    }]).informes();
+    assert.equal(informe.pais, null);
     assert.equal(informe.ciudad, null);
     assert.equal(informe.campo, null);
   });

@@ -115,7 +115,17 @@ export interface FilaInforme {
   /** YYYY-MM-DD (primer día del trimestre). */
   periodo: string;
   createdAt: string | null;
+  tipo_congregacion: "PAIS" | "CONGREGACION" | "CAMPO" | null;
+  congregacion_id: number | null;
 }
+
+export type FilaListadoInforme = Omit<InformeSupervisionDTO, "pais" | "ciudad" | "campo"> & {
+  tipo_congregacion: "PAIS" | "CONGREGACION" | "CAMPO" | null;
+  congregacion_id: number | null;
+  nombre_pais: string | null;
+  nombre_congregacion: string | null;
+  nombre_campo: string | null;
+};
 
 export const obtenerListadoInformes = async (
   inicio: string,
@@ -125,7 +135,7 @@ export const obtenerListadoInformes = async (
   porPagina: number,
   usuarios?: number[],
 ): Promise<Omit<InformesSupervisionDTO, "informes"> & {
-  informes: Omit<InformeSupervisionDTO, "pais" | "ciudad" | "campo">[];
+  informes: FilaListadoInforme[];
 }> => {
   const nombre = "TRIM(CONCAT_WS(' ', NULLIF(TRIM(u.primerNombre), ''), NULLIF(TRIM(u.segundoNombre), ''), NULLIF(TRIM(u.primerApellido), ''), NULLIF(TRIM(u.segundoApellido), '')))";
   const desde = `FROM informe i
@@ -140,8 +150,10 @@ export const obtenerListadoInformes = async (
   const total = Number(conteo[0].total);
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const paginaActual = Math.min(pagina, totalPaginas);
-  const informes = await seleccionar<Omit<InformeSupervisionDTO, "pais" | "ciudad" | "campo">>(
+  const informes = await seleccionar<FilaListadoInforme>(
     `SELECT i.id, i.usuario_id, ${nombre} AS obrero, i.estado,
+       i.tipo_congregacion, i.congregacion_id,
+       i.nombre_pais, i.nombre_congregacion, i.nombre_campo,
        DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d') AS periodo
      ${desde} ORDER BY obrero, i.id DESC LIMIT :limite OFFSET :offset`,
     { ...replacements, limite: porPagina, offset: (paginaActual - 1) * porPagina },
@@ -149,24 +161,33 @@ export const obtenerListadoInformes = async (
   return { informes, total, pagina: paginaActual, porPagina, totalPaginas };
 };
 
-/** Informes no eliminados de los usuarios indicados cuyo periodo está en [inicio, fin). */
+/** Informes no eliminados del ámbito indicado (o de los usuarios si no se proporciona ámbito). */
 export const obtenerInformes = async (
   usuarios: number[],
   inicio: string,
   finExclusivo: string,
+  ambitos?: { tipo: string; id: number }[],
 ): Promise<FilaInforme[]> => {
-  if (!usuarios.length) return [];
+  if (ambitos ? !ambitos.length : !usuarios.length) return [];
+  const replacements: Record<string, unknown> = { usuarios, inicio, fin: finExclusivo };
+  const alcance = ambitos
+    ? ambitos.map((ambito, indice) => {
+        replacements[`tipo${indice}`] = ambito.tipo;
+        replacements[`unidad${indice}`] = ambito.id;
+        return `(i.tipo_congregacion = :tipo${indice} AND i.congregacion_id = :unidad${indice})`;
+      }).join(" OR ")
+    : "i.usuario_id IN (:usuarios)";
   return (
     await seleccionar<any>(
-      `SELECT i.id, i.usuario_id, i.estado,
+      `SELECT i.id, i.usuario_id, i.estado, i.tipo_congregacion, i.congregacion_id,
               DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d') AS periodo,
               DATE_FORMAT(i.createdAt, '%Y-%m-%d %H:%i:%s') AS createdAt
          FROM informe i
-        WHERE i.usuario_id IN (:usuarios)
+        WHERE (${alcance})
           AND i.estado <> 'Eliminado'
           AND ${SQL_PERIODO_INFORME} >= :inicio
           AND ${SQL_PERIODO_INFORME} < :fin`,
-      { usuarios, inicio, fin: finExclusivo },
+      replacements,
     )
   ).map((f) => ({
     id: numero(f.id),
@@ -174,31 +195,49 @@ export const obtenerInformes = async (
     estado: f.estado,
     periodo: f.periodo,
     createdAt: f.createdAt ?? null,
+    tipo_congregacion: f.tipo_congregacion ?? null,
+    congregacion_id: numeroONulo(f.congregacion_id),
   }));
 };
 
 export interface FilaActividad {
   informe_id: number;
+  mes: string;
   nombre: string | null;
   diaSemana: number | null;
   cantidad: number;
   asistencia: number;
 }
 
+export const obtenerInformesSinAmbito = async (
+  inicio: string,
+  fin: string,
+): Promise<{ periodo: string; cantidad: number }[]> =>
+  (await seleccionar<{ periodo: string; cantidad: number | string }>(
+    `SELECT DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d') AS periodo, COUNT(*) AS cantidad
+       FROM informe i
+      WHERE i.estado <> 'Eliminado'
+        AND (i.tipo_congregacion IS NULL OR i.congregacion_id IS NULL)
+        AND ${SQL_PERIODO_INFORME} >= :inicio AND ${SQL_PERIODO_INFORME} < :fin
+      GROUP BY DATE_FORMAT(${SQL_PERIODO_INFORME}, '%Y-%m-%d')`,
+    { inicio, fin },
+  )).map((fila) => ({ periodo: fila.periodo, cantidad: Number(fila.cantidad) }));
+
 export const obtenerActividades = async (informes: number[]): Promise<FilaActividad[]> => {
   if (!informes.length) return [];
   return (
     await seleccionar<any>(
-      `SELECT a.informe_id, t.nombre, DAYOFWEEK(a.fecha) AS diaSemana,
+      `SELECT a.informe_id, DATE_FORMAT(a.fecha, '%Y-%m') AS mes, t.nombre, DAYOFWEEK(a.fecha) AS diaSemana,
               COUNT(*) AS cantidad, SUM(COALESCE(a.asistencia, 0)) AS asistencia
          FROM actividad a
          LEFT JOIN tipoActividadEclesiastico t ON t.id = a.tipoActividad_id
         WHERE a.informe_id IN (:informes)
-        GROUP BY a.informe_id, t.nombre, DAYOFWEEK(a.fecha)`,
+        GROUP BY a.informe_id, DATE_FORMAT(a.fecha, '%Y-%m'), t.nombre, DAYOFWEEK(a.fecha)`,
       { informes },
     )
   ).map((f) => ({
     informe_id: numero(f.informe_id),
+    mes: f.mes,
     nombre: f.nombre ?? null,
     diaSemana: numeroONulo(f.diaSemana),
     cantidad: numero(f.cantidad),

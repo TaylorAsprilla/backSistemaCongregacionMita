@@ -52,6 +52,7 @@ import {
 import {
   clavePeriodo,
   compararPeriodos,
+  coberturaTemporal,
   descripcionComparacion,
   etiquetaPeriodo,
   fechaFinExclusivaPeriodo,
@@ -108,6 +109,7 @@ interface Dataset {
   asuntos: Map<number, consultas.FilaAsunto[]>;
   alertasPorUnidad: Map<string, AlertaDTO[]>;
   categoriasEspirituales: consultas.FilaPais[];
+  actividades: consultas.FilaActividad[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -324,13 +326,13 @@ const construirMetricas = async (informes: number[]) => {
     asuntosPorInforme.set(fila.informe_id, lista);
   }
 
-  return { metricas, asuntos: asuntosPorInforme };
+  return { metricas, asuntos: asuntosPorInforme, actividades };
 };
 
 const informesDe = (ds: Dataset, unidad: Unidad, periodo: Periodo) =>
   ds.informesPorUnidad.get(unidad.clave)?.get(clavePeriodo(periodo)) ?? [];
 
-/** Suma los informes indicados sin duplicar (un informe puede cubrir varias unidades). */
+/** Suma los informes indicados sin duplicar en agregados de la jerarquía. */
 const agregadoDeInformes = (ds: Dataset, informes: Iterable<consultas.FilaInforme>) => {
   const ids = new Set<number>();
   for (const informe of informes) ids.add(informe.id);
@@ -339,6 +341,23 @@ const agregadoDeInformes = (ds: Dataset, informes: Iterable<consultas.FilaInform
 
 const agregadoUnidad = (ds: Dataset, unidad: Unidad, periodo: Periodo) =>
   agregadoDeInformes(ds, informesDe(ds, unidad, periodo));
+
+const agregadoCerrado = (ds: Dataset, unidad: Unidad, periodo: Periodo) =>
+  fechaInicioPeriodo(periodo) >= DASHBOARD_SUPERVISION_CONFIG.inicioCobertura &&
+  fechaFinExclusivaPeriodo(periodo) <= new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" })
+    ? agregadoDeInformes(ds, informesDe(ds, unidad, periodo).filter((i) => i.estado === "Cerrado"))
+    : crearAgregado();
+
+const variacionPeriodo = (ds: Dataset, anterior: number | null, actual: number | null): Variacion => {
+  const cobertura = ds.contexto.coberturaTemporal;
+  if (cobertura.comparable) return calcularVariacion(anterior, actual);
+  return {
+    ...calcularVariacion(null, actual),
+    anterior,
+    diferencia: null,
+    mensaje: cobertura.mensaje,
+  };
+};
 
 export const estadoEntrega = (
   tieneObrero: boolean,
@@ -357,28 +376,29 @@ const estadoUnidad = (ds: Dataset, unidad: Unidad): EstadoEntrega =>
   );
 
 const calcularAlertasUnidad = (ds: Dataset, unidad: Unidad): AlertaDTO[] => {
+  if (ds.contexto.coberturaTemporal.sinCobertura) return [];
   const etiqueta = etiquetaPeriodo(ds.periodo);
   const etiquetaComparacion = etiquetaPeriodo(ds.comparacion);
   const alertas: AlertaDTO[] = [];
 
-  if (estadoUnidad(ds, unidad) === "PENDIENTE") {
+  if (estadoUnidad(ds, unidad) === "PENDIENTE" && !ds.contexto.integridad.informesSinAmbitoPeriodo) {
     alertas.push(alertaInformePendiente(unidad.ref, etiqueta));
   }
 
-  alertas.push(
+  if (ds.contexto.coberturaTemporal.comparable) alertas.push(
     ...alertasVariacion(
       unidad.ref,
-      agregadoUnidad(ds, unidad, ds.periodo),
-      agregadoUnidad(ds, unidad, ds.comparacion),
+      agregadoCerrado(ds, unidad, ds.periodo),
+      agregadoCerrado(ds, unidad, ds.comparacion),
       etiqueta,
       etiquetaComparacion,
     ),
   );
 
-  alertas.push(
+  if (!ds.contexto.integridad.informesSinAmbitoHistorico) alertas.push(
     ...alertasTendencia(
       unidad.ref,
-      ds.historico.map((p) => agregadoUnidad(ds, unidad, p)),
+      ds.historico.map((p) => agregadoCerrado(ds, unidad, p)),
       etiqueta,
     ),
   );
@@ -402,39 +422,55 @@ const construirDataset = async (filtros: FiltrosDashboard): Promise<Dataset> => 
 
   const periodo: Periodo = { anio: filtros.anio, trimestre: filtros.trimestre };
   const comparacion = periodoComparacion(periodo, filtros.comparacion);
-  const historico = periodosHistorico(periodo, DASHBOARD_SUPERVISION_CONFIG.trimestresHistorico);
-  const inicio = [historico[0], comparacion].sort(compararPeriodos)[0];
+  const historico = periodosHistorico(periodo, DASHBOARD_SUPERVISION_CONFIG.trimestresHistorico)
+    .filter((p) => fechaFinExclusivaPeriodo(p) > DASHBOARD_SUPERVISION_CONFIG.inicioCobertura);
+  const inicio = [historico[0] ?? periodo, comparacion].sort(compararPeriodos)[0];
 
   const unidades = unidadesEnAlcance(filtros, catalogo);
   const idsObreros = [...new Set(unidades.flatMap((u) => u.obreros))];
 
-  const [informes, usuarios] = await Promise.all([
-    consultas.obtenerInformes(idsObreros, fechaInicioPeriodo(inicio), fechaFinExclusivaPeriodo(periodo)),
+  const [informes, usuarios, sinAmbito] = await Promise.all([
+    consultas.obtenerInformes(idsObreros, fechaInicioPeriodo(inicio), fechaFinExclusivaPeriodo(periodo),
+      unidades.map((u) => ({ tipo: u.ref.tipo, id: u.ref.id }))),
     consultas.obtenerUsuarios(idsObreros),
+    consultas.obtenerInformesSinAmbito(fechaInicioPeriodo(inicio), fechaFinExclusivaPeriodo(periodo)),
   ]);
+  const contarSinAmbito = (p: Periodo) =>
+    sinAmbito.find((fila) => fila.periodo === fechaInicioPeriodo(p))?.cantidad ?? 0;
+  const integridad = {
+    informesSinAmbitoPeriodo: contarSinAmbito(periodo),
+    informesSinAmbitoComparacion: contarSinAmbito(comparacion),
+    informesSinAmbitoHistorico: historico.reduce((total, p) => total + contarSinAmbito(p), 0),
+  };
+  const temporal = coberturaTemporal(periodo, comparacion, DASHBOARD_SUPERVISION_CONFIG.inicioCobertura);
+  if (temporal.comparable &&
+    (integridad.informesSinAmbitoPeriodo || integridad.informesSinAmbitoComparacion)) {
+    temporal.comparable = false;
+    temporal.mensaje = "Comparación no disponible: hay informes sin Congregación identificada pendientes de conciliación.";
+  }
 
-  const informesPorUsuario = new Map<number, consultas.FilaInforme[]>();
+  const informesPorAmbito = new Map<string, consultas.FilaInforme[]>();
   for (const informe of informes) {
-    const lista = informesPorUsuario.get(informe.usuario_id) ?? [];
+    if (informe.periodo < DASHBOARD_SUPERVISION_CONFIG.inicioCobertura) continue;
+    const clave = `${informe.tipo_congregacion}-${informe.congregacion_id}`;
+    const lista = informesPorAmbito.get(clave) ?? [];
     lista.push(informe);
-    informesPorUsuario.set(informe.usuario_id, lista);
+    informesPorAmbito.set(clave, lista);
   }
 
   const informesPorUnidad = new Map<string, Map<string, consultas.FilaInforme[]>>();
   for (const unidad of unidades) {
     const porPeriodo = new Map<string, consultas.FilaInforme[]>();
-    for (const obrero of unidad.obreros) {
-      for (const informe of informesPorUsuario.get(obrero) ?? []) {
-        const p = periodoDesdeFecha(informe.periodo);
-        if (!p) continue;
-        const clave = clavePeriodo(p);
-        porPeriodo.set(clave, [...(porPeriodo.get(clave) ?? []), informe]);
-      }
+    for (const informe of informesPorAmbito.get(unidad.clave) ?? []) {
+      const p = periodoDesdeFecha(informe.periodo);
+      if (!p) continue;
+      const clave = clavePeriodo(p);
+      porPeriodo.set(clave, [...(porPeriodo.get(clave) ?? []), informe]);
     }
     informesPorUnidad.set(unidad.clave, porPeriodo);
   }
 
-  const { metricas, asuntos } = await construirMetricas(informes.map((i) => i.id));
+  const { metricas, asuntos, actividades } = await construirMetricas(informes.map((i) => i.id));
 
   const ds: Dataset = {
     filtros,
@@ -448,12 +484,15 @@ const construirDataset = async (filtros: FiltrosDashboard): Promise<Dataset> => 
     asuntos,
     alertasPorUnidad: new Map(),
     categoriasEspirituales: catalogo.categoriasEspirituales,
+    actividades,
     contexto: {
       filtros,
       periodo: periodoDTO(periodo),
       periodoComparacion: periodoDTO(comparacion),
       descripcionComparacion: descripcionComparacion(filtros.comparacion, comparacion),
       generadoEn: new Date().toISOString(),
+      integridad,
+      coberturaTemporal: temporal,
     },
   };
 
@@ -496,25 +535,30 @@ export const obtenerListadoInformes = async (
     ),
     usuarios,
   );
-  const unidadesPorObrero = new Map<number, UnidadRef[]>();
-  for (const unidad of unidades) {
-    for (const obrero of unidad.obreros) {
-      const asignaciones = unidadesPorObrero.get(obrero) ?? [];
-      asignaciones.push(unidad.ref);
-      unidadesPorObrero.set(obrero, asignaciones);
-    }
-  }
-  const nombres = (valores: (string | null)[]): string | null =>
-    [...new Set(valores.filter((valor): valor is string => !!valor))].join(" · ") || null;
+  const unidadesPorClave = new Map(
+    unidades.map((unidad) => [`${unidad.ref.tipo}:${unidad.ref.id}`, unidad.ref]),
+  );
   return {
     ...resultado,
     informes: resultado.informes.map((informe) => {
-      const asignaciones = unidadesPorObrero.get(Number(informe.usuario_id)) ?? [];
+      const {
+        tipo_congregacion, congregacion_id,
+        nombre_pais, nombre_congregacion, nombre_campo,
+        ...datos
+      } = informe;
+      const unidad = unidadesPorClave.get(`${tipo_congregacion}:${congregacion_id}`);
+      const usarActual = informe.estado === "Abierto" && unidad !== undefined;
+      const tieneAmbito = tipo_congregacion === "PAIS" ||
+        tipo_congregacion === "CONGREGACION" || tipo_congregacion === "CAMPO";
       return {
-        ...informe,
-        pais: nombres(asignaciones.map((unidad) => unidad.pais)),
-        ciudad: nombres(asignaciones.map((unidad) => unidad.congregacion)),
-        campo: nombres(asignaciones.filter((unidad) => unidad.tipo === "CAMPO").map((unidad) => unidad.nombre)),
+        ...datos,
+        pais: tieneAmbito ? (usarActual ? unidad.pais : nombre_pais ?? null) : null,
+        ciudad: tipo_congregacion === "CONGREGACION" || tipo_congregacion === "CAMPO"
+          ? (usarActual ? unidad.congregacion : nombre_congregacion ?? null)
+          : null,
+        campo: tipo_congregacion === "CAMPO"
+          ? (usarActual ? unidad.nombre : nombre_campo ?? null)
+          : null,
       };
     }),
   };
@@ -524,16 +568,25 @@ export const obtenerListadoInformes = async (
 /* Cálculos compartidos                                                */
 /* ------------------------------------------------------------------ */
 
-/** Informes del periodo y de comparación de las unidades que tienen informe en ambos. */
-const conjuntosComparables = (ds: Dataset, unidades: Unidad[]) => {
+/** Compara las mismas unidades con informes cerrados y datos de la métrica en ambos periodos. */
+const conjuntosComparables = (
+  ds: Dataset,
+  unidades: Unidad[],
+  extraer?: (agregado: AgregadoMetricas) => number | null,
+) => {
   const actuales: consultas.FilaInforme[] = [];
   const anteriores: consultas.FilaInforme[] = [];
   let unidadesComparadas = 0;
 
+  if (!ds.contexto.coberturaTemporal.comparable) {
+    return { actual: crearAgregado(), anterior: crearAgregado(), unidadesComparadas };
+  }
   for (const unidad of unidades) {
-    const actual = informesDe(ds, unidad, ds.periodo);
-    const anterior = informesDe(ds, unidad, ds.comparacion);
+    const actual = informesDe(ds, unidad, ds.periodo).filter((i) => i.estado === "Cerrado");
+    const anterior = informesDe(ds, unidad, ds.comparacion).filter((i) => i.estado === "Cerrado");
     if (actual.length && anterior.length) {
+      if (extraer && (extraer(agregadoDeInformes(ds, actual)) === null ||
+        extraer(agregadoDeInformes(ds, anterior)) === null)) continue;
       unidadesComparadas++;
       actuales.push(...actual);
       anteriores.push(...anterior);
@@ -551,25 +604,28 @@ const informesPeriodo = (ds: Dataset, unidades: Unidad[], periodo: Periodo) =>
   unidades.flatMap((u) => informesDe(ds, u, periodo));
 
 const construirIndicadores = (
+  ds: Dataset,
   total: AgregadoMetricas,
-  actual: AgregadoMetricas,
-  anterior: AgregadoMetricas,
+  unidades: Unidad[],
 ): IndicadorDTO[] =>
-  INDICADORES.map((indicador) => ({
-    clave: indicador.clave,
-    etiqueta: indicador.etiqueta,
-    grupo: indicador.grupo,
-    formato: indicador.formato,
-    valorPeriodo: indicador.extraer(total),
-    variacion: calcularVariacion(indicador.extraer(anterior), indicador.extraer(actual)),
-  }));
+  INDICADORES.map((indicador) => {
+    const { actual, anterior } = conjuntosComparables(ds, unidades, indicador.extraer);
+    return {
+      clave: indicador.clave,
+      etiqueta: indicador.etiqueta,
+      grupo: indicador.grupo,
+      formato: indicador.formato,
+      valorPeriodo: indicador.extraer(total),
+      variacion: variacionPeriodo(ds, indicador.extraer(anterior), indicador.extraer(actual)),
+    };
+  });
 
 const CATEGORIAS_ASISTENCIA: CategoriaActividad[] = [...CATEGORIAS_SERVICIO, "CONSEJERO", "VIGILIA"];
 
 const construirAsistenciaPorServicio = (
+  ds: Dataset,
   total: AgregadoMetricas,
-  actual: AgregadoMetricas,
-  anterior: AgregadoMetricas,
+  unidades: Unidad[],
 ): AsistenciaServicioDTO[] => {
   const leer = (ag: AgregadoMetricas, cat: CategoriaActividad) => {
     if (ag.informes <= 0 || ag.secciones.act <= 0) {
@@ -582,11 +638,12 @@ const construirAsistenciaPorServicio = (
 
   return CATEGORIAS_ASISTENCIA.map((categoria) => {
     const periodo = leer(total, categoria);
+    const { actual, anterior } = conjuntosComparables(ds, unidades, (ag) => leer(ag, categoria).promedio);
     return {
       categoria,
       etiqueta: ETIQUETAS_CATEGORIA_ACTIVIDAD[categoria],
       ...periodo,
-      variacionPromedio: calcularVariacion(
+      variacionPromedio: variacionPeriodo(ds,
         leer(anterior, categoria).promedio,
         leer(actual, categoria).promedio,
       ),
@@ -618,12 +675,12 @@ const variacionesUnidad = (
   unidad: (typeof ds.unidades)[number],
   claves: string[],
 ): Record<string, Variacion> => {
-  const actual = agregadoUnidad(ds, unidad, ds.periodo);
-  const anterior = agregadoUnidad(ds, unidad, ds.comparacion);
+  const actual = agregadoCerrado(ds, unidad, ds.periodo);
+  const anterior = agregadoCerrado(ds, unidad, ds.comparacion);
   const resultado: Record<string, Variacion> = {};
   for (const clave of claves) {
     const indicador = INDICADORES_POR_CLAVE.get(clave)!;
-    resultado[clave] = calcularVariacion(indicador.extraer(anterior), indicador.extraer(actual));
+    resultado[clave] = variacionPeriodo(ds, indicador.extraer(anterior), indicador.extraer(actual));
   }
   return resultado;
 };
@@ -681,7 +738,8 @@ const construirEntregaPorPais = (ds: Dataset): EntregaPaisDTO[] => {
       return {
         ...g,
         porcentajeConInforme:
-          esperadas > 0
+          esperadas > 0 && !ds.contexto.coberturaTemporal.sinCobertura &&
+          !ds.contexto.integridad.informesSinAmbitoPeriodo
             ? Math.round(((g.entregados + g.enElaboracion) / esperadas) * 1000) / 10
             : null,
       };
@@ -697,7 +755,7 @@ export const obtenerFiltrosDisponibles = async (): Promise<FiltrosDisponiblesDTO
   const catalogo = await obtenerCatalogo();
   const activo = periodoActivo();
   const anios: number[] = [];
-  for (let anio = activo.anio; anio >= Math.max(2020, activo.anio - 6); anio--) anios.push(anio);
+  for (let anio = activo.anio; anio >= Number(DASHBOARD_SUPERVISION_CONFIG.inicioCobertura.slice(0, 4)); anio--) anios.push(anio);
 
   return {
     periodoActivo: periodoDTO(activo),
@@ -733,7 +791,7 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
   const conInforme = contar("ENTREGADO") + contar("EN_ELABORACION");
 
   const total = agregadoDeInformes(ds, informesPeriodo(ds, ciudades, ds.periodo));
-  const { actual, anterior, unidadesComparadas } = conjuntosComparables(ds, ciudades);
+  const { unidadesComparadas } = conjuntosComparables(ds, ciudades);
   const alertas = todasLasAlertas(ds);
 
   const unSoloPais =
@@ -754,12 +812,18 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
       pendientes: contar("PENDIENTE"),
       sinObrero: contar("SIN_OBRERO"),
       porcentajeConInforme:
-        conObrero > 0 ? Math.round((conInforme / conObrero) * 1000) / 10 : null,
+        conObrero > 0 && !ds.contexto.coberturaTemporal.sinCobertura &&
+        !ds.contexto.integridad.informesSinAmbitoPeriodo
+          ? Math.round((conInforme / conObrero) * 1000) / 10 : null,
+      porcentajeEntregado:
+        conObrero > 0 && !ds.contexto.coberturaTemporal.sinCobertura &&
+        !ds.contexto.integridad.informesSinAmbitoPeriodo
+          ? Math.round((contar("ENTREGADO") / conObrero) * 1000) / 10 : null,
       informesPeriodo: total.informes,
       unidadesComparadas,
     },
-    indicadores: construirIndicadores(total, actual, anterior),
-    asistenciaPorServicio: construirAsistenciaPorServicio(total, actual, anterior),
+    indicadores: construirIndicadores(ds, total, ciudades),
+    asistenciaPorServicio: construirAsistenciaPorServicio(ds, total, ciudades),
     variacionPorServicio: (() => {
       const porUnidad = ciudades.map((u) => variacionesUnidad(ds, u, INDICADORES_SERVICIO));
       return SERVICIOS_VARIACION.map((s) => ({
@@ -772,18 +836,19 @@ export const obtenerResumen = async (filtros: FiltrosDashboard): Promise<Resumen
     entregaPorPais: construirEntregaPorPais(ds),
     actividadesEspiritualesPorCategoria: ds.categoriasEspirituales.map((cat) => {
       const leer = (ag: AgregadoMetricas) =>
-        ag.informes > 0 ? ag.valores[`esp.cat.${cat.id}`] ?? 0 : null;
+        ag.informes > 0 && ag.valores["esp.total"] !== undefined ? ag.valores[`esp.cat.${cat.id}`] ?? 0 : null;
+      const { actual, anterior } = conjuntosComparables(ds, ciudades, leer);
       return {
         id: cat.id,
         nombre: cat.nombre,
         valorPeriodo: leer(total),
-        variacion: calcularVariacion(leer(anterior), leer(actual)),
+        variacion: variacionPeriodo(ds, leer(anterior), leer(actual)),
       };
     }),
     actividadEconomica: unSoloPais
       ? {
           disponible: true,
-          montoRecaudado: total.informes > 0 ? total.valores["eco.monto"] ?? 0 : null,
+          montoRecaudado: total.informes > 0 ? total.valores["eco.monto"] ?? null : null,
           mensaje: "Monto expresado en la moneda local del país seleccionado.",
         }
       : {
@@ -802,6 +867,28 @@ export const obtenerTendencias = async (filtros: FiltrosDashboard): Promise<Tend
   const agregados = ds.historico.map((p) =>
     agregadoDeInformes(ds, informesPeriodo(ds, ciudades, p)),
   );
+  const ids = new Set(ds.historico.flatMap((p) => informesPeriodo(ds, ciudades, p)).map((i) => i.id));
+  const porMes = new Map<string, { cantidad: number; asistencia: number }>();
+  for (const actividad of ds.actividades) {
+    if (!ids.has(actividad.informe_id) ||
+      !CATEGORIAS_SERVICIO.includes(clasificarActividad(actividad.nombre, actividad.diaSemana))) continue;
+    const total = porMes.get(actividad.mes) ?? { cantidad: 0, asistencia: 0 };
+    total.cantidad += actividad.cantidad;
+    total.asistencia += actividad.asistencia;
+    porMes.set(actividad.mes, total);
+  }
+  const meses: string[] = [];
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Bogota" }).slice(0, 7);
+  const fin = fechaFinExclusivaPeriodo(ds.periodo).slice(0, 7);
+  const inicioHistorico = fechaInicioPeriodo(ds.historico[0] ?? ds.periodo);
+  const inicio = inicioHistorico < DASHBOARD_SUPERVISION_CONFIG.inicioCobertura
+    ? DASHBOARD_SUPERVISION_CONFIG.inicioCobertura : inicioHistorico;
+  for (let fecha = inicio; fecha.slice(0, 7) < fin && fecha.slice(0, 7) <= hoy;) {
+    meses.push(fecha.slice(0, 7));
+    const siguiente = new Date(`${fecha}T12:00:00Z`);
+    siguiente.setUTCMonth(siguiente.getUTCMonth() + 1);
+    fecha = siguiente.toISOString().slice(0, 10);
+  }
 
   return {
     contexto: ds.contexto,
@@ -811,6 +898,15 @@ export const obtenerTendencias = async (filtros: FiltrosDashboard): Promise<Tend
       valor: agregados[i].informes,
     })),
     series: construirSeries(ds, agregados),
+    seriesMensuales: [
+      { clave: "asistenciaMensual", etiqueta: "Asistencia acumulada a servicios (no personas únicas)", formato: "ENTERO",
+        puntos: meses.map((mes) => ({ periodo: mes, valor: porMes.get(mes)?.asistencia ?? null })) },
+      { clave: "serviciosMensuales", etiqueta: "Servicios registrados por mes", formato: "ENTERO",
+        puntos: meses.map((mes) => ({ periodo: mes, valor: porMes.get(mes)?.cantidad ?? null })) },
+      { clave: "promedioMensual", etiqueta: "Promedio de asistencia por servicio", formato: "DECIMAL",
+        puntos: meses.map((mes) => ({ periodo: mes, valor: porMes.has(mes)
+          ? calcularPromedio(porMes.get(mes)!.asistencia, porMes.get(mes)!.cantidad) : null })) },
+    ],
   };
 };
 
@@ -972,7 +1068,6 @@ export const obtenerDetalleUnidad = async (
     return [...informes.values()];
   };
   const total = agregadoDeInformes(ds, informesDeCiudades(ds.periodo));
-  const anterior = agregadoDeInformes(ds, informesDeCiudades(ds.comparacion));
   const informesActuales = informesDeCiudades(ds.periodo);
   const idsActuales = [...new Set(informesActuales.map((i) => i.id))];
 
@@ -1023,13 +1118,13 @@ export const obtenerDetalleUnidad = async (
       obrero: ds.usuarios.get(i.usuario_id)?.nombre || `Usuario ${i.usuario_id}`,
       creado: i.createdAt,
     })),
-    indicadores: construirIndicadores(total, total, anterior),
-    asistenciaPorServicio: construirAsistenciaPorServicio(total, total, anterior),
+    indicadores: construirIndicadores(ds, total, ciudades),
+    asistenciaPorServicio: construirAsistenciaPorServicio(ds, total, ciudades),
     historico: {
       periodos: ds.historico.map(periodoDTO),
       series: construirSeries(
         ds,
-        ds.historico.map((p) => agregadoUnidad(ds, unidad, p)),
+        ds.historico.map((p) => agregadoDeInformes(ds, informesDeCiudades(p))),
       ),
     },
     logros,

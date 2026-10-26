@@ -73,6 +73,18 @@ export interface ContextoDashboard {
   periodoComparacion: PeriodoDTO;
   descripcionComparacion: string;
   generadoEn: string;
+  integridad: {
+    informesSinAmbitoPeriodo: number;
+    informesSinAmbitoComparacion: number;
+    informesSinAmbitoHistorico: number;
+  };
+  coberturaTemporal: {
+    inicioCobertura: string;
+    sinCobertura: boolean;
+    enCurso: boolean;
+    comparable: boolean;
+    mensaje: string;
+  };
 }
 
 export interface UnidadRef {
@@ -113,6 +125,7 @@ export interface CoberturaDTO {
   sinObrero: number;
   /** % de unidades con obrero que ya tienen informe (abierto o cerrado). */
   porcentajeConInforme: number | null;
+  porcentajeEntregado: number | null;
   informesPeriodo: number;
   /** Unidades con informe en ambos periodos (base de las variaciones). */
   unidadesComparadas: number;
@@ -191,6 +204,7 @@ export interface TendenciasDTO {
   periodos: PeriodoDTO[];
   informesPorPeriodo: PuntoSerieDTO[];
   series: SerieDTO[];
+  seriesMensuales: SerieDTO[];
 }
 
 export type TipoAlerta =
