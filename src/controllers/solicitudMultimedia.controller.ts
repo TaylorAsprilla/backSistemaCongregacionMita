@@ -92,6 +92,8 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "congregacionCercana",
             "observaciones",
             "createdAt",
+            "updatedAt",
+            "terminos",
           ],
           where: {
             emailVerificado: {
@@ -421,6 +423,8 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "estado",
             "observaciones",
             "createdAt",
+            "updatedAt",
+            "terminos",
           ],
           where: {
             emailVerificado: { [Op.ne]: null },
@@ -481,13 +485,60 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
           required: true,
           attributes: ["id"],
           include: [
-            { model: Pais, as: "pais", attributes: ["id", "pais"] },
+            {
+              model: Pais,
+              as: "pais",
+              attributes: ["id", "pais"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
+            },
             {
               model: Congregacion,
               as: "congregacion",
               attributes: ["id", "congregacion"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
             },
-            { model: Campo, as: "campo", attributes: ["id", "campo"] },
+            {
+              model: Campo,
+              as: "campo",
+              attributes: ["id", "campo"],
+              include: [
+                {
+                  model: Usuario,
+                  as: "obreroEncargado",
+                  attributes: [
+                    "id",
+                    "primerNombre",
+                    "segundoNombre",
+                    "primerApellido",
+                    "segundoApellido",
+                  ],
+                },
+              ],
+            },
           ],
         },
       ],
