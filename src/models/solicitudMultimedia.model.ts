@@ -127,6 +127,16 @@ const SolicitudMultimedia = db.define(
       type: DataTypes.DATE,
       defaultValue: null,
     },
+    fechaAprobacion: {
+      type: DataTypes.DATE,
+      defaultValue: null,
+      allowNull: true,
+    },
+    duracionAprobadaDias: {
+      type: DataTypes.DECIMAL(14, 6),
+      defaultValue: null,
+      allowNull: true,
+    },
     tiempoSugerido: {
       type: DataTypes.STRING,
       allowNull: true,

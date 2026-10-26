@@ -24,6 +24,7 @@ import db from "../database/connection";
 import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import { auditoriaUsuario } from "../database/usuario.associations";
 import generarPassword from "../helpers/generarPassword";
+import { datosAprobacionMultimedia } from "../helpers/aprobacionMultimedia";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -87,6 +88,8 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "fechaAprobacion",
+            "duracionAprobadaDias",
             "motivoDeNegacion",
             "estado",
             "congregacionCercana",
@@ -418,6 +421,8 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "horaTemploMasCercano",
             "tiempoSugerido",
             "tiempoAprobacion",
+            "fechaAprobacion",
+            "duracionAprobadaDias",
             "motivoDeNegacion",
             "congregacionCercana",
             "estado",
@@ -571,7 +576,11 @@ export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
     //                          Guardar Acceso Multimedia
     // =======================================================================
 
-    const solicitudDeAcceso = SolicitudMultimedia.build(body);
+    const solicitudDeAcceso = SolicitudMultimedia.build({
+      ...body,
+      fechaAprobacion: null,
+      duracionAprobadaDias: null,
+    });
     await solicitudDeAcceso.save();
 
     await auditoriaUsuario(
@@ -758,9 +767,40 @@ export const actualizarSolicitudMultimedia = async (
       solicitudDeAcceso.getDataValue("tiempoAprobacion");
     const tiempoAprobacionNuevo = body.tiempoAprobacion;
 
+    const fechaAprobacion = new Date();
+    const nuevoVencimiento = new Date(tiempoAprobacionNuevo);
+    const nuevaAprobacion =
+      body.estado === SOLICITUD_MULTIMEDIA_ENUM.APROBADA &&
+      solicitudDeAcceso.getDataValue("estado") !== SOLICITUD_MULTIMEDIA_ENUM.APROBADA;
     const tiempoAprobacionCambio =
-      tiempoAprobacionNuevo &&
-      tiempoAprobacionAnterior !== tiempoAprobacionNuevo;
+      tiempoAprobacionNuevo != null &&
+      (tiempoAprobacionAnterior == null ||
+        new Date(tiempoAprobacionAnterior).getTime() !== nuevoVencimiento.getTime());
+
+    if (
+      tiempoAprobacionNuevo != null &&
+      (typeof tiempoAprobacionNuevo !== "string" ||
+        !Number.isFinite(nuevoVencimiento.getTime()) ||
+        ((tiempoAprobacionCambio || nuevaAprobacion) &&
+          nuevoVencimiento.getTime() <= fechaAprobacion.getTime()))
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        ok: false,
+        msg: "El vencimiento debe ser una fecha posterior a la aprobacion.",
+      });
+    }
+
+    // Las fechas de auditoria se generan en el servidor, nunca desde el cliente.
+    delete body.fechaAprobacion;
+    delete body.duracionAprobadaDias;
+    if (
+      tiempoAprobacionNuevo != null &&
+      (tiempoAprobacionCambio || nuevaAprobacion) &&
+      (body.estado ?? solicitudDeAcceso.getDataValue("estado")) === SOLICITUD_MULTIMEDIA_ENUM.APROBADA
+    ) {
+      Object.assign(body, datosAprobacionMultimedia(nuevoVencimiento, fechaAprobacion));
+    }
 
     // =======================================================================
     //             Verificar y Crear Credenciales si no existen
