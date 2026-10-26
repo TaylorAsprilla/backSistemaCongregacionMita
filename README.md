@@ -2,6 +2,22 @@
 
 Sistema de gestión integral para la Congregación Mita Inc., desarrollado con Node.js, Express, TypeScript y MySQL.
 
+## Fechas de aprobación multimedia
+
+Antes de desplegar esta versión, aplicar manualmente
+[011-solicitud-multimedia-fecha-aprobacion.sql](migrations/011-solicitud-multimedia-fecha-aprobacion.sql).
+La migración agrega `fechaAprobacion` y `duracionAprobadaDias`, ambas nulas para
+solicitudes históricas; no se infieren desde `updatedAt` ni desde la auditoría
+por usuario, que no identifica inequívocamente cada solicitud.
+
+Las aprobaciones y renovaciones guardan el instante del servidor y su duración
+hasta `tiempoAprobacion` (vencimiento), expresada en días con seis decimales.
+Una renovación reemplaza estos dos datos por los de la nueva autorización.
+Editar sin cambiar el vencimiento ni aprobar nuevamente no los modifica.
+Los valores de auditoría enviados por el cliente se ignoran.
+Las dos consultas de listado multimedia exponen estos campos para el Excel;
+el Excel básico no incluye el nombre ni el identificador del aprobador.
+
 ## 🚀 Características Principales
 
 - ✅ Gestión completa de usuarios y congregaciones

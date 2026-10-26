@@ -16,6 +16,7 @@ import { SOLICITUD_MULTIMEDIA_ENUM } from "../enum/solicitudMultimendia.enum";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import { Op } from "sequelize";
 import { format } from "date-fns";
+import { datosAprobacionMultimedia } from "../helpers/aprobacionMultimedia";
 
 const environment = config[process.env.NODE_ENV || "development"];
 
@@ -35,6 +36,17 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
   let email = "";
   let nombreCongregacion = "";
   let tiempoAprobacionDate = new Date(tiempoAprobacion);
+  const fechaAprobacion = new Date();
+  if (
+    typeof tiempoAprobacion !== "string" ||
+    !Number.isFinite(tiempoAprobacionDate.getTime()) ||
+    tiempoAprobacionDate.getTime() <= fechaAprobacion.getTime()
+  ) {
+    return res.status(400).json({
+      ok: false,
+      msg: "El vencimiento debe ser una fecha posterior a la aprobacion.",
+    });
+  }
   const formattedTiempoAprobacion = format(tiempoAprobacionDate, "yyyy-MM-dd");
 
   const transaction = await db.transaction();
@@ -185,6 +197,7 @@ export const crearAccesoMultimedia = async (req: Request, res: Response) => {
     await SolicitudMultimedia.update(
       {
         tiempoAprobacion: tiempoAprobacionDate,
+        ...datosAprobacionMultimedia(tiempoAprobacionDate, fechaAprobacion),
         usuarioQueAprobo_id,
         estado: SOLICITUD_MULTIMEDIA_ENUM.APROBADA,
       },
