@@ -33,11 +33,19 @@ export const obtenerContextoObrero = async (
     obtenerPermisosUsuario(usuarioId),
     obtenerNombresPermisosUsuario(usuarioId),
   ]);
-  const tienePermiso = (id: string, nombre: string) =>
-    permisos.includes(id) || nombres.some((permiso) => normalizarPermiso(permiso) === nombre);
+  const nombresNormalizados = nombres.map(normalizarPermiso);
+  const tienePermiso = (id: string, ...nombresPermitidos: string[]) =>
+    permisos.includes(id) ||
+    nombresNormalizados.some((permiso) => nombresPermitidos.includes(permiso));
   const unidades: UnidadObreroAsignada[] = [];
 
-  if (tienePermiso(ROLES_ID.OBRERO_CIUDAD, "OBRERO CIUDAD")) {
+  if (
+    tienePermiso(
+      ROLES_ID.OBRERO_CIUDAD,
+      "OBRERO CIUDAD",
+      "OBRERO CONGREGACION",
+    )
+  ) {
     const congregaciones = await Congregacion.findAll({
       attributes: ["id"],
       where: {

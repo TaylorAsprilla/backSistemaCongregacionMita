@@ -21,6 +21,32 @@ export const getRazonSolitudes = async (req: Request, res: Response) => {
   }
 };
 
+export const getUnaRazonSolicitud = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const razonSolicitud = await RazonSolicitud.findByPk(id);
+
+    if (!razonSolicitud) {
+      return res.status(404).json({
+        ok: false,
+        msg: `No existe una razón de solicitud con el id ${id}`,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      razonSolicitud,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      msg: "Hable con el administrador",
+      error,
+    });
+  }
+};
+
 export const crearUnaRazonSolicitud = async (req: Request, res: Response) => {
   const { body } = req;
 

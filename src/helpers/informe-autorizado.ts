@@ -9,6 +9,7 @@ import {
   obtenerContextoObreroPais,
   obtenerObrerosAsignadosAlPais,
 } from "../services/supervisionPais.authorization";
+import { obtenerContextoObrero } from "../services/supervisionObrero.authorization";
 import { obtenerAmbitosResponsabilidad } from "../services/informeResponsables";
 
 type AuthenticatedRequest = Request & { id?: number };
@@ -83,6 +84,34 @@ export const obtenerInformeAutorizado = async (
     totalUsuariosAutorizados: usuariosAutorizados.length,
   });
   return null;
+};
+
+export const obtenerInformeEditable = async (
+  req: Request,
+  informeId: string,
+) => {
+  const usuarioId = (req as AuthenticatedRequest).id;
+  if (!usuarioId) return null;
+
+  const informe = await obtenerInformeAutorizado(req, informeId);
+  if (!informe) return null;
+
+  if (Number(informe.getDataValue("usuario_id")) === usuarioId) return informe;
+
+  const permisos = await obtenerPermisosUsuario(usuarioId);
+  if (permisos.includes(ROLES_ID.ADMINISTRADOR)) return informe;
+
+  if (informe.getDataValue("tipo_congregacion") !== "CONGREGACION") {
+    return null;
+  }
+
+  const congregacionId = Number(informe.getDataValue("congregacion_id"));
+  const contexto = await obtenerContextoObrero(usuarioId);
+  return contexto?.unidades.some(
+    (unidad) => unidad.tipo === "CONGREGACION" && unidad.id === congregacionId,
+  )
+    ? informe
+    : null;
 };
 
 export const esResponsableActualDelInforme = async (

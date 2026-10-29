@@ -53,6 +53,9 @@ const preparar = (
           },
           obtenerObrerosAsignadosAlPais: async () => [8, 9],
         };
+        case "../services/supervisionObrero.authorization": return {
+          obtenerContextoObrero: async () => null,
+        };
         case "../services/informeResponsables": return {
           obtenerAmbitosResponsabilidad: async () => [],
         };

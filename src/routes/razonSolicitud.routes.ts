@@ -10,6 +10,7 @@ import {
   crearUnaRazonSolicitud,
   eliminarRazonSolicitud,
   getRazonSolitudes,
+  getUnaRazonSolicitud,
 } from "../controllers/razonSolicitud.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
@@ -17,6 +18,7 @@ import validarJWT from "../middlewares/validar-jwt";
 const router = Router();
 
 router.get("/", getRazonSolitudes);
+router.get("/:id", getUnaRazonSolicitud);
 router.post(
   "/",
   [
