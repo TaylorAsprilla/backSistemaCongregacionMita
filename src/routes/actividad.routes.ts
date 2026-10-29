@@ -7,6 +7,7 @@ import { check } from "express-validator";
 import {
   actualizarActividad,
   crearActividad,
+  eliminarActividad,
   getActividad,
   getActividadPorInforme,
 } from "../controllers/actividad.controller";
@@ -55,6 +56,12 @@ router.put(
   validarJWT,
   bloquearInformeCerradoEnEdicion(Actividad),
   actualizarActividad,
+);
+router.delete(
+  "/:id",
+  validarJWT,
+  bloquearInformeCerradoEnEdicion(Actividad),
+  eliminarActividad,
 );
 
 export default router;

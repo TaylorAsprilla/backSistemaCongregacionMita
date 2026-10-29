@@ -49,7 +49,7 @@ const responderSiInformeCerrado = async (
 export const bloquearInformeCerradoEnCreacion =
   (campoIdInforme = "informe_id") =>
   async (req: Request, res: Response, next: NextFunction) => {
-    const informeId = req.body[campoIdInforme];
+    const informeId = req.body?.[campoIdInforme];
     if (informeId === undefined || informeId === null || informeId === "") {
       return next();
     }
@@ -80,7 +80,7 @@ export const bloquearInformeCerradoEnEdicion =
         if (res.headersSent) return;
       }
 
-      const informeIdNuevo = req.body.informe_id;
+      const informeIdNuevo = req.body?.informe_id;
       if (
         informeIdNuevo !== undefined &&
         String(informeIdNuevo) !== String(informeIdActual)
