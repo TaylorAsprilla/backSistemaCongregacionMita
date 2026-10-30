@@ -10,8 +10,9 @@ Este cron job notifica automáticamente a los usuarios con permiso de **APROBADO
 
 - **Frecuencia**: Semanal
 - **Día**: Todos los lunes
-- **Hora**: 9:00 AM
+- **Hora**: 9:00 AM en la zona horaria del servidor (no hay zona explícita configurada)
 - **Expresión Cron**: `0 9 * * 1`
+- **Entorno**: solo se programa con `NODE_ENV=production`; el servidor debe estar ejecutándose a esa hora. No recupera ejecuciones perdidas.
 
 ### **Lógica de Notificación**
 
@@ -19,12 +20,14 @@ Este cron job notifica automáticamente a los usuarios con permiso de **APROBADO
 
 El sistema busca usuarios con:
 
-- Permiso `ADMINISTRADOR_MULTIMEDIA` (ID: 7)
+- Permiso `APROBADOR_MULTIMEDIA` (ID: 11)
 - Email válido configurado
 - Asignados como obreros encargados de:
-  - **Países** (`Pais.idObreroEncargado`)
+  - **Países** (`Pais.idObreroEncargado` o `idAdministrador`)
   - **Congregaciones** (`Congregacion.idObreroEncargado` o `idObreroEncargadoDos`)
   - **Campos** (`Campo.idObreroEncargado` o `idObreroEncargadoDos`)
+
+Se consideran todas las áreas activas a cargo del aprobador, no su ubicación personal en `usuarioCongregacion`. Las áreas se consultan juntas para enviar un único resumen por aprobador.
 
 #### **2. Filtrado de Solicitudes**
 
@@ -32,15 +35,17 @@ Para cada aprobador, se obtienen solicitudes que cumplan:
 
 - Estado: `PENDIENTE`
 - Email verificado: `true`
-- Ubicación del solicitante coincide con la jurisdicción del aprobador
+- Ubicación del solicitante coincide con las congregaciones asignadas al aprobador
 
 #### **3. Envío de Notificaciones**
 
 Solo se envían emails cuando:
 
-- Hay solicitudes pendientes en la jurisdicción
+- Hay solicitudes pendientes en las congregaciones asignadas
 - El aprobador tiene email configurado
 - No hay errores en el proceso de envío
+
+Se exige que el servidor SMTP acepte el mensaje antes de registrar el envío como exitoso. Esto no garantiza entrega en la bandeja de entrada: deben revisarse también los registros del proveedor, rebotes y spam. Los errores se registran por aprobador y no impiden continuar con los demás; la ejecución termina con error si hubo fallos.
 
 ## 📊 Ejemplos de Casos de Uso
 
@@ -49,7 +54,7 @@ Solo se envían emails cuando:
 ```
 Usuario: 2182
 Rol: Obrero País - Colombia
-Permiso: ADMINISTRADOR_MULTIMEDIA
+Permiso: APROBADOR_MULTIMEDIA
 Resultado: Recibe email con todas las solicitudes pendientes de usuarios ubicados en Colombia
 ```
 
@@ -58,7 +63,7 @@ Resultado: Recibe email con todas las solicitudes pendientes de usuarios ubicado
 ```
 Usuario: 3
 Rol: Obrera Congregación - Boston
-Permiso: ADMINISTRADOR_MULTIMEDIA
+Permiso: APROBADOR_MULTIMEDIA
 Resultado: Recibe email con todas las solicitudes pendientes de usuarios de la congregación Boston
 ```
 
@@ -67,7 +72,7 @@ Resultado: Recibe email con todas las solicitudes pendientes de usuarios de la c
 ```
 Usuario: 1425
 Rol: Obrero Campo - Centro
-Permiso: ADMINISTRADOR_MULTIMEDIA
+Permiso: APROBADOR_MULTIMEDIA
 Resultado: Recibe email con todas las solicitudes pendientes de usuarios del campo Centro
 ```
 
@@ -76,7 +81,7 @@ Resultado: Recibe email con todas las solicitudes pendientes de usuarios del cam
 ### **Información Incluida**
 
 - Nombre del aprobador
-- Tipo y nombre de la jurisdicción
+- Tipo y nombre de las congregaciones asignadas
 - Total de solicitudes pendientes
 - Fecha del reporte
 - Lista detallada con:
@@ -91,7 +96,15 @@ Resultado: Recibe email con todas las solicitudes pendientes de usuarios del cam
 
 ## 🧪 Pruebas
 
-### **Endpoint Manual de Prueba**
+### **Pruebas automatizadas sin envío real**
+
+```bash
+node --test tests/notify-pending-requests.test.cjs
+```
+
+### **Endpoint Manual de Prueba (no implementado)**
+
+La ruta del ejemplo siguiente no existe en el backend. Para ejecución manual desde código se exporta `notificarAprobadoresMultimedia`; sin simulaciones, esta función envía correos reales.
 
 ```http
 POST /api/cron/test-notifications

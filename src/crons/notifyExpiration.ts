@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
 import enviarEmail from "../helpers/email";
@@ -173,6 +173,45 @@ const eliminarCredenciales = async () => {
   }
 };
 
+const ejecutarTareaCaducidad = async () => {
+  await db.transaction(async (transaction) => {
+    const [bloqueo] = await db.query<{ acquired: number | null }>(
+      "SELECT GET_LOCK(:lockName, 0) AS acquired",
+      {
+        replacements: { lockName: "cron-notify-expiration-cmar-live" },
+        transaction,
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (Number(bloqueo?.acquired) !== 1) {
+      console.info(
+        "Cron de caducidad omitido: otra instancia ya está ejecutando la tarea.",
+      );
+      return;
+    }
+
+    try {
+      console.log("Ejecutando tarea cron...");
+      await verificarFechasYEnviarCorreos();
+      await eliminarCredenciales();
+    } finally {
+      const [liberacion] = await db.query<{ released: number | null }>(
+        "SELECT RELEASE_LOCK(:lockName) AS released",
+        {
+          replacements: { lockName: "cron-notify-expiration-cmar-live" },
+          transaction,
+          type: QueryTypes.SELECT,
+        },
+      );
+
+      if (Number(liberacion?.released) !== 1) {
+        throw new Error("No se pudo liberar el bloqueo del cron de caducidad.");
+      }
+    }
+  });
+};
+
 loadEmailTemplates();
 
 // Desglose de la expresión cron:
@@ -186,9 +225,11 @@ const nodeEnv = process.env.NODE_ENV || "development";
 
 if (nodeEnv === "production") {
   cron.schedule("0 15 * * *", async () => {
-    console.log("Ejecutando tarea cron...");
-    await verificarFechasYEnviarCorreos();
-    await eliminarCredenciales();
+    try {
+      await ejecutarTareaCaducidad();
+    } catch (error) {
+      console.error("Error al ejecutar el cron de caducidad:", error);
+    }
   });
 
   // cron.schedule("* * * * *", async () => {
