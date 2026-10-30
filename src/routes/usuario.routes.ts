@@ -19,6 +19,7 @@ import {
 } from "../controllers/usuario.controller";
 import validarCampos from "../middlewares/validar-campos";
 import validarJWT from "../middlewares/validar-jwt";
+import validarAdministracionQr from "../middlewares/validar-administracion-qr";
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.get(
   buscarPorNumeroDocumento,
 );
 
-router.get("/buscarnumeromita", buscarPorNumeroMita);
+router.get("/buscarnumeromita", validarJWT, validarAdministracionQr, buscarPorNumeroMita);
 
 router.get("/:id/responsabilidades-obrero", validarJWT, getResponsabilidadesObrero);
 router.get("/:id", validarJWT, getUsuario);

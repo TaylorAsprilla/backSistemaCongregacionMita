@@ -8,7 +8,8 @@ const enviarEmail = async (
   to: string,
   subject: string,
   html: string,
-  bcc?: string
+  bcc?: string,
+  exigirEntrega = false
 ) => {
   console.info("Enviando correos", to);
 
@@ -21,8 +22,12 @@ const enviarEmail = async (
       bcc: bcc,
     });
 
+    if (exigirEntrega && !info.accepted?.length) {
+      throw new Error("El servidor de correo no aceptó el mensaje.");
+    }
     console.info("Cuenta de correo", info.accepted);
   } catch (error: any) {
+    if (exigirEntrega) throw error;
     console.error("error?.message", error?.message);
     console.error("error?.message", error);
   }

@@ -3,6 +3,7 @@
 ## Tabla de Contenidos
 
 - [Autenticación](#autenticación)
+- [Acceso QR verificado](#acceso-qr-verificado)
 - [Usuarios](#usuarios)
 - [Categorías de Profesión](#categorías-de-profesión)
 - [Códigos de Error](#códigos-de-error)
@@ -11,7 +12,8 @@
 
 ## Autenticación
 
-Todos los endpoints (excepto login) requieren autenticación JWT mediante el header `x-token`.
+Los endpoints protegidos requieren autenticación JWT mediante el header `x-token`.
+Login y los dos pasos públicos de acceso QR descritos abajo no requieren una sesión previa.
 
 ### Login
 
@@ -53,6 +55,162 @@ x-token: YOUR_JWT_TOKEN
 ```
 
 **Respuesta:** Igual que login, incluye nueva token y datos del usuario con `categoriaProfesion`.
+
+---
+
+## Acceso QR verificado
+
+### Solicitar código
+
+`POST /api/accesoqr/solicitarCodigo` recibe:
+
+```json
+{
+  "qrCode": "ticket-del-qr",
+  "numeroMita": "123"
+}
+```
+
+Requiere QR y congregación activos. Para un usuario censado y activo con correo
+registrado, envía un código de seis dígitos a ese correo, nunca a una dirección
+proporcionada por el visitante. La respuesta no expone nombre, correo ni existencia
+del usuario:
+
+```json
+{
+  "ok": true,
+  "desafio_id": "uuid-del-desafio",
+  "msg": "Si los datos permiten el acceso, recibirá un código en el correo registrado. Puede solicitar hasta 3 códigos cada 15 minutos."
+}
+```
+
+Para una identidad inexistente, inactiva, sin correo o limitada devuelve el mismo
+formato con un identificador sin desafío válido. No garantiza igualdad de tiempos
+de respuesta. Un fallo de procesamiento o correo devuelve 503; no emite una sesión.
+
+El código dura diez minutos, admite cinco intentos fallidos y solo puede consumirse
+una vez. Se permiten tres solicitudes por usuario cada quince minutos, con contador
+persistente y bloqueo transaccional. En MySQL se guarda únicamente su resumen HMAC,
+vinculado al desafío y firmado con `JWT_SECRET`, no el código en texto.
+El formulario informa la cuota y la duración de cuatro horas de la sesión antes
+y después de solicitar el código. El correo usa la plantilla
+`src/templates/codigoAccesoQr.html`, con el logo configurado en `imagenEmail`,
+tipografía, firma y contacto de los correos existentes; incluye ambas condiciones
+y el vencimiento del código. `copy-templates` la incorpora al build.
+
+### Verificar e ingresar
+
+`POST /api/accesoqr/loginQr` recibe:
+
+```json
+{
+  "qrCode": "ticket-del-qr",
+  "desafio_id": "uuid-del-desafio",
+  "codigo": "012345",
+  "esGuarda": true,
+  "enTurnoGuarda": true,
+  "puesto": "Casa Nueva"
+}
+```
+
+`esGuarda` y `enTurnoGuarda` son booleanos obligatorios. Si no es guarda, el turno
+debe ser `false`. Solo un guarda en turno debe seleccionar un puesto:
+`Puesto 1`, `Casa Nueva`, `Finca de Arecibo` o `Finca de Bayamón`.
+En los demás casos `puesto` debe ser nulo o vacío.
+Un guarda fuera de turno (`esGuarda=true`, `enTurnoGuarda=false`) no puede ingresar
+mediante QR: el formulario informa la restricción y deshabilita el ingreso; el
+backend devuelve 403 y audita `GUARDA_FUERA_DE_TURNO`, sin crear sesión, consumir
+el código ni incrementar intentos fallidos del código. Quien no es guarda puede
+continuar con la verificación. El ingreso con contraseña no cambia.
+
+El backend verifica nuevamente usuario, QR y congregación activos. La sesión QR,
+el consumo del desafío y la auditoría exitosa se confirman en una misma
+transacción; una falla revierte los tres. El nombre procede del censo, no del
+formulario. La respuesta contiene `ok`, `token`, `nombre`, `congregacion`
+(`id`, `congregacion`) y `sessionInfo` (`sessionId`, `sessionType`,
+`isLoginCodeQr`, `expiresAt`).
+
+Las nuevas sesiones QR duran **cuatro horas**, sin cerrar otras sesiones.
+La renovación de JWT no extiende la expiración persistida de la sesión.
+Datos mal formados devuelven 400, una verificación rechazada 401 y un fallo
+interno 500. Los rechazos incluyen `code` y un `msg` visible en el formulario:
+`CODIGO_VENCIDO`, `CODIGO_UTILIZADO` y `CODIGO_BLOQUEADO` indican que debe pulsar
+«Solicitar otro código / cambiar número». `CODIGO_NO_VALIDO` informa los intentos
+restantes y pide revisar el correo correspondiente a esta solicitud; el quinto
+fallo ya devuelve bloqueo. El estado específico solo se informa si el desafío
+corresponde al QR activo enviado; los desconocidos o ajenos conservan el mensaje
+genérico `DESAFIO_NO_DISPONIBLE`. No cambia la caducidad ni el consumo del código.
+Los límites adicionales por IP son 20 solicitudes de código y
+30 verificaciones cada quince minutos; son locales al proceso y devuelven 429.
+Los rechazos del limitador se registran en el log del servidor; los intentos que
+llegan al controlador se guardan en la auditoría QR.
+
+### Administración y auditoría
+
+`GET /api/accesoqr/ultimoQr`, `POST /api/accesoqr/generarQr`,
+`GET /api/accesoqr/listadoAccesos` y la consulta
+`GET /api/usuarios/buscarnumeromita` requieren `x-token`, sesión normal de usuario
+activo y un permiso activo existente: administrador (1), asistente OOTS (8) o
+comité rector (13). Una sesión QR o de congregación no sirve para administrar.
+
+La generación y la consulta del último QR componen la imagen con el escudo local
+`src/assets/imagenes/logo.png`, incluido en el build por `copy-assets`.
+No descargan el logo desde `cmar.live` ni requieren DNS o Internet para componer
+la imagen. La URL de ingreso del QR sigue usando `loginPorQr` de la configuración;
+`logoQR` ya no se utiliza en estos dos endpoints. Si el recurso local falta o
+no puede procesarse, se registra el error y la operación devuelve 500.
+
+El listado acepta `page` (desde 1), `limit` (1 a 100), `esGuarda=true|false` y
+`puesto` (uno de los cuatro valores autorizados). Conserva la respuesta
+`{ok, msg, data, pagination}` y consulta directamente `qrAccesos`, sin atribuir
+identidad mediante coincidencias de IP. Registra solicitudes, verificaciones y
+rechazos con fecha, IP, dispositivo, resultado e identidad verificada o pendiente.
+Las respuestas de guarda y puesto son declaraciones del visitante, no prueba de
+su cargo. Los registros históricos no reciben valores inferidos.
+
+### Despliegue y conservación
+
+1. Respaldar la base y aplicar una sola vez
+   [012-acceso-qr-verificacion.sql](../migrations/012-acceso-qr-verificacion.sql)
+   antes del nuevo backend. MySQL confirma los cambios DDL por separado; revisar
+   cualquier aplicación parcial antes de reintentar, sin eliminar tablas.
+2. Desplegar backend y frontend coordinadamente: el antiguo ingreso basado
+   únicamente en número Mita y nombre ya no se acepta. No cambia la URL del QR.
+3. Confirmar configuración del correo y `JWT_SECRET`; probar la entrega con una
+   cuenta de prueba autorizada. El código nunca se registra en la auditoría.
+4. Verificar ingreso con código, rechazo por caducidad/reutilización, controles
+   administrativos y acceso normal con contraseña.
+
+La migración añade `desafioAccesoQr` y campos opcionales en `qrAccesos`; permite
+nulos en QR/nombre para auditar intentos no identificados y amplía el nombre a
+255 caracteres. No actualiza filas históricas ni sesiones existentes.
+Los cambios no activan geocercas, GPS ni restricciones por ubicación. La ubicación
+por IP continúa siendo información auxiliar, no una prueba de presencia física.
+
+No hay purga automática nueva. Programar, mediante el mantenimiento existente y
+con la política de retención aprobada, la eliminación de desafíos ya caducados
+con más de 24 horas desde su expiración. No purgar desafíos vigentes: el recuento
+reciente también protege la cuota por usuario. El historial `qrAccesos` se
+conserva de forma independiente según la política de auditoría.
+
+### Pruebas focalizadas
+
+Backend, desde la raíz del proyecto:
+
+```powershell
+npm run build
+.\node_modules\.bin\tsc.cmd -p tsconfig.test.json
+node --test build-test\tests\acceso-qr.test.js tests\acceso-qr-controller.test.cjs tests\acceso-qr-permisos.test.cjs
+```
+
+Frontend, desde su propia raíz:
+
+```powershell
+.\node_modules\.bin\ng.cmd test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.qr.spec.json --include=src/app/auth/login/login.component.spec.ts --include=src/app/pages/accesosQr/listado-accesos-qr/listado-accesos-qr.component.spec.ts
+```
+
+Los controladores se prueban con correo y transacciones simulados; no envían
+mensajes reales ni reemplazan la prueba de entrega y concurrencia en el entorno.
 
 ---
 

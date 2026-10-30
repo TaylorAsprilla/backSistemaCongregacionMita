@@ -13,21 +13,6 @@ interface RateLimitStore {
   };
 }
 
-const store: RateLimitStore = {};
-
-// Limpieza automática cada 5 minutos
-setInterval(
-  () => {
-    const now = Date.now();
-    Object.keys(store).forEach((key) => {
-      if (store[key].resetTime < now) {
-        delete store[key];
-      }
-    });
-  },
-  5 * 60 * 1000,
-);
-
 /**
  * Rate Limiter Middleware
  *
@@ -40,6 +25,13 @@ export const rateLimiter = (
   windowMs: number = 60 * 1000,
   message: string = "Demasiadas solicitudes desde esta IP, por favor intente más tarde",
 ) => {
+  const store: RateLimitStore = {};
+  setInterval(() => {
+    const now = Date.now();
+    Object.keys(store).forEach((key) => {
+      if (store[key].resetTime < now) delete store[key];
+    });
+  }, 5 * 60 * 1000).unref();
   return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || "unknown";
     const now = Date.now();
