@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
-import { Op } from "sequelize";
+import { Model, Op, WhereOptions } from "sequelize";
 import SolicitudMultimedia from "../models/solicitudMultimedia.model";
 import Usuario from "../models/usuario.model";
 import UsuarioPermiso from "../models/usuarioPermiso.model";
@@ -38,87 +38,74 @@ function renderTemplate(template: string, variables: Record<string, string>) {
   return result;
 }
 
-// Función para obtener las solicitudes pendientes por jurisdicción
+// Función para obtener las solicitudes pendientes por congregación
 const obtenerSolicitudesPendientesPorCongregacion = async (
-  tipoCongregacion: "pais" | "congregacion" | "campo",
-  congregacionId: number,
+  congregaciones: WhereOptions[],
 ) => {
-  try {
-    const whereCondition: any = {
-      estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
-      emailVerificado: true,
-    };
-
-    // Definir las condiciones según el tipo de jurisdicción
-    const includeCondition: any = [
+  return Usuario.findAll({
+    attributes: [
+      "id",
+      "primerNombre",
+      "segundoNombre",
+      "primerApellido",
+      "segundoApellido",
+      "email",
+      "numeroCelular",
+    ],
+    include: [
+      {
+        model: SolicitudMultimedia,
+        as: "solicitudes",
+        where: {
+          estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
+          emailVerificado: true,
+        },
+        attributes: ["id", "createdAt", "observaciones"],
+        required: true,
+      },
       {
         model: UsuarioCongregacion,
         as: "usuarioCongregacion",
         required: true,
-        where: {},
-        include: [
-          {
-            model: Pais,
-            as: "pais",
-            attributes: ["id", "pais"],
-          },
-          {
-            model: Congregacion,
-            as: "congregacion",
-            attributes: ["id", "congregacion"],
-          },
-          {
-            model: Campo,
-            as: "campo",
-            attributes: ["id", "campo"],
-          },
-        ],
+        where: { [Op.or]: congregaciones },
       },
-    ];
+    ],
+  });
+};
 
-    // Agregar condición específica según la congregacion
-    switch (tipoCongregacion) {
-      case "pais":
-        includeCondition[0].where = { pais_id: congregacionId };
-        break;
-      case "congregacion":
-        includeCondition[0].where = { congregacion_id: congregacionId };
-        break;
-      case "campo":
-        includeCondition[0].where = { campo_id: congregacionId };
-        break;
+const obtenerCongregacionesAsignadas = async (usuarioId: number) => {
+  const [paises, congregaciones, campos] = await Promise.all([
+    Pais.findAll({
+      where: {
+        estado: true,
+        [Op.or]: [{ idObreroEncargado: usuarioId }, { idAdministrador: usuarioId }],
+      },
+    }),
+    Congregacion.findAll({
+      where: {
+        estado: true,
+        [Op.or]: [{ idObreroEncargado: usuarioId }, { idObreroEncargadoDos: usuarioId }],
+      },
+    }),
+    Campo.findAll({
+      where: {
+        estado: true,
+        [Op.or]: [{ idObreroEncargado: usuarioId }, { idObreroEncargadoDos: usuarioId }],
+      },
+    }),
+  ]);
+  const condiciones: WhereOptions[] = [];
+  const nombres: string[] = [];
+  const agregar = (registros: Model[], columna: string, nombre: string) => {
+    for (const registro of registros) {
+      condiciones.push({ [columna]: registro.getDataValue("id") });
+      nombres.push(registro.getDataValue(nombre));
     }
-
-    const solicitudes = await Usuario.findAll({
-      attributes: [
-        "id",
-        "primerNombre",
-        "segundoNombre",
-        "primerApellido",
-        "segundoApellido",
-        "email",
-        "numeroCelular",
-      ],
-      include: [
-        {
-          model: SolicitudMultimedia,
-          as: "solicitudes",
-          where: {
-            estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
-            emailVerificado: true,
-          },
-          attributes: ["id", "createdAt", "observaciones"],
-          required: true,
-        },
-        ...includeCondition,
-      ],
-    });
-
-    return solicitudes;
-  } catch (error) {
-    console.error("Error obteniendo solicitudes pendientes:", error);
-    return [];
-  }
+  };
+  agregar(paises, "pais_id", "pais");
+  agregar(congregaciones, "congregacion_id", "congregacion");
+  agregar(campos, "campo_id", "campo");
+  return { condiciones, nombres };
 };
 
 // Función para generar la lista HTML de solicitudes
@@ -179,74 +166,45 @@ const generarListaSolicitudes = (solicitudes: any[]) => {
 const notificarAprobadoresMultimedia = async () => {
   console.log("🔍 Iniciando notificación semanal a aprobadores multimedia...");
 
-  try {
-    // Obtener todos los usuarios con permiso de ADMINISTRADOR_MULTIMEDIA (ID 7)
-    const aprobadores = await Usuario.findAll({
-      attributes: [
-        "id",
-        "primerNombre",
-        "segundoNombre",
-        "primerApellido",
-        "segundoApellido",
-        "email",
-      ],
-      include: [
-        {
-          model: UsuarioPermiso,
-          as: "usuarioPermiso",
-          where: {
-            permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA, // ID 11
-          },
-          attributes: [],
-          required: true,
+  const aprobadores = await Usuario.findAll({
+    attributes: [
+      "id",
+      "primerNombre",
+      "segundoNombre",
+      "primerApellido",
+      "segundoApellido",
+      "email",
+    ],
+    include: [
+      {
+        model: UsuarioPermiso,
+        as: "usuarioPermiso",
+        where: {
+          permiso_id: ROLES_ID.APROBADOR_MULTIMEDIA,
         },
-        {
-          model: UsuarioCongregacion,
-          as: "usuarioCongregacion",
-          include: [
-            {
-              model: Pais,
-              as: "pais",
-              attributes: ["id", "pais"],
-            },
-            {
-              model: Congregacion,
-              as: "congregacion",
-              attributes: ["id", "congregacion"],
-            },
-            {
-              model: Campo,
-              as: "campo",
-              attributes: ["id", "campo"],
-            },
-          ],
-          required: false,
-        },
-      ],
-    });
+        attributes: [],
+        required: true,
+      },
+    ],
+  });
 
-    console.log(`Encontrados ${aprobadores.length} aprobadores multimedia`);
+  console.log(`Encontrados ${aprobadores.length} aprobadores multimedia`);
 
-    const fechaReporte = new Date().toLocaleDateString("es-ES", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+  const fechaReporte = new Date().toLocaleDateString("es-ES", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
-    // Procesar cada aprobador multimedia
-    for (const aprobador of aprobadores) {
+  let fallos = 0;
+  for (const aprobador of aprobadores) {
+    try {
       const email = aprobador.getDataValue("email");
       if (!email) {
         console.log(
           `Aprobador ID ${aprobador.getDataValue("id")} no tiene email configurado`,
         );
-        continue;
-      }
-
-      const usuarioCongregacion = aprobador.getDataValue("usuarioCongregacion");
-      if (!usuarioCongregacion) {
-        console.log(`Aprobador ${email} no tiene congregación asignada`);
         continue;
       }
 
@@ -259,49 +217,19 @@ const notificarAprobadoresMultimedia = async () => {
           .replace(/\s+/g, " ")
           .trim();
 
-      // Determinar jurisdicción del aprobador y obtener solicitudes
-      let solicitudesPendientes: any[] = [];
-      let tipoCongregacion = "";
-      let nombreCongregacion = "";
-
-      // Verificar jurisdicción por orden de prioridad: Campo > Congregación > País
-      const campoId = usuarioCongregacion.getDataValue("campo_id");
-      const congregacionId =
-        usuarioCongregacion.getDataValue("congregacion_id");
-      const paisId = usuarioCongregacion.getDataValue("pais_id");
-
-      if (campoId) {
-        // Tiene campo asignado
-        solicitudesPendientes =
-          await obtenerSolicitudesPendientesPorCongregacion("campo", campoId);
-        tipoCongregacion = "campo";
-        const campo = usuarioCongregacion.getDataValue("campo");
-        nombreCongregacion = campo ? campo.getDataValue("campo") : "Campo";
-      } else if (congregacionId) {
-        // Tiene congregación asignada
-        solicitudesPendientes =
-          await obtenerSolicitudesPendientesPorCongregacion(
-            "congregacion",
-            congregacionId,
-          );
-        tipoCongregacion = "congregación";
-        const congregacion = usuarioCongregacion.getDataValue("congregacion");
-        nombreCongregacion = congregacion
-          ? congregacion.getDataValue("congregacion")
-          : "Congregación";
-      } else if (paisId) {
-        // Tiene país asignado
-        solicitudesPendientes =
-          await obtenerSolicitudesPendientesPorCongregacion("pais", paisId);
-        tipoCongregacion = "país";
-        const pais = usuarioCongregacion.getDataValue("pais");
-        nombreCongregacion = pais ? pais.getDataValue("pais") : "País";
-      } else {
+      const { condiciones, nombres } = await obtenerCongregacionesAsignadas(
+        aprobador.getDataValue("id"),
+      );
+      if (!condiciones.length) {
         console.log(
-          `Aprobador ${email} no tiene ninguna jurisdicción asignada`,
+          `Aprobador ${email} no tiene ninguna congregación asignada`,
         );
         continue;
       }
+      const tipoCongregacion = "área de responsabilidad";
+      const nombreCongregacion = nombres.join(", ");
+      const solicitudesPendientes =
+        await obtenerSolicitudesPendientesPorCongregacion(condiciones);
 
       // Enviar email solo si hay solicitudes pendientes
       if (solicitudesPendientes.length > 0) {
@@ -322,6 +250,8 @@ const notificarAprobadoresMultimedia = async () => {
           email,
           `Solicitudes Multimedia Pendientes - ${nombreCongregacion}`,
           emailPersonalizado,
+          undefined,
+          true,
         );
 
         console.log(
@@ -332,12 +262,19 @@ const notificarAprobadoresMultimedia = async () => {
           `ℹ️ ${nombreAprobador} (${email}) no tiene solicitudes pendientes en ${tipoCongregacion}: ${nombreCongregacion}`,
         );
       }
+    } catch (error) {
+      fallos += 1;
+      console.error(
+        `Error notificando al aprobador ${aprobador.getDataValue("id")}:`,
+        error,
+      );
     }
-
-    console.log("Proceso de notificación semanal completado exitosamente");
-  } catch (error) {
-    console.error("Error en notificación semanal a aprobadores:", error);
   }
+
+  if (fallos) {
+    throw new Error(`Falló la notificación de ${fallos} aprobador(es).`);
+  }
+  console.log("Proceso de notificación semanal completado exitosamente");
 };
 
 // Cargar plantilla al inicio
@@ -352,7 +289,11 @@ if (nodeEnv === "production") {
     console.log(
       "Ejecutando notificación semanal de solicitudes multimedia pendientes...",
     );
-    await notificarAprobadoresMultimedia();
+    try {
+      await notificarAprobadoresMultimedia();
+    } catch (error) {
+      console.error("Error en notificación semanal a aprobadores:", error);
+    }
   });
 
   // Para pruebas, descomenta la siguiente línea (ejecuta cada minuto):

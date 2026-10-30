@@ -40,6 +40,16 @@ const SolicitudMultimedia = db.define(
       defaultValue: false,
       allowNull: true,
     },
+    personaInmunosuprimida: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: null,
+      allowNull: true,
+    },
+    impedimentoSalirCasa: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: null,
+      allowNull: true,
+    },
     enfermedadQuePadece: {
       type: DataTypes.STRING,
       defaultValue: "",
