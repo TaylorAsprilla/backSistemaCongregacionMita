@@ -23,8 +23,14 @@ export function verificarCodigoQr(id: string, codigo: string, resumen: string): 
   );
 }
 
-export function validarDatosGuarda(esGuarda: unknown, enTurnoGuarda: unknown, puesto: unknown): boolean {
-  if (typeof esGuarda !== "boolean" || typeof enTurnoGuarda !== "boolean") return false;
+export function validarDatosQr(
+  esGuarda: unknown,
+  esCuidadora: unknown,
+  enTurnoGuarda: unknown,
+  puesto: unknown,
+): boolean {
+  if (typeof esGuarda !== "boolean" || typeof esCuidadora !== "boolean" ||
+      typeof enTurnoGuarda !== "boolean" || (esGuarda && esCuidadora)) return false;
   if (!esGuarda && enTurnoGuarda) return false;
   if (esGuarda && enTurnoGuarda) return typeof puesto === "string" && PUESTOS_QR.includes(puesto);
   return puesto === null || puesto === undefined || puesto === "";

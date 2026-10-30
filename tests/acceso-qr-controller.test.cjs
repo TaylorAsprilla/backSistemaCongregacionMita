@@ -126,7 +126,7 @@ function cargar() {
   const datosLogin = () => ({
     qrCode: "QR-PRUEBA", desafio_id: estado.desafios[0].id,
     codigo: estado.envios[0][2].match(/<strong>(\d{6})<\/strong>/)[1],
-    esGuarda: false, enTurnoGuarda: false, puesto: null,
+    esGuarda: false, esCuidadora: false, enTurnoGuarda: false, puesto: null,
   });
   return { estado, ejecutar, solicitar, datosLogin };
 }
@@ -241,6 +241,21 @@ test("puesto es obligatorio solo para guarda en turno y se audita", async () => 
   assert.equal((await c.ejecutar("loginPorQr", { ...datos, puesto: "Otro" })).status, 400);
   assert.equal((await c.ejecutar("loginPorQr", { ...datos, puesto: "Casa Nueva" })).status, 200);
   assert.equal(c.estado.auditoria.at(-1).puesto, "Casa Nueva");
+});
+
+test("cuidadora puede ingresar y su respuesta queda en la auditoría", async () => {
+  const c = cargar(); await c.solicitar();
+  const datos = { ...c.datosLogin(), esCuidadora: true };
+  assert.equal((await c.ejecutar("loginPorQr", datos)).status, 200);
+  assert.equal(c.estado.auditoria.at(-1).esGuarda, false);
+  assert.equal(c.estado.auditoria.at(-1).esCuidadora, true);
+});
+
+test("no acepta que la persona indique ser guarda y cuidadora a la vez", async () => {
+  const c = cargar(); await c.solicitar();
+  const datos = { ...c.datosLogin(), esGuarda: true, esCuidadora: true };
+  assert.equal((await c.ejecutar("loginPorQr", datos)).status, 400);
+  assert.equal(c.estado.sesiones.length, 0);
 });
 
 test("vencido y utilizado muestran mensajes distintos sin crear sesiones", async () => {

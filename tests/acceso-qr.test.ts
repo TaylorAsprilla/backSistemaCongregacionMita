@@ -1,7 +1,7 @@
 import { strict as assert } from "assert";
 import { test } from "node:test";
 import {
-  generarCodigoQr, resumirCodigoQr, verificarCodigoQr, validarDatosGuarda, PUESTOS_QR,
+  generarCodigoQr, resumirCodigoQr, verificarCodigoQr, validarDatosQr, PUESTOS_QR,
 } from "../src/helpers/accesoQr";
 
 test("codigo QR tiene seis digitos y el resumen queda vinculado al desafio", () => {
@@ -22,18 +22,21 @@ test("codigo QR tiene seis digitos y el resumen queda vinculado al desafio", () 
   }
 });
 
-test("no guarda y guarda fuera de turno no requieren ni aceptan puesto", () => {
-  assert.equal(validarDatosGuarda(false, false, null), true);
-  assert.equal(validarDatosGuarda(true, false, ""), true);
-  assert.equal(validarDatosGuarda(false, true, null), false);
-  assert.equal(validarDatosGuarda(false, false, PUESTOS_QR[0]), false);
-  assert.equal(validarDatosGuarda(true, false, PUESTOS_QR[0]), false);
-  assert.equal(validarDatosGuarda("true", false, null), false);
-  assert.equal(validarDatosGuarda(null, false, null), false);
+test("guarda, cuidadora y otros tipos de personal son excluyentes", () => {
+  assert.equal(validarDatosQr(false, false, false, null), true);
+  assert.equal(validarDatosQr(false, true, false, null), true);
+  assert.equal(validarDatosQr(true, false, false, ""), true);
+  assert.equal(validarDatosQr(true, true, false, null), false);
+  assert.equal(validarDatosQr(false, true, true, null), false);
+  assert.equal(validarDatosQr(false, false, true, null), false);
+  assert.equal(validarDatosQr(false, false, false, PUESTOS_QR[0]), false);
+  assert.equal(validarDatosQr(true, false, false, PUESTOS_QR[0]), false);
+  assert.equal(validarDatosQr("true", false, false, null), false);
+  assert.equal(validarDatosQr(false, null, false, null), false);
 });
 
 test("guarda en turno requiere uno de los cuatro puestos autorizados", () => {
-  for (const puesto of PUESTOS_QR) assert.equal(validarDatosGuarda(true, true, puesto), true);
-  assert.equal(validarDatosGuarda(true, true, ""), false);
-  assert.equal(validarDatosGuarda(true, true, "otro"), false);
+  for (const puesto of PUESTOS_QR) assert.equal(validarDatosQr(true, false, true, puesto), true);
+  assert.equal(validarDatosQr(true, false, true, ""), false);
+  assert.equal(validarDatosQr(true, false, true, "otro"), false);
 });
