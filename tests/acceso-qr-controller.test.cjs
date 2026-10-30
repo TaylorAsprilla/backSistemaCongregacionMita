@@ -12,10 +12,12 @@ function cargar() {
     desafios: [], auditoria: [], sesiones: [], envios: [],
     activo: true, qrActivo: true, falloCorreo: false, falloAuditoria: false, falloInvalidacion: false,
     qrActualizaciones: [], qrCreados: [],
+    ubicaciones: [], consultasUbicacion: [],
   };
-  const op = { gte: Symbol("gte") };
+  const op = require("sequelize").Op;
   const modelo = (fila) => fila && ({
     getDataValue: (campo) => fila[campo],
+    toJSON: () => ({ ...fila }),
     update: async (datos) => Object.assign(fila, datos),
     increment: async (campo) => { fila[campo]++; },
   });
@@ -74,7 +76,13 @@ function cargar() {
       },
       findAndCountAll: async (opciones) => {
         estado.consultaHistorial = opciones;
-        return { count: estado.auditoria.length, rows: estado.auditoria };
+        return { count: estado.auditoria.length, rows: estado.auditoria.map(modelo) };
+      },
+    },
+    "../models/ubicacionConexion.model": {
+      findOne: async (opciones) => {
+        estado.consultasUbicacion.push(opciones);
+        return modelo(estado.ubicaciones.find((fila) => fila.ip === opciones.where.ip));
       },
     },
     "../helpers/email": async (...args) => {
@@ -94,7 +102,7 @@ function cargar() {
     "../helpers/tokenJwt": async (...args) => { estado.jwt = args; return "jwt-de-prueba"; },
     "../helpers/guardarInformacionConexion": { guardarInformacionConexion: async () => {} },
     "../enum/usuario.enum": { ESTADO_USUARIO_ENUM: { ACTIVO: "ACTIVO" } },
-    sequelize: { Op: op },
+    sequelize: require("sequelize"),
     uuid: { v4: randomUUID },
     "device-detector-js": class { parse() { return {}; } },
     qrcode: require("qrcode"), sharp: require("sharp"), path, fs,
@@ -102,7 +110,7 @@ function cargar() {
   const archivo = path.join(__dirname, "../src/controllers/accesoQR.controller.ts");
   const modulo = { exports: {} };
   const codigo = ts.transpileModule(fs.readFileSync(archivo, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true },
+    compilerOptions: { target: ts.ScriptTarget.ES2016, module: ts.ModuleKind.CommonJS, esModuleInterop: true },
   }).outputText;
   vm.runInNewContext(codigo, {
     exports: modulo.exports, module: modulo, process: { env: { NODE_ENV: "development" } },
@@ -327,8 +335,103 @@ test("historial usa registros QR directos, valida filtros y conserva nulos histo
   })).status, 200);
   assert.equal(c.estado.consultaHistorial.where.esGuarda, true);
   assert.equal(c.estado.consultaHistorial.where.esCuidadora, false);
-  assert.equal(c.estado.consultaHistorial.where.puesto, "Casa Nueva");
+  assert.equal(c.estado.consultaHistorial.replacements.puesto, "%Casa Nueva%");
   assert.equal((await c.ejecutar("getQrAccesos", {}, { esGuarda: "incorrecto" })).status, 400);
   assert.equal((await c.ejecutar("getQrAccesos", {}, { esCuidadora: "incorrecto" })).status, 400);
   assert.equal((await c.ejecutar("getQrAccesos", {}, { page: "-1" })).status, 400);
+});
+
+test("combina filtros de todas las columnas antes de paginar y usa parametros de texto", async () => {
+  const c = cargar();
+  const { status, respuesta } = await c.ejecutar("getQrAccesos", {}, {
+    page: "2", limit: "20", usuario: "#12.345", dispositivo: "Android",
+    ubicacion: "Ciudad", accesoDe: "guarda", puesto: "Casa Nueva",
+    resultado: "RECHAZADO", identidad: "NO_VERIFICADA", motivoRechazo: "CODIGO_%",
+    fechaDesde: "2026-10-01T04:00:00.000Z", fechaHasta: "2026-11-01T04:00:00.000Z",
+  });
+  assert.equal(status, 200);
+  const { Op, Sequelize } = require("sequelize");
+  const opciones = c.estado.consultaHistorial;
+  assert.equal(opciones.offset, 20);
+  assert.equal(opciones.limit, 20);
+  assert.equal(respuesta.pagination.page, 2);
+  assert.equal(opciones.replacements.usuario, "%#12.345%");
+  assert.equal(opciones.replacements.motivoRechazo, "%CODIGO!_!%%");
+  const condiciones = opciones.where[Op.and];
+  assert.equal(condiciones[0][Op.or][1].idUsuario, 12345);
+  assert.ok(condiciones.some((filtro) => filtro.esGuarda === true));
+  assert.ok(condiciones.some((filtro) => filtro.resultado === "RECHAZADO"));
+  assert.ok(condiciones.some((filtro) => filtro.resultadoIdentidad === "NO_VERIFICADA"));
+  assert.ok(condiciones.some((filtro) => filtro.createdAt?.[Op.gte]?.toISOString() === "2026-10-01T04:00:00.000Z"));
+  assert.ok(condiciones.some((filtro) => filtro.createdAt?.[Op.lt]?.toISOString() === "2026-11-01T04:00:00.000Z"));
+  const db = new Sequelize("prueba", "prueba", "prueba", { dialect: "mysql", logging: false });
+  const modelo = db.define("QrAccesos", {}, { tableName: "qrAccesos" });
+  const sql = db.getQueryInterface().queryGenerator.selectQuery("qrAccesos", { ...opciones }, modelo);
+  assert.match(sql, /FROM `qrAccesos` AS `QrAccesos`/);
+  assert.match(sql, /FROM ubicacionConexion u WHERE u.ip = `QrAccesos`.`ip`/);
+  assert.match(sql, /ORDER BY u.createdAt DESC, u.id DESC LIMIT 1/);
+  assert.match(sql, /NULLIF\(`QrAccesos`.`tipoPuesto`, ''\)/);
+  assert.match(sql, /LIKE :ubicacion ESCAPE '!'/);
+  assert.match(sql, /LIMIT 20, 20/);
+});
+
+test("acepta todos los tipos de acceso y los estados sin registro", async () => {
+  const { Op } = require("sequelize");
+  for (const accesoDe of ["guarda", "cuidadora", "otro", "sin_registro"]) {
+    const c = cargar();
+    assert.equal((await c.ejecutar("getQrAccesos", {}, { accesoDe })).status, 200);
+    const condicion = c.estado.consultaHistorial.where[Op.and][0];
+    if (accesoDe === "guarda") assert.equal(condicion.esGuarda, true);
+    if (accesoDe === "cuidadora") assert.equal(condicion.esCuidadora, true);
+    if (accesoDe === "otro") {
+      assert.equal(condicion.esGuarda, false);
+      assert.equal(condicion.esCuidadora, false);
+    }
+    if (accesoDe === "sin_registro") assert.equal(condicion[Op.or].length, 2);
+  }
+  const c = cargar();
+  assert.equal((await c.ejecutar("getQrAccesos", {}, { resultado: "HISTORICO", identidad: "SIN_REGISTRO" })).status, 200);
+  const condiciones = c.estado.consultaHistorial.where[Op.and];
+  assert.deepEqual(Array.from(condiciones[0].resultado[Op.or]), [null, ""]);
+  assert.deepEqual(Array.from(condiciones[1].resultadoIdentidad[Op.or]), [null, ""]);
+});
+
+test("valida tipos, longitudes, opciones y fechas de los filtros", async () => {
+  const invalidos = [
+    { usuario: ["Prueba"] }, { dispositivo: { contiene: "Android" } }, { ubicacion: " " },
+    { puesto: "x".repeat(151) }, { motivoRechazo: ["DATOS_INVALIDOS"] },
+    { accesoDe: "administrador" }, { resultado: ["EXITOSO"] }, { identidad: "OTRA" },
+    { esGuarda: ["true"] }, { esCuidadora: ["false"] },
+    { fechaDesde: "2026-02-30T00:00:00.000Z" }, { fechaHasta: "ayer" },
+    { fechaDesde: "2026-11-01T00:00:00.000Z", fechaHasta: "2026-10-01T00:00:00.000Z" },
+  ];
+  for (const filtros of invalidos) {
+    const c = cargar();
+    assert.equal((await c.ejecutar("getQrAccesos", {}, filtros)).status, 400, JSON.stringify(filtros));
+    assert.equal(c.estado.consultaHistorial, undefined);
+  }
+});
+
+test("historial agrega ciudad y pais registrados por IP sin alterar total ni duplicar consultas", async () => {
+  const c = cargar();
+  c.estado.auditoria.push(
+    { id: 1, ip: "192.0.2.1", esGuarda: null },
+    { id: 2, ip: "192.0.2.1", esCuidadora: true },
+    { id: 3, ip: "192.0.2.2" },
+    { id: 4, ip: null },
+  );
+  c.estado.ubicaciones.push({ ip: "192.0.2.1", ciudad: "Ciudad de prueba", pais: "Pais de prueba" });
+  const { status, respuesta } = await c.ejecutar("getQrAccesos");
+  assert.equal(status, 200);
+  assert.equal(respuesta.pagination.total, 4);
+  assert.equal(respuesta.data.length, 4);
+  assert.equal(respuesta.data[0].ubicacion.ciudad, "Ciudad de prueba");
+  assert.equal(respuesta.data[0].ubicacion.pais, "Pais de prueba");
+  assert.equal(respuesta.data[0].esGuarda, null);
+  assert.equal(respuesta.data[1].esCuidadora, true);
+  assert.equal(respuesta.data[2].ubicacion, null);
+  assert.equal(respuesta.data[3].ubicacion, null);
+  assert.equal(c.estado.consultasUbicacion.length, 2);
+  assert.deepEqual(Array.from(c.estado.consultasUbicacion[0].order, (orden) => Array.from(orden)),
+    [["createdAt", "DESC"], ["id", "DESC"]]);
 });

@@ -160,13 +160,46 @@ la imagen. La URL de ingreso del QR sigue usando `loginPorQr` de la configuraci�
 `logoQR` ya no se utiliza en estos dos endpoints. Si el recurso local falta o
 no puede procesarse, se registra el error y la operación devuelve 500.
 
-El listado acepta `page` (desde 1), `limit` (1 a 100), `esGuarda=true|false` y
-`puesto` (uno de los cuatro valores autorizados). Conserva la respuesta
+El listado acepta `page` (desde 1), `limit` (1 a 100), `esGuarda=true|false`
+y `esCuidadora=true|false`. Todos los filtros se combinan antes de contar y
+paginar. Conserva la respuesta
 `{ok, msg, data, pagination}` y consulta directamente `qrAccesos`, sin atribuir
 identidad mediante coincidencias de IP. Registra solicitudes, verificaciones y
 rechazos con fecha, IP, dispositivo, resultado e identidad verificada o pendiente.
 Las respuestas de guarda y puesto son declaraciones del visitante, no prueba de
 su cargo. Los registros históricos no reciben valores inferidos.
+
+Cada acceso incluye `ubicacion: { ciudad, pais } | null`, con la última ubicación
+almacenada en `ubicacionConexion` para su IP. Es una ubicación aproximada, no
+una ubicación física verificada ni necesariamente la del momento del acceso.
+La consulta del listado no envía IP a servicios externos; si no existen datos,
+devuelve `null` y la tabla muestra "Sin registro". No cambia el total paginado.
+La tabla muestra Usuario, Dispositivo, Ubicación, Acceso de, Puesto, Resultado,
+Identidad, Motivo de rechazo y Fecha. "Acceso de" distingue Guarda, Cuidadora,
+Otro (ambas respuestas negativas) y Sin registro (sin declaración suficiente).
+
+Filtros adicionales de `GET /api/accesoqr/listadoAccesos`:
+
+| Parámetro | Valores / comportamiento |
+|-----------|--------------------------|
+| `usuario` | Parte del nombre o número Mita exacto, con o sin `#` y separadores de miles. `No verificada` busca nombres ausentes. |
+| `dispositivo` | Parte del dispositivo. `Sin registro` busca datos ausentes. |
+| `ubicacion` | Parte de la ciudad/país de la última ubicación almacenada para la IP. `Sin registro` busca ubicaciones ausentes. |
+| `accesoDe` | `guarda`, `cuidadora`, `otro`, `sin_registro`, según el mismo criterio de la tabla. |
+| `puesto` | Parte del puesto actual o, si falta, `tipoPuesto` histórico. `Sin registro` busca ambos ausentes. |
+| `resultado` | `EXITOSO`, `RECHAZADO`, `CODIGO_SOLICITADO`, `HISTORICO` (nulo/vacío). |
+| `identidad` | `VERIFICADA`, `NO_VERIFICADA`, `PENDIENTE`, `SIN_REGISTRO` (nulo/vacío). |
+| `motivoRechazo` | Parte del motivo. `Sin registro` busca motivos ausentes (mostrados como `—`). |
+| `fechaDesde` | Instante ISO UTC inclusivo, por ejemplo `2026-10-01T04:00:00.000Z`. |
+| `fechaHasta` | Instante ISO UTC exclusivo, posterior a `fechaDesde`. |
+
+Los textos tienen un máximo de 150 caracteres; `%`, `_` y `!` se buscan
+literalmente. Valores inválidos, repetidos o rangos invertidos devuelven 400.
+Omitir un filtro incluye todos sus valores. El formulario aplica con
+"Aplicar filtros" y mantiene los criterios aplicados durante la paginación,
+aunque se editen los controles. "Limpiar filtros" restaura el listado completo.
+Las fechas del formulario corresponden a días locales completos: la fecha
+final se convierte al inicio del día siguiente antes de enviarla al API.
 
 ### Despliegue y conservación
 

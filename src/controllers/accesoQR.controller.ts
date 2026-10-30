@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import DeviceDetector from "device-detector-js";
 import generarJWT from "../helpers/tokenJwt";
 import QrAccesos from "../models/qrAccesos";
+import UbicacionConexion from "../models/ubicacionConexion.model";
 import Congregacion from "../models/congregacion.model";
 import config from "../config/config";
 import sharp from "sharp";
@@ -12,7 +13,7 @@ import path from "path";
 import fs from "fs";
 import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
 import { createQrSession } from "../helpers/session.service";
-import { Op, Transaction } from "sequelize";
+import { literal, Op, Transaction, WhereOptions } from "sequelize";
 import db from "../database/connection";
 import Usuario from "../models/usuario.model";
 import DesafioAccesoQr from "../models/desafioAccesoQr.model";
@@ -359,28 +360,114 @@ export const getQrAccesos = async (req: Request, res: Response) => {
     const page = Number(req.query.page ?? 1);
     const limit = Number(req.query.limit ?? 10);
     const offset = (page - 1) * limit;
+    const camposTexto = ["usuario", "dispositivo", "ubicacion", "puesto", "motivoRechazo"] as const;
+    const resultados = ["EXITOSO", "RECHAZADO", "CODIGO_SOLICITADO", "HISTORICO"];
+    const identidades = ["VERIFICADA", "NO_VERIFICADA", "PENDIENTE", "SIN_REGISTRO"];
+    const tiposAcceso = ["guarda", "cuidadora", "otro", "sin_registro"];
+    const fechaValida = (valor: unknown): valor is string =>
+      typeof valor === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(valor) &&
+      Number.isFinite(Date.parse(valor)) && new Date(valor).toISOString() === valor;
 
     // Validar parámetros
     if (!Number.isSafeInteger(page) || !Number.isSafeInteger(limit) || page < 1 || limit < 1 || limit > 100 ||
-        (req.query.esGuarda !== undefined && !["true", "false"].includes(String(req.query.esGuarda))) ||
-        (req.query.esCuidadora !== undefined && !["true", "false"].includes(String(req.query.esCuidadora))) ||
-        (req.query.puesto !== undefined && !PUESTOS_QR.includes(String(req.query.puesto)))) {
+        (req.query.esGuarda !== undefined && (typeof req.query.esGuarda !== "string" || !["true", "false"].includes(req.query.esGuarda))) ||
+        (req.query.esCuidadora !== undefined && (typeof req.query.esCuidadora !== "string" || !["true", "false"].includes(req.query.esCuidadora))) ||
+        camposTexto.some((campo) => req.query[campo] !== undefined &&
+          (typeof req.query[campo] !== "string" || String(req.query[campo]).trim().length === 0 ||
+            String(req.query[campo]).length > 150)) ||
+        (req.query.accesoDe !== undefined && (typeof req.query.accesoDe !== "string" || !tiposAcceso.includes(req.query.accesoDe))) ||
+        (req.query.resultado !== undefined && (typeof req.query.resultado !== "string" || !resultados.includes(req.query.resultado))) ||
+        (req.query.identidad !== undefined && (typeof req.query.identidad !== "string" || !identidades.includes(req.query.identidad))) ||
+        (req.query.fechaDesde !== undefined && !fechaValida(req.query.fechaDesde)) ||
+        (req.query.fechaHasta !== undefined && !fechaValida(req.query.fechaHasta)) ||
+        (fechaValida(req.query.fechaDesde) && fechaValida(req.query.fechaHasta) &&
+          req.query.fechaDesde >= req.query.fechaHasta)) {
       return res.status(400).json({
         ok: false,
-        msg: "Parámetros de paginación inválidos (page >= 1, limit 1-100)",
+        msg: "Filtros o paginación inválidos. Revise los valores y el rango de fechas (page >= 1, limit 1-100).",
       });
     }
+
+    const condiciones: WhereOptions[] = [];
+    const replacements: Record<string, string> = {};
+    const contiene = (expresion: string, parametro: string, valor: string) => {
+      replacements[parametro] = `%${valor.trim().replace(/[!%_]/g, "!$&")}%`;
+      return literal(`${expresion} LIKE :${parametro} ESCAPE '!'`);
+    };
+    if (typeof req.query.usuario === "string") {
+      const nombre = contiene("COALESCE(NULLIF(`QrAccesos`.`nombre`, ''), 'No verificada')", "usuario", req.query.usuario);
+      const numeroMita = req.query.usuario.trim().replace(/^#/, "").replace(/[.,\s]/g, "");
+      if (/^\d+$/.test(numeroMita) && Number.isSafeInteger(Number(numeroMita))) {
+        condiciones.push({ [Op.or]: [nombre, { idUsuario: Number(numeroMita) }] });
+      } else {
+        condiciones.push(nombre);
+      }
+    }
+    if (typeof req.query.dispositivo === "string") {
+      condiciones.push(contiene("COALESCE(NULLIF(`QrAccesos`.`dispositivo`, ''), 'Sin registro')", "dispositivo", req.query.dispositivo));
+    }
+    if (typeof req.query.puesto === "string") {
+      condiciones.push(contiene("COALESCE(NULLIF(`QrAccesos`.`puesto`, ''), NULLIF(`QrAccesos`.`tipoPuesto`, ''), 'Sin registro')",
+        "puesto", req.query.puesto));
+    }
+    if (typeof req.query.motivoRechazo === "string") {
+      condiciones.push(contiene("COALESCE(NULLIF(`QrAccesos`.`motivoRechazo`, ''), 'Sin registro')", "motivoRechazo", req.query.motivoRechazo));
+    }
+    if (typeof req.query.ubicacion === "string") {
+      // La misma última ubicación por IP que se muestra en cada fila, sin multiplicar accesos.
+      condiciones.push(contiene(`COALESCE(NULLIF((SELECT CONCAT_WS(', ', NULLIF(u.ciudad, ''), NULLIF(u.pais, ''))
+        FROM ubicacionConexion u WHERE u.ip = \`QrAccesos\`.\`ip\`
+        ORDER BY u.createdAt DESC, u.id DESC LIMIT 1), ''), 'Sin registro')`,
+      "ubicacion", req.query.ubicacion));
+    }
+    if (req.query.accesoDe === "guarda") condiciones.push({ esGuarda: true });
+    if (req.query.accesoDe === "cuidadora") condiciones.push({ esCuidadora: true, [Op.or]: [{ esGuarda: false }, { esGuarda: null }] });
+    if (req.query.accesoDe === "otro") condiciones.push({ esGuarda: false, esCuidadora: false });
+    if (req.query.accesoDe === "sin_registro") {
+      condiciones.push({
+        [Op.or]: [
+          { esGuarda: null, esCuidadora: { [Op.or]: [false, null] } },
+          { esGuarda: false, esCuidadora: null },
+        ],
+      });
+    }
+    if (req.query.resultado !== undefined) {
+      condiciones.push({ resultado: req.query.resultado === "HISTORICO" ? { [Op.or]: [null, ""] } : req.query.resultado });
+    }
+    if (req.query.identidad !== undefined) {
+      condiciones.push({ resultadoIdentidad: req.query.identidad === "SIN_REGISTRO" ? { [Op.or]: [null, ""] } : req.query.identidad });
+    }
+    if (typeof req.query.fechaDesde === "string") condiciones.push({ createdAt: { [Op.gte]: new Date(req.query.fechaDesde) } });
+    if (typeof req.query.fechaHasta === "string") condiciones.push({ createdAt: { [Op.lt]: new Date(req.query.fechaHasta) } });
 
     // Realizar consulta para obtener accesos con login QR
     const { count, rows: accesos } = await QrAccesos.findAndCountAll({
       where: {
         ...(req.query.esGuarda !== undefined ? { esGuarda: req.query.esGuarda === "true" } : {}),
         ...(req.query.esCuidadora !== undefined ? { esCuidadora: req.query.esCuidadora === "true" } : {}),
-        ...(req.query.puesto !== undefined ? { puesto: String(req.query.puesto) } : {}),
+        ...(condiciones.length ? { [Op.and]: condiciones } : {}),
       },
+      replacements,
       order: [["createdAt", "DESC"], ["id", "DESC"]],
       limit, offset,
     });
+
+    const ips = [...new Set(accesos.map((acceso) => acceso.getDataValue("ip") as string).filter(Boolean))];
+    const ubicaciones = new Map(await Promise.all(ips.map(async (ip) => {
+      const ubicacion = await UbicacionConexion.findOne({
+        attributes: ["ciudad", "pais"],
+        where: { ip },
+        order: [["createdAt", "DESC"], ["id", "DESC"]],
+      });
+      return [ip, ubicacion ? {
+        ciudad: ubicacion.getDataValue("ciudad") || null,
+        pais: ubicacion.getDataValue("pais") || null,
+      } : null] as const;
+    })));
+    const data = accesos.map((acceso) => ({
+      ...acceso.toJSON(),
+      ubicacion: ubicaciones.get(acceso.getDataValue("ip")) || null,
+    }));
 
     // Calcular metadata de paginación
     const totalPages = Math.ceil(count / limit);
@@ -389,7 +476,7 @@ export const getQrAccesos = async (req: Request, res: Response) => {
     return res.status(200).json({
       ok: true,
       msg: "Accesos obtenidos correctamente mediante código QR.",
-      data: accesos,
+      data,
       pagination: {
         total: count,
         page,
