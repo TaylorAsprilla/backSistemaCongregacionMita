@@ -363,6 +363,7 @@ export const getQrAccesos = async (req: Request, res: Response) => {
     // Validar parámetros
     if (!Number.isSafeInteger(page) || !Number.isSafeInteger(limit) || page < 1 || limit < 1 || limit > 100 ||
         (req.query.esGuarda !== undefined && !["true", "false"].includes(String(req.query.esGuarda))) ||
+        (req.query.esCuidadora !== undefined && !["true", "false"].includes(String(req.query.esCuidadora))) ||
         (req.query.puesto !== undefined && !PUESTOS_QR.includes(String(req.query.puesto)))) {
       return res.status(400).json({
         ok: false,
@@ -374,6 +375,7 @@ export const getQrAccesos = async (req: Request, res: Response) => {
     const { count, rows: accesos } = await QrAccesos.findAndCountAll({
       where: {
         ...(req.query.esGuarda !== undefined ? { esGuarda: req.query.esGuarda === "true" } : {}),
+        ...(req.query.esCuidadora !== undefined ? { esCuidadora: req.query.esCuidadora === "true" } : {}),
         ...(req.query.puesto !== undefined ? { puesto: String(req.query.puesto) } : {}),
       },
       order: [["createdAt", "DESC"], ["id", "DESC"]],
