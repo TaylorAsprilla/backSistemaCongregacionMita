@@ -19,7 +19,7 @@ import DesafioAccesoQr from "../models/desafioAccesoQr.model";
 import enviarEmail from "../helpers/email";
 import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
 import {
-  generarCodigoQr, resumirCodigoQr, verificarCodigoQr, validarDatosGuarda,
+  generarCodigoQr, resumirCodigoQr, verificarCodigoQr, validarDatosQr,
   HORAS_SESION_QR, MINUTOS_CODIGO_QR, MAX_INTENTOS_CODIGO_QR, PUESTOS_QR,
 } from "../helpers/accesoQr";
 
@@ -131,6 +131,7 @@ interface IntentoQr {
   idUsuario?: number;
   nombre?: string;
   esGuarda?: boolean;
+  esCuidadora?: boolean;
   enTurnoGuarda?: boolean;
   puesto?: string | null;
   resultado: string;
@@ -235,21 +236,21 @@ export const solicitarCodigoQr = async (req: Request, res: Response) => {
 };
 
 export const loginPorQr = async (req: Request, res: Response) => {
-  const { qrCode, desafio_id, codigo, esGuarda, enTurnoGuarda, puesto } = req.body;
+  const { qrCode, desafio_id, codigo, esGuarda, esCuidadora, enTurnoGuarda, puesto } = req.body;
   try {
     if (typeof qrCode !== "string" || qrCode.length > 255 ||
         typeof desafio_id !== "string" || !/^[a-f0-9-]{36}$/i.test(desafio_id) ||
         typeof codigo !== "string" || !/^\d{6}$/.test(codigo) ||
-        !validarDatosGuarda(esGuarda, enTurnoGuarda, puesto)) {
+        !validarDatosQr(esGuarda, esCuidadora, enTurnoGuarda, puesto)) {
       await registrarIntentoQr(req, {
         resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "DATOS_INVALIDOS",
       });
-      return res.status(400).json({ ok: false, msg: "Revise el código y las respuestas de guarda y puesto." });
+      return res.status(400).json({ ok: false, msg: "Revise el código y las respuestas de tipo de personal y puesto." });
     }
 
     if (esGuarda && !enTurnoGuarda) {
       await registrarIntentoQr(req, {
-        esGuarda, enTurnoGuarda, puesto: null,
+        esGuarda, esCuidadora, enTurnoGuarda, puesto: null,
         resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "GUARDA_FUERA_DE_TURNO",
       });
       return res.status(403).json({
@@ -266,7 +267,7 @@ export const loginPorQr = async (req: Request, res: Response) => {
       });
       const datosIntento = {
         idQrCode: qr?.getDataValue("id"),
-        esGuarda, enTurnoGuarda, puesto: puesto || null,
+        esGuarda, esCuidadora, enTurnoGuarda, puesto: puesto || null,
       };
       const rechazar = async (
         motivoRechazo: string,

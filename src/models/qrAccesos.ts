@@ -37,6 +37,7 @@ const QrAccesos = db.define(
       allowNull: true,
     },
     esGuarda: { type: DataTypes.BOOLEAN, allowNull: true },
+    esCuidadora: { type: DataTypes.BOOLEAN, allowNull: true },
     enTurnoGuarda: { type: DataTypes.BOOLEAN, allowNull: true },
     puesto: { type: DataTypes.STRING(50), allowNull: true },
     resultado: { type: DataTypes.STRING(30), allowNull: true },

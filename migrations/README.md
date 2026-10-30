@@ -44,6 +44,12 @@ mysql -u root -ptaylor89 sistemaCMI_dev < migrations/001-add-categoria-profesion
 
 ## Migraciones Disponibles
 
+### 014-acceso-qr-cuidadora.sql
+
+Agrega la respuesta opcional `esCuidadora` a la auditoría de accesos QR. Ejecutar
+antes de desplegar el backend y frontend actualizados. Los registros históricos
+permanecen en `NULL` porque no contienen esta respuesta.
+
 ### 013-solicitud-enfermedad.sql
 
 Agregar `personaInmunosuprimida` e `impedimentoSalirCasa` como respuestas
