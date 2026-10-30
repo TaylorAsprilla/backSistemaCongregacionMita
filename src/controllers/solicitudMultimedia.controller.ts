@@ -25,6 +25,7 @@ import { AUDITORIAUSUARIO_ENUM } from "../enum/auditoriaUsuario.enum";
 import { auditoriaUsuario } from "../database/usuario.associations";
 import generarPassword from "../helpers/generarPassword";
 import { datosAprobacionMultimedia } from "../helpers/aprobacionMultimedia";
+import { errorSolicitudEnfermedad } from "../helpers/solicitudEnfermedad";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -80,6 +81,8 @@ export const getSolicitudesMultimedia = async (req: Request, res: Response) => {
             "personaEncargada",
             "celularPersonaEncargada",
             "enfermedadCronica",
+            "personaInmunosuprimida",
+            "impedimentoSalirCasa",
             "enfermedadQuePadece",
             "paisDondeEstudia",
             "ciudadDondeEstudia",
@@ -413,6 +416,8 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
             "personaEncargada",
             "celularPersonaEncargada",
             "enfermedadCronica",
+            "personaInmunosuprimida",
+            "impedimentoSalirCasa",
             "enfermedadQuePadece",
             "paisDondeEstudia",
             "ciudadDondeEstudia",
@@ -570,6 +575,10 @@ export const obtenerUsuariosConSolicitudesPorCongregacion = async (
 export const crearSolicitudMultimedia = async (req: Request, res: Response) => {
   const { body } = req;
   const { usuario_id } = body;
+  const errorEnfermedad = errorSolicitudEnfermedad(body);
+  if (errorEnfermedad) {
+    return res.status(400).json({ ok: false, msg: errorEnfermedad });
+  }
 
   try {
     // =======================================================================

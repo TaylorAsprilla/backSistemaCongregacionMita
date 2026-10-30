@@ -5,6 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const ts = require("typescript");
 const { datosAprobacionMultimedia } = require("../build-test/src/helpers/aprobacionMultimedia");
+const { errorSolicitudEnfermedad } = require("../build-test/src/helpers/solicitudEnfermedad");
 
 function cargarControlador(estado, vencimiento) {
   let guardado;
@@ -22,6 +23,7 @@ function cargarControlador(estado, vencimiento) {
     "../helpers/email": async () => {},
     "../helpers/generarPassword": () => "no-utilizada",
     "../helpers/aprobacionMultimedia": { datosAprobacionMultimedia },
+    "../helpers/solicitudEnfermedad": { errorSolicitudEnfermedad },
     "../database/connection": { transaction: async () => transaction },
     "../database/usuario.associations": { auditoriaUsuario: async () => {} },
     "../enum/solicitudMultimendia.enum": {
@@ -55,9 +57,31 @@ function cargarControlador(estado, vencimiento) {
   });
   return {
     actualizar: modulo.exports.actualizarSolicitudMultimedia,
+    crear: modulo.exports.crearSolicitudMultimedia,
     guardado: () => guardado,
   };
 }
+
+test("crear rechaza enfermedad sin respuestas o con cuatro No antes de guardar o enviar correos", async () => {
+  for (const body of [
+    { razonSolicitud_id: 4 },
+    {
+      razonSolicitud_id: "4", personaEncamada: false, enfermedadCronica: false,
+      personaInmunosuprimida: false, impedimentoSalirCasa: false,
+    },
+  ]) {
+    const controlador = cargarControlador("PENDIENTE", null);
+    let codigo;
+    let respuesta;
+    await controlador.crear({ body }, {
+      status(valor) { codigo = valor; return this; },
+      json(valor) { respuesta = valor; },
+    });
+    assert.equal(codigo, 400);
+    assert.equal(respuesta.ok, false);
+    assert.equal(controlador.guardado(), undefined);
+  }
+});
 
 async function ejecutar(controlador, body) {
   let codigo = 200;

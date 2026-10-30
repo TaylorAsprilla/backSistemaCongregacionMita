@@ -44,6 +44,15 @@ mysql -u root -ptaylor89 sistemaCMI_dev < migrations/001-add-categoria-profesion
 
 ## Migraciones Disponibles
 
+### 013-solicitud-enfermedad.sql
+
+Agregar `personaInmunosuprimida` e `impedimentoSalirCasa` como respuestas
+booleanas opcionales en registros históricos (NULL significa no informado).
+Ejecutar esta migración antes de desplegar el backend y después desplegar el
+frontend que envía las cuatro respuestas. No se modifican respuestas históricas.
+Las nuevas solicitudes por enfermedad requieren cuatro respuestas Sí/No y
+al menos una respuesta Sí; de lo contrario, la API responde 400.
+
 ### 001-add-categoria-profesion.sql
 
 **Fecha:** 2026-03-07  
