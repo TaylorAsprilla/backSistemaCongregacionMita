@@ -322,9 +322,13 @@ test("sin auditoria no se persiste sesion ni se consume el codigo", async () => 
 
 test("historial usa registros QR directos, valida filtros y conserva nulos historicos", async () => {
   const c = cargar();
-  assert.equal((await c.ejecutar("getQrAccesos", {}, { esGuarda: "true", puesto: "Casa Nueva" })).status, 200);
+  assert.equal((await c.ejecutar("getQrAccesos", {}, {
+    esGuarda: "true", esCuidadora: "false", puesto: "Casa Nueva",
+  })).status, 200);
   assert.equal(c.estado.consultaHistorial.where.esGuarda, true);
+  assert.equal(c.estado.consultaHistorial.where.esCuidadora, false);
   assert.equal(c.estado.consultaHistorial.where.puesto, "Casa Nueva");
   assert.equal((await c.ejecutar("getQrAccesos", {}, { esGuarda: "incorrecto" })).status, 400);
+  assert.equal((await c.ejecutar("getQrAccesos", {}, { esCuidadora: "incorrecto" })).status, 400);
   assert.equal((await c.ejecutar("getQrAccesos", {}, { page: "-1" })).status, 400);
 });
