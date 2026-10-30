@@ -8,12 +8,36 @@ import QrAccesos from "../models/qrAccesos";
 import Congregacion from "../models/congregacion.model";
 import config from "../config/config";
 import sharp from "sharp";
-import axios from "axios";
+import path from "path";
+import fs from "fs";
 import { guardarInformacionConexion } from "../helpers/guardarInformacionConexion";
-import UbicacionConexion from "../models/ubicacionConexion.model";
 import { createQrSession } from "../helpers/session.service";
+import { Op, Transaction } from "sequelize";
+import db from "../database/connection";
+import Usuario from "../models/usuario.model";
+import DesafioAccesoQr from "../models/desafioAccesoQr.model";
+import enviarEmail from "../helpers/email";
+import { ESTADO_USUARIO_ENUM } from "../enum/usuario.enum";
+import {
+  generarCodigoQr, resumirCodigoQr, verificarCodigoQr, validarDatosGuarda,
+  HORAS_SESION_QR, MINUTOS_CODIGO_QR, MAX_INTENTOS_CODIGO_QR, PUESTOS_QR,
+} from "../helpers/accesoQr";
 
 const environment = config[process.env.NODE_ENV || "development"];
+
+async function generarImagenQr(qrUrl: string): Promise<string> {
+  const qrBuffer = await QRCode.toBuffer(qrUrl, {
+    width: 800,
+    margin: 2,
+    color: { dark: "#1976d2", light: "#ffffff" },
+  });
+  const logo = await sharp(path.join(__dirname, "..", "assets", "imagenes", "logo.png"))
+    .resize(100, 100).toBuffer();
+  const imagen = await sharp(qrBuffer)
+    .composite([{ input: logo, gravity: "center" }])
+    .png().toBuffer();
+  return imagen.toString("base64");
+}
 
 export const getUltimoQrGenerado = async (req: Request, res: Response) => {
   try {
@@ -35,44 +59,7 @@ export const getUltimoQrGenerado = async (req: Request, res: Response) => {
       environment.loginPorQr || "https://cmar.live/sistemacmi/#/login?ticket=";
     const qrUrl = `${baseUrl}${ultimoQr.getDataValue("qrCode")}`;
 
-    // Generar la imagen del QR como buffer
-    const qrBuffer = await QRCode.toBuffer(qrUrl, {
-      width: 800,
-      margin: 2,
-      color: {
-        dark: "#1976d2",
-        light: "#ffffff",
-      },
-    });
-
-    // Cargar el QR generado con Sharp
-    let qrImage = sharp(qrBuffer);
-
-    // Cargar el logo desde la URL
-    const logoUrl =
-      environment.logoQR ||
-      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg";
-    const logoResponse = await axios.get(logoUrl, {
-      responseType: "arraybuffer",
-    });
-
-    // Convertir la respuesta de axios a un buffer que Sharp pueda usar
-    const logoBuffer = Buffer.from(logoResponse.data);
-
-    // Redimensionar el logo
-    const resizedLogo = await sharp(logoBuffer).resize(100, 100).toBuffer();
-
-    // Componer el logo en el centro del QR
-    qrImage = qrImage.composite([
-      {
-        input: resizedLogo,
-        gravity: "center", // Coloca el logo en el centro del QR
-      },
-    ]);
-
-    // Convertir la imagen final a base64
-    const qrImageBase64 = await qrImage.png().toBuffer();
-    const qrImageBase64Encoded = qrImageBase64.toString("base64");
+    const qrImageBase64Encoded = await generarImagenQr(qrUrl);
 
     res.json({
       ok: true,
@@ -104,44 +91,7 @@ export const generarQrCode = async (req: Request, res: Response) => {
   const qrUrl = `${baseUrl}${qrCode}`;
 
   try {
-    // 1. Generar imagen del QR como buffer
-    const qrBuffer = await QRCode.toBuffer(qrUrl, {
-      width: 800,
-      margin: 2,
-      color: {
-        dark: "#1976d2",
-        light: "#ffffff",
-      },
-    });
-
-    // 2. Cargar el QR generado con Sharp
-    let qrImage = sharp(qrBuffer);
-
-    // 3. Cargar el logo desde la URL
-    const logoUrl =
-      environment.logoQR ||
-      "https://cmar.live/sistemacmi/assets/images/escudo-congregacion-mita.jpg";
-    const logoResponse = await axios.get(logoUrl, {
-      responseType: "arraybuffer",
-    });
-
-    // Convertir la respuesta de axios a un buffer que Sharp pueda usar
-    const logoBuffer = Buffer.from(logoResponse.data);
-
-    // 4. Redimensionar el logo (ajusta según necesidad)
-    const resizedLogo = await sharp(logoBuffer).resize(100, 100).toBuffer();
-
-    // 5. Componer el logo en el centro del QR
-    qrImage = qrImage.composite([
-      {
-        input: resizedLogo,
-        gravity: "center", // Coloca el logo en el centro del QR
-      },
-    ]);
-
-    // 6. Convertir la imagen final a base64
-    const qrImageBase64 = await qrImage.png().toBuffer();
-    const qrImageBase64Encoded = qrImageBase64.toString("base64");
+    const qrImageBase64Encoded = await generarImagenQr(qrUrl);
 
     // 7a. Desactivar QR anteriores de la misma congregación
     await QrCodigos.update(
@@ -176,143 +126,243 @@ export const generarQrCode = async (req: Request, res: Response) => {
   }
 };
 
-export const loginPorQr = async (req: Request, res: Response) => {
-  const { qrCode, numeroMita, nombre, tipoPuesto } = req.body;
+interface IntentoQr {
+  idQrCode?: number;
+  idUsuario?: number;
+  nombre?: string;
+  esGuarda?: boolean;
+  enTurnoGuarda?: boolean;
+  puesto?: string | null;
+  resultado: string;
+  resultadoIdentidad: string;
+  motivoRechazo?: string;
+}
 
-  const ip = (
-    req.ip ||
-    req.headers["x-forwarded-for"] ||
-    req.socket.remoteAddress ||
-    ""
-  ).toString();
-  const userAgentRaw = req.headers["user-agent"] || "";
-  const deviceDetector = new DeviceDetector();
-  const deviceResult = deviceDetector.parse(userAgentRaw);
+async function registrarIntentoQr(req: Request, datos: IntentoQr, transaction?: Transaction) {
+  const userAgent = (req.get("user-agent") || "").slice(0, 500);
+  const dispositivo = new DeviceDetector().parse(userAgent);
+  await QrAccesos.create({
+    ...datos,
+    ip: req.ip || req.socket.remoteAddress || "",
+    userAgent,
+    dispositivo: `${dispositivo.os?.name || "Desconocido"} - ${dispositivo.device?.type || "Desconocido"}`,
+  }, { transaction });
+}
 
-  if (!qrCode || !nombre || !numeroMita || !tipoPuesto) {
-    return res.status(400).json({ ok: false, msg: "Datos incompletos" });
-  }
-
+export const solicitarCodigoQr = async (req: Request, res: Response) => {
+  const { qrCode, numeroMita } = req.body;
+  const id = uuidv4();
+  let desafioCreado = false;
   try {
-    const qr = await QrCodigos.findOne({
-      where: { qrCode, activo: true },
-      include: [{ model: Congregacion }],
-    });
-
-    if (!qr || !qr.get("idCongregacion")) {
-      return res
-        .status(404)
-        .json({ ok: false, msg: "Código QR no válido o inactivo" });
+    if (typeof qrCode !== "string" || qrCode.length > 255 ||
+        typeof numeroMita !== "string" || !/^[1-9]\d{0,9}$/.test(numeroMita)) {
+      await registrarIntentoQr(req, {
+        resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "DATOS_INVALIDOS",
+      });
+      return res.status(400).json({ ok: false, msg: "Revise los datos de acceso QR." });
     }
 
-    const congregacion = await Congregacion.findByPk(
-      qr.getDataValue("idCongregacion"),
-    );
-
-    if (!congregacion) {
-      return res
-        .status(404)
-        .json({ ok: false, msg: "Congregación no encontrada" });
+    const qr = await QrCodigos.findOne({ where: { qrCode, activo: true } });
+    const congregacion = qr && await Congregacion.findOne({
+      where: { id: qr.getDataValue("idCongregacion"), estado: true },
+    });
+    if (!qr || !congregacion) {
+      await registrarIntentoQr(req, {
+        resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "QR_NO_DISPONIBLE",
+      });
+      return res.status(400).json({ ok: false, msg: "Código QR no válido o inactivo." });
     }
 
-    // Generar fecha de expiración (12 horas)
-    const expirationHours = 12;
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + expirationHours);
-
-    // Crear sesión QR independiente — no invalida otras sesiones activas
-    const { sessionId } = await createQrSession({
-      tipoEntidad: "congregacion",
-      idCongregacion: congregacion.getDataValue("id"),
-      idUsuario: numeroMita || undefined,
-      qrCode,
-      ip,
-      userAgent: userAgentRaw,
-      expiresAt,
+    const codigo = generarCodigoQr();
+    const desde = new Date(Date.now() - 15 * 60000);
+    const email = await db.transaction(async (transaction) => {
+      const usuario = await Usuario.findOne({
+        where: { id: Number(numeroMita), estado: ESTADO_USUARIO_ENUM.ACTIVO },
+        transaction, lock: transaction.LOCK.UPDATE,
+      });
+      const solicitudes = usuario && await DesafioAccesoQr.count({
+        where: { idUsuario: usuario.getDataValue("id"), createdAt: { [Op.gte]: desde } },
+        transaction,
+      });
+      if (!usuario || !usuario.getDataValue("email") || Number(solicitudes) >= 3) {
+        await registrarIntentoQr(req, {
+          idQrCode: qr.getDataValue("id"),
+          resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA",
+          motivoRechazo: "IDENTIDAD_NO_DISPONIBLE_O_LIMITADA",
+        }, transaction);
+        return null;
+      }
+      await DesafioAccesoQr.create({
+        id, idQrCode: qr.getDataValue("id"), idUsuario: usuario.getDataValue("id"),
+        resumenCodigo: resumirCodigoQr(id, codigo),
+        fechaExpiracion: new Date(Date.now() + MINUTOS_CODIGO_QR * 60000),
+      }, { transaction });
+      await registrarIntentoQr(req, {
+        idQrCode: qr.getDataValue("id"), idUsuario: usuario.getDataValue("id"),
+        resultado: "CODIGO_SOLICITADO", resultadoIdentidad: "PENDIENTE",
+      }, transaction);
+      return String(usuario.getDataValue("email"));
     });
-
-    const email = congregacion.getDataValue("email") || "";
-
-    const token = await generarJWT(
-      congregacion.getDataValue("id"),
-      email,
-      sessionId,
-      email,
-      `${expirationHours}h`,
-    );
-
-    // Guardar el acceso
-    await QrAccesos.create({
-      idQrCode: qr.getDataValue("id"),
-      nombre,
-      idUsuario: numeroMita,
-      tipoPuesto,
-      ip, // Ensure ip is a string
-      userAgent: userAgentRaw,
-      dispositivo: `${deviceResult.os?.name || "Desconocido"} - ${deviceResult.device?.type || "Desconocido"}`,
+    desafioCreado = email !== null;
+    if (email) {
+      const plantilla = fs.readFileSync(path.join(__dirname, "..", "templates", "codigoAccesoQr.html"), "utf8");
+      const html = plantilla
+        .replace("{{imagenEmail}}", environment.imagenEmail)
+        .replace("{{codigo}}", codigo)
+        .replace("{{minutos}}", String(MINUTOS_CODIGO_QR))
+        .replace("{{horas}}", String(HORAS_SESION_QR));
+      await enviarEmail(email, "Código de ingreso QR - CMAR LIVE", html, undefined, true);
+    }
+    return res.json({
+      ok: true, desafio_id: id,
+      msg: "Si los datos permiten el acceso, recibirá un código en el correo registrado. Puede solicitar hasta 3 códigos cada 15 minutos.",
     });
+  } catch (error) {
+    if (desafioCreado) {
+      try {
+        await DesafioAccesoQr.update({ fechaConsumo: new Date() }, { where: { id } });
+        await registrarIntentoQr(req, {
+          resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "ENVIO_NO_DISPONIBLE",
+        });
+      } catch (errorRegistro) {
+        console.error("[QR] No fue posible invalidar o auditar el desafío fallido.",
+          errorRegistro instanceof Error ? errorRegistro.name : "Error desconocido");
+      }
+    }
+    console.error("[QR] No fue posible solicitar el código de ingreso.", error instanceof Error ? error.name : "Error desconocido");
+    return res.status(503).json({ ok: false, msg: "No fue posible procesar el código. Intente más tarde." });
+  }
+};
 
-    // Guardar información extendida de conexión
-    guardarInformacionConexion(
-      ip,
-      userAgentRaw,
-      null,
-      congregacion,
-      true,
-    ).catch((err) =>
-      console.error("Error al guardar información de conexión:", err),
-    );
+export const loginPorQr = async (req: Request, res: Response) => {
+  const { qrCode, desafio_id, codigo, esGuarda, enTurnoGuarda, puesto } = req.body;
+  try {
+    if (typeof qrCode !== "string" || qrCode.length > 255 ||
+        typeof desafio_id !== "string" || !/^[a-f0-9-]{36}$/i.test(desafio_id) ||
+        typeof codigo !== "string" || !/^\d{6}$/.test(codigo) ||
+        !validarDatosGuarda(esGuarda, enTurnoGuarda, puesto)) {
+      await registrarIntentoQr(req, {
+        resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "DATOS_INVALIDOS",
+      });
+      return res.status(400).json({ ok: false, msg: "Revise el código y las respuestas de guarda y puesto." });
+    }
 
-    console.info(
-      `Login QR exitoso: ${nombre}, Congregación: ${congregacion.getDataValue(
-        "congregacion",
-      )}, IP: ${ip}, Dispositivo: ${deviceResult.os?.name || "Desconocido"} - ${deviceResult.device?.type || "Desconocido"}`,
-    );
-
-    res.json({
-      ok: true,
-      token,
-      congregacion,
-      nombre,
-      sessionInfo: {
-        sessionId,
-        sessionType: "QR",
-        isLoginCodeQr: true,
-        expiresAt,
-      },
-    });
-  } catch (error: any) {
-    // Verificar si el error es por columnas faltantes (migraciones pendientes)
-    const isMissingColumn =
-      error?.original?.code === "ER_BAD_FIELD_ERROR" ||
-      error?.message?.includes("Unknown column");
-
-    if (isMissingColumn) {
-      console.error(
-        "[loginPorQr] ERROR: Columnas faltantes en userSession. " +
-          "Ejecutar: migrations/002-add-session-type-to-user-session.sql\n",
-        error?.original?.sqlMessage || error?.message,
-      );
-      return res.status(500).json({
-        ok: false,
-        msg: "Error de configuración del servidor. Contacte al administrador.",
+    if (esGuarda && !enTurnoGuarda) {
+      await registrarIntentoQr(req, {
+        esGuarda, enTurnoGuarda, puesto: null,
+        resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo: "GUARDA_FUERA_DE_TURNO",
+      });
+      return res.status(403).json({
+        ok: false, msg: "Si es guarda, debe estar actualmente en turno para ingresar mediante QR.",
       });
     }
 
-    console.error("Error al hacer login por QR:", error);
-    res.status(500).json({ ok: false, msg: "Error interno" });
+    const respuesta = await db.transaction(async (transaction) => {
+      const desafio = await DesafioAccesoQr.findByPk(desafio_id, {
+        transaction, lock: transaction.LOCK.UPDATE,
+      });
+      const qr = await QrCodigos.findOne({
+        where: { qrCode, activo: true }, transaction, lock: transaction.LOCK.SHARE,
+      });
+      const datosIntento = {
+        idQrCode: qr?.getDataValue("id"),
+        esGuarda, enTurnoGuarda, puesto: puesto || null,
+      };
+      const rechazar = async (
+        motivoRechazo: string,
+        msg = "No fue posible verificar el acceso. Solicite otro código desde este formulario e intente nuevamente.",
+      ) => {
+        await registrarIntentoQr(req, {
+          ...datosIntento, resultado: "RECHAZADO", resultadoIdentidad: "NO_VERIFICADA", motivoRechazo,
+        }, transaction);
+        return { rechazo: motivoRechazo, msg };
+      };
+      if (!desafio || !qr || desafio.getDataValue("idQrCode") !== qr.getDataValue("id")) {
+        return rechazar("DESAFIO_NO_DISPONIBLE");
+      }
+      if (desafio.getDataValue("fechaConsumo")) {
+        return rechazar("CODIGO_UTILIZADO",
+          "Este código ya fue utilizado y no puede volver a usarse. Pulse «Solicitar otro código / cambiar número» para obtener uno nuevo.");
+      }
+      if (new Date(desafio.getDataValue("fechaExpiracion")).getTime() <= Date.now()) {
+        return rechazar("CODIGO_VENCIDO",
+          `Este código venció. Su validez es de ${MINUTOS_CODIGO_QR} minutos. Pulse «Solicitar otro código / cambiar número» para obtener uno nuevo.`);
+      }
+      if (desafio.getDataValue("intentosFallidos") >= MAX_INTENTOS_CODIGO_QR) {
+        return rechazar("CODIGO_BLOQUEADO",
+          `Este código fue bloqueado tras ${MAX_INTENTOS_CODIGO_QR} intentos incorrectos. Pulse «Solicitar otro código / cambiar número» para obtener uno nuevo.`);
+      }
+      if (!verificarCodigoQr(desafio_id, codigo, desafio.getDataValue("resumenCodigo"))) {
+        const intentosRestantes = MAX_INTENTOS_CODIGO_QR - desafio.getDataValue("intentosFallidos") - 1;
+        await desafio.increment("intentosFallidos", { transaction });
+        if (intentosRestantes <= 0) {
+          return rechazar("CODIGO_BLOQUEADO",
+            `Este código fue bloqueado tras ${MAX_INTENTOS_CODIGO_QR} intentos incorrectos. Pulse «Solicitar otro código / cambiar número» para obtener uno nuevo.`);
+        }
+        return rechazar("CODIGO_NO_VALIDO",
+          `El código no coincide con esta solicitud. Revise el correo correspondiente. Intentos restantes: ${intentosRestantes}.`);
+      }
+      const usuario = await Usuario.findOne({
+        where: { id: desafio.getDataValue("idUsuario"), estado: ESTADO_USUARIO_ENUM.ACTIVO },
+        transaction, lock: transaction.LOCK.SHARE,
+      });
+      const congregacion = await Congregacion.findOne({
+        where: { id: qr.getDataValue("idCongregacion"), estado: true },
+        transaction, lock: transaction.LOCK.SHARE,
+      });
+      if (!usuario || !congregacion) return rechazar("ACCESO_NO_AUTORIZADO");
+
+      const nombre = ["primerNombre", "segundoNombre", "primerApellido", "segundoApellido"]
+        .map((campo) => usuario.getDataValue(campo)).filter(Boolean).join(" ");
+      const expiresAt = new Date(Date.now() + HORAS_SESION_QR * 3600000);
+      const { sessionId } = await createQrSession({
+        tipoEntidad: "congregacion", idCongregacion: congregacion.getDataValue("id"),
+        idUsuario: usuario.getDataValue("id"), qrCode,
+        ip: req.ip || req.socket.remoteAddress || "",
+        userAgent: (req.get("user-agent") || "").slice(0, 500),
+        expiresAt, transaction,
+      });
+      const email = congregacion.getDataValue("email") || "";
+      const token = await generarJWT(congregacion.getDataValue("id"), email, sessionId, email, `${HORAS_SESION_QR}h`);
+      await desafio.update({ fechaConsumo: new Date() }, { transaction });
+      await registrarIntentoQr(req, {
+        ...datosIntento, idUsuario: usuario.getDataValue("id"), nombre,
+        resultado: "EXITOSO", resultadoIdentidad: "VERIFICADA",
+      }, transaction);
+      return { token, nombre, congregacion, sessionId, expiresAt };
+    });
+    if ("rechazo" in respuesta) {
+      return res.status(401).json({ ok: false, code: respuesta.rechazo, msg: respuesta.msg });
+    }
+    guardarInformacionConexion(req.ip || req.socket.remoteAddress || "", req.get("user-agent") || "", null, respuesta.congregacion, true)
+      .catch(() => console.error("[QR] No fue posible registrar la ubicación por IP."));
+    return res.json({
+      ok: true, token: respuesta.token, nombre: respuesta.nombre,
+      congregacion: {
+        id: respuesta.congregacion.getDataValue("id"),
+        congregacion: respuesta.congregacion.getDataValue("congregacion"),
+      },
+      sessionInfo: {
+        sessionId: respuesta.sessionId, sessionType: "QR", isLoginCodeQr: true, expiresAt: respuesta.expiresAt,
+      },
+    });
+  } catch (error) {
+    console.error("[QR] No fue posible completar el ingreso.", error instanceof Error ? error.name : "Error desconocido");
+    return res.status(500).json({ ok: false, msg: "No fue posible completar el ingreso QR. Contacte al administrador." });
   }
 };
 
 export const getQrAccesos = async (req: Request, res: Response) => {
   try {
     // Obtener parámetros de paginación
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const page = Number(req.query.page ?? 1);
+    const limit = Number(req.query.limit ?? 10);
     const offset = (page - 1) * limit;
 
     // Validar parámetros
-    if (page < 1 || limit < 1 || limit > 100) {
+    if (!Number.isSafeInteger(page) || !Number.isSafeInteger(limit) || page < 1 || limit < 1 || limit > 100 ||
+        (req.query.esGuarda !== undefined && !["true", "false"].includes(String(req.query.esGuarda))) ||
+        (req.query.puesto !== undefined && !PUESTOS_QR.includes(String(req.query.puesto)))) {
       return res.status(400).json({
         ok: false,
         msg: "Parámetros de paginación inválidos (page >= 1, limit 1-100)",
@@ -320,7 +370,14 @@ export const getQrAccesos = async (req: Request, res: Response) => {
     }
 
     // Realizar consulta para obtener accesos con login QR
-    const { count, rows: accesos } = await obtenerAccesosQr(limit, offset);
+    const { count, rows: accesos } = await QrAccesos.findAndCountAll({
+      where: {
+        ...(req.query.esGuarda !== undefined ? { esGuarda: req.query.esGuarda === "true" } : {}),
+        ...(req.query.puesto !== undefined ? { puesto: String(req.query.puesto) } : {}),
+      },
+      order: [["createdAt", "DESC"], ["id", "DESC"]],
+      limit, offset,
+    });
 
     // Calcular metadata de paginación
     const totalPages = Math.ceil(count / limit);
@@ -348,37 +405,4 @@ export const getQrAccesos = async (req: Request, res: Response) => {
       error: error.message || "Error desconocido",
     });
   }
-};
-
-// Función para obtener los accesos QR con las relaciones necesarias
-const obtenerAccesosQr = async (limit: number, offset: number) => {
-  return await UbicacionConexion.findAndCountAll({
-    where: { isLoginCodeQr: true }, // Filtrar accesos QR
-    attributes: [
-      "ip",
-      "dispositivo",
-      "createdAt",
-      "isLoginCodeQr",
-      "idCongregacion",
-      "pais",
-      "ciudad",
-    ],
-    order: [["createdAt", "DESC"]], // Ordenar por fecha descendente
-    limit,
-    offset,
-    include: [
-      {
-        model: QrAccesos,
-        as: "qrAcceso", // Alias que definiste en la asociación
-        attributes: ["nombre"], // Obtener solo el nombre
-        required: false, // LEFT JOIN
-      },
-      {
-        model: Congregacion,
-        as: "congregacion", // Alias para Congregacion
-        attributes: ["congregacion"], // Información de la congregación
-        required: false,
-      },
-    ],
-  });
 };

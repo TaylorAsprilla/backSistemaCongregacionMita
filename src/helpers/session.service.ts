@@ -46,6 +46,7 @@ interface CreateSessionParams {
   userAgent: string;
   expiresAt: Date;
   refreshToken?: string;
+  transaction?: Transaction;
 }
 
 interface SessionValidationResult {
@@ -564,6 +565,7 @@ export const createQrSession = async (
     userAgent,
     expiresAt,
     refreshToken,
+    transaction,
   } = params;
 
   if (tipoEntidad === "usuario" && !idUsuario) {
@@ -604,11 +606,11 @@ export const createQrSession = async (
     isActive: true,
     lastActivityAt: new Date(),
     expiresAt,
-  });
+  }, { transaction });
 
   const entidadId = idUsuario || idCongregacion;
   console.info(
-    `Sesión QR creada para ${tipoEntidad} ${entidadId}. SessionId: ${sessionId}, QR: ${qrCode}, Ubicación: ${locationInfo.ciudad}, ${locationInfo.pais}`,
+    `Sesión QR creada para ${tipoEntidad} ${entidadId}.`,
   );
 
   return { sessionId, session: newSession };

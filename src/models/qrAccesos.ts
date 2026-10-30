@@ -6,7 +6,7 @@ const QrAccesos = db.define(
   {
     idQrCode: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     idUsuario: {
       type: DataTypes.INTEGER,
@@ -18,7 +18,7 @@ const QrAccesos = db.define(
     },
     nombre: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     tipoPuesto: {
       type: DataTypes.STRING,
@@ -36,6 +36,12 @@ const QrAccesos = db.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    esGuarda: { type: DataTypes.BOOLEAN, allowNull: true },
+    enTurnoGuarda: { type: DataTypes.BOOLEAN, allowNull: true },
+    puesto: { type: DataTypes.STRING(50), allowNull: true },
+    resultado: { type: DataTypes.STRING(30), allowNull: true },
+    resultadoIdentidad: { type: DataTypes.STRING(30), allowNull: true },
+    motivoRechazo: { type: DataTypes.STRING(80), allowNull: true },
   },
   {
     tableName: "qrAccesos",
