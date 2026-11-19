@@ -1,5 +1,6 @@
 import { Response } from "express";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
+import db from "../database/connection";
 import Usuario from "../models/usuario.model";
 import { CustomRequest } from "../middlewares/validar-jwt";
 import {
@@ -56,6 +57,24 @@ const eliminarSilencioso = async (clave: string, motivo: string) => {
   } catch (error) {
     // No debe revertir una operación ya confirmada; queda registrado para limpieza.
     console.error(`[FOTO_PERFIL] Objeto huérfano (${motivo}): ${clave}`, error);
+  }
+};
+
+/**
+ * Indicador "ya vio el tour de la fotografía" (columna usuario.fotoTourVisto, migración 016).
+ * Se usa SQL directo y no el modelo: así, si la migración aún no se aplicó, solo esta función
+ * degrada (devuelve null y el cliente usa su respaldo local) y ninguna otra consulta de Usuario se rompe.
+ */
+const leerTourVisto = async (usuarioId: number): Promise<boolean | null> => {
+  try {
+    const filas = (await db.query("SELECT fotoTourVisto FROM usuario WHERE id = :id", {
+      type: QueryTypes.SELECT,
+      replacements: { id: usuarioId },
+    })) as Array<{ fotoTourVisto: number | boolean | null }>;
+    return filas.length ? Number(filas[0].fotoTourVisto) === 1 : null;
+  } catch (error) {
+    console.warn("[FOTO_PERFIL] No se pudo leer fotoTourVisto (¿migración 016 pendiente?):", error);
+    return null;
   }
 };
 
@@ -153,9 +172,26 @@ export const obtenerFotoPerfil = async (req: CustomRequest, res: Response) => {
     return res.json({
       ok: true,
       ...(await construirRespuestaFoto(usuarioId, usuario.getDataValue("foto"))),
+      tourVisto: await leerTourVisto(usuarioId),
     });
   } catch (error) {
     return responderError(res, error, "obtener");
+  }
+};
+
+/** POST /api/foto-perfil/tour-visto — registra que el usuario autenticado ya vio el tour (idempotente). */
+export const marcarTourFotoVisto = async (req: CustomRequest, res: Response) => {
+  try {
+    const usuarioId = obtenerUsuarioId(req);
+    try {
+      await db.query("UPDATE usuario SET fotoTourVisto = 1 WHERE id = :id", { replacements: { id: usuarioId } });
+    } catch (error) {
+      console.warn("[FOTO_PERFIL] No se pudo guardar fotoTourVisto (¿migración 016 pendiente?):", error);
+      return res.json({ ok: true, guardado: false });
+    }
+    return res.json({ ok: true, guardado: true });
+  } catch (error) {
+    return responderError(res, error, "tour-visto");
   }
 };
 

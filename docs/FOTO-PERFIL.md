@@ -10,6 +10,7 @@ en `Usuario.foto`.
 | --- | --- | --- |
 | `GET` | `/` | Fotografía y URL firmada del usuario autenticado. |
 | `POST` | `/` | Sube la fotografía. Cuerpo binario con `Content-Type: image/jpeg`, `image/png` o `image/webp` (máx. 5 MB). |
+| `POST` | `/tour-visto` | Registra que el usuario ya vio el tour guiado de la foto (idempotente; id del JWT). `GET /` devuelve `tourVisto` (`true`/`false`, o `null` si la migración 016 no está aplicada). |
 | `DELETE` | `/` | Elimina la fotografía y vuelve al avatar con iniciales. |
 | `POST` | `/urls` | Body `{ "ids": [1, 2, …] }` (máx. 100). Devuelve las URLs firmadas de los usuarios que tienen foto, para avatares en listados. |
 
@@ -70,6 +71,8 @@ Antes de desplegar verificar que la columna exista y revisar valores heredados:
 SHOW COLUMNS FROM usuario LIKE 'foto';
 SELECT COUNT(*) FROM usuario WHERE foto IS NOT NULL;
 ```
+
+Para el tour guiado se usa la columna `usuario.fotoTourVisto` (migración `016-usuario-foto-tour-visto.sql`, aplicar antes de desplegar). Se accede con SQL directo: si falta, solo el tour degrada al respaldo del navegador y nada más se rompe.
 
 Los valores previos se ignoran. Si la columna es más corta que VARCHAR(255), aplique `migrations/015-usuario-foto-longitud.sql`: MySQL trunca la clave en silencio y la foto no se ve al recargar.
 

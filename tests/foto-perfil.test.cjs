@@ -108,8 +108,17 @@ test("claves: prefijo por usuario, únicas y verificación de propiedad", () => 
 
 // ------------------------------------------------------------ Controlador
 
-function entornoControlador({ fotoActual = null, fallaS3 = false, fallaBD = false, truncaA = 0 } = {}) {
-  const estado = { foto: fotoActual, guardados: [], eliminados: [], consultas: [] };
+function entornoControlador({ fotoActual = null, fallaS3 = false, fallaBD = false, truncaA = 0, tourVisto = 0, sinColumnaTour = false } = {}) {
+  const estado = { foto: fotoActual, guardados: [], eliminados: [], consultas: [], tourVisto, sql: [] };
+  const db = {
+    query: async (sql, opciones) => {
+      estado.sql.push({ sql, opciones });
+      if (sinColumnaTour) throw new Error("Unknown column fotoTourVisto");
+      if (/^SELECT/.test(sql)) return [{ fotoTourVisto: estado.tourVisto }];
+      estado.tourVisto = 1;
+      return [];
+    },
+  };
   const registro = {
     getDataValue: (c) => (c === "foto" ? estado.foto : 7),
     update: async (datos) => {
@@ -139,7 +148,8 @@ function entornoControlador({ fotoActual = null, fallaS3 = false, fallaBD = fals
     },
   };
   const controlador = cargarModulo("src/controllers/fotoPerfil.controller.ts", {
-    sequelize: { Op: { in: "in", ne: "ne" } },
+    sequelize: { Op: { in: "in", ne: "ne" }, QueryTypes: { SELECT: "SELECT" } },
+    "../database/connection": db,
     "../models/usuario.model": Usuario,
     "../middlewares/validar-jwt": {},
     "../helpers/fotoPerfil": helper,
@@ -261,7 +271,13 @@ test("obtener: usuario sin fotografía devuelve nulos; con fotografía, URL firm
   let { controlador } = entornoControlador();
   let res = respuesta();
   await controlador.obtenerFotoPerfil(peticion(), res);
-  assert.deepEqual(JSON.parse(JSON.stringify(res.cuerpo)), { ok: true, foto: null, url: null, expiraEn: null });
+  assert.deepEqual(JSON.parse(JSON.stringify(res.cuerpo)), {
+    ok: true,
+    foto: null,
+    url: null,
+    expiraEn: null,
+    tourVisto: false,
+  });
 
   ({ controlador } = entornoControlador({ fotoActual: "usuarios/fotos-perfil/7/a.webp" }));
   res = respuesta();
@@ -287,4 +303,50 @@ test("columna truncada: detecta que la referencia quedó incompleta, borra el ob
   assert.equal(res.cuerpo.code, "ALMACENAMIENTO_ERROR");
   assert.deepEqual(estado.eliminados, estado.guardados);
   assert.equal(estado.eliminados.includes(anterior), false);
+});
+
+test("tour: GET informa si ya lo vio; tras marcarlo (POST) queda en true y es idempotente", async () => {
+  const { controlador, estado } = entornoControlador();
+  let res = respuesta();
+  await controlador.obtenerFotoPerfil(peticion(), res);
+  assert.equal(res.cuerpo.tourVisto, false);
+
+  for (let i = 0; i < 2; i++) {
+    res = respuesta();
+    await controlador.marcarTourFotoVisto(peticion(), res);
+    assert.deepEqual(JSON.parse(JSON.stringify(res.cuerpo)), { ok: true, guardado: true });
+  }
+  assert.equal(estado.tourVisto, 1);
+  // El id sale del JWT, no del cuerpo.
+  const update = estado.sql.find((q) => /^UPDATE/.test(q.sql));
+  assert.equal(update.opciones.replacements.id, 7);
+
+  res = respuesta();
+  await controlador.obtenerFotoPerfil(peticion(), res);
+  assert.equal(res.cuerpo.tourVisto, true);
+});
+
+test("tour: ignora un usuario_id enviado en el cuerpo y bloquea sesiones QR", async () => {
+  const { controlador, estado } = entornoControlador();
+  let res = respuesta();
+  await controlador.marcarTourFotoVisto(peticion({ body: { id: 99, usuarioId: 99 } }), res);
+  assert.equal(estado.sql[0].opciones.replacements.id, 7);
+
+  res = respuesta();
+  await controlador.marcarTourFotoVisto(peticion({ sessionType: "QR" }), res);
+  assert.equal(res.codigo, 403);
+  assert.equal(res.cuerpo.code, "SESION_NO_PERMITIDA");
+});
+
+test("tour: si la migración 016 no está aplicada, degrada sin romper (null / guardado:false)", async () => {
+  const { controlador } = entornoControlador({ sinColumnaTour: true });
+  let res = respuesta();
+  await controlador.obtenerFotoPerfil(peticion(), res);
+  assert.equal(res.codigo, 200);
+  assert.equal(res.cuerpo.tourVisto, null);
+
+  res = respuesta();
+  await controlador.marcarTourFotoVisto(peticion(), res);
+  assert.equal(res.codigo, 200);
+  assert.equal(res.cuerpo.guardado, false);
 });
