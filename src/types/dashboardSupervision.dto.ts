@@ -246,6 +246,8 @@ export interface AlertasDTO {
 export interface UnidadFilaDTO {
   unidad: UnidadRef;
   obreros: string[];
+  /** Ids de los obreros, en el mismo orden que `obreros` (para mostrar su fotografía). */
+  obrerosIds: number[];
   estadoEntrega: EstadoEntrega;
   informes: number;
   indicadores: Record<string, Variacion>;

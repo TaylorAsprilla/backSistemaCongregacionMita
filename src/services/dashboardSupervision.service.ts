@@ -964,6 +964,7 @@ export const obtenerUnidades = async (
   let filas: UnidadFilaDTO[] = ds.unidades.map((unidad) => ({
     unidad: unidad.ref,
     obreros: nombreObreros(unidad, ds.usuarios),
+    obrerosIds: [...unidad.obreros],
     estadoEntrega: estadoUnidad(ds, unidad),
     informes: agregadoUnidad(ds, unidad, ds.periodo).informes,
     indicadores: variacionesUnidad(ds, unidad, INDICADORES_TABLA),
