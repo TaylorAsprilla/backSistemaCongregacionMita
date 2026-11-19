@@ -108,14 +108,16 @@ test("claves: prefijo por usuario, únicas y verificación de propiedad", () => 
 
 // ------------------------------------------------------------ Controlador
 
-function entornoControlador({ fotoActual = null, fallaS3 = false, fallaBD = false } = {}) {
+function entornoControlador({ fotoActual = null, fallaS3 = false, fallaBD = false, truncaA = 0 } = {}) {
   const estado = { foto: fotoActual, guardados: [], eliminados: [], consultas: [] };
   const registro = {
     getDataValue: (c) => (c === "foto" ? estado.foto : 7),
     update: async (datos) => {
       if (fallaBD) throw new Error("MySQL caído");
-      estado.foto = datos.foto;
+      // Simula una columna VARCHAR corta que trunca sin error.
+      estado.foto = truncaA ? datos.foto.slice(0, truncaA) : datos.foto;
     },
+    reload: async () => {},
   };
   const storage = {
     guardar: async (clave) => {
@@ -274,4 +276,15 @@ test("urls en lote: solo claves propias de cada usuario (ignora heredadas y ajen
   await controlador.obtenerUrlsFotos(peticion({ body: { ids: [7, "8", 9, 9, "x", -1] } }), res);
   assert.deepEqual([...Object.keys(res.cuerpo.fotos)], ["7"]);
   assert.deepEqual([...estado.consultas[0].where.id.in], [7, 8, 9]);
+});
+
+test("columna truncada: detecta que la referencia quedó incompleta, borra el objeto nuevo y conserva el anterior", async () => {
+  const anterior = "usuarios/fotos-perfil/7/vieja.webp";
+  const { controlador, estado } = entornoControlador({ fotoActual: anterior, truncaA: 50 });
+  const res = respuesta();
+  await controlador.subirFotoPerfil(peticion({ body: await imagen("png") }), res);
+  assert.equal(res.codigo, 500);
+  assert.equal(res.cuerpo.code, "ALMACENAMIENTO_ERROR");
+  assert.deepEqual(estado.eliminados, estado.guardados);
+  assert.equal(estado.eliminados.includes(anterior), false);
 });

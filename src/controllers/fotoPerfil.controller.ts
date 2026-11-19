@@ -93,6 +93,16 @@ export const subirFotoPerfil = async (req: CustomRequest, res: Response) => {
 
     try {
       await usuario.update({ foto: claveNueva });
+      // MySQL puede truncar en silencio si la columna `foto` es más corta que la clave:
+      // se relee la fila y se exige que la referencia haya quedado completa.
+      await usuario.reload({ attributes: ["id", "foto"] });
+      if (usuario.getDataValue("foto") !== claveNueva) {
+        throw new FotoPerfilError(
+          "ALMACENAMIENTO_ERROR",
+          "No se pudo guardar la referencia de la fotografía. Contacte al administrador.",
+          500,
+        );
+      }
     } catch (error) {
       // No dejar el objeto nuevo huérfano; la fotografía anterior se conserva.
       await eliminarSilencioso(claveNueva, "falló la actualización en MySQL");

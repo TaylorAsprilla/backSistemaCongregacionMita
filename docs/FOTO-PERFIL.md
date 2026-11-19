@@ -63,15 +63,15 @@ sin metadatos.
 
 ## Base de datos
 
-No hay migración: se reutiliza la columna existente `Usuario.foto` (VARCHAR(255), NULL).
+Se reutiliza la columna existente `usuario.foto`, que debe ser `VARCHAR(255) NULL` (ver migración 015).
 Antes de desplegar verificar que la columna exista y revisar valores heredados:
 
 ```sql
-SHOW COLUMNS FROM Usuarios LIKE 'foto';
-SELECT COUNT(*) FROM Usuarios WHERE foto IS NOT NULL;
+SHOW COLUMNS FROM usuario LIKE 'foto';
+SELECT COUNT(*) FROM usuario WHERE foto IS NOT NULL;
 ```
 
-(Ajustar el nombre de la tabla si el entorno usa otro.) Los valores previos se ignoran.
+Los valores previos se ignoran. Si la columna es más corta que VARCHAR(255), aplique `migrations/015-usuario-foto-longitud.sql`: MySQL trunca la clave en silencio y la foto no se ve al recargar.
 
 ## Pruebas
 
