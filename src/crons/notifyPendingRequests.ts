@@ -39,7 +39,7 @@ function renderTemplate(template: string, variables: Record<string, string>) {
 }
 
 // Función para obtener las solicitudes pendientes por congregación
-const obtenerSolicitudesPendientesPorCongregacion = async (
+export const obtenerSolicitudesPendientesPorCongregacion = async (
   congregaciones: WhereOptions[],
 ) => {
   return Usuario.findAll({
@@ -73,7 +73,7 @@ const obtenerSolicitudesPendientesPorCongregacion = async (
   });
 };
 
-const obtenerCongregacionesAsignadas = async (usuarioId: number) => {
+export const obtenerCongregacionesAsignadas = async (usuarioId: number) => {
   const [paises, congregaciones, campos] = await Promise.all([
     Pais.findAll({
       where: {

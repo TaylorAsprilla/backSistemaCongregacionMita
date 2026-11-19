@@ -26,6 +26,7 @@ import { obtenerContextoObrero } from "../services/supervisionObrero.authorizati
 import { ROLES_ID } from "../enum/roles.enum";
 import { obtenerPermisosUsuario } from "../services/dashboardSupervision/consultas";
 import { paisPerteneceAlAlcance } from "../services/supervisionPais.scope";
+import { notificarInformeCerrado, notificarInformeCreado } from "../services/notificaciones/eventos";
 import {
   esResponsableActualDelInforme,
   obtenerInformeAutorizado,
@@ -665,6 +666,9 @@ export const crearInforme = async (req: Request, res: Response) => {
       nombre_campo: ambito.nombre_campo,
     });
 
+    // Notificación best-effort: nunca altera ni retrasa la creación del informe.
+    void notificarInformeCreado(Number(informe.getDataValue("id")));
+
     return res.json({ ok: true, msg: "Informe creado.", informe });
   } catch (error) {
     if ((error as { name?: string }).name === "SequelizeUniqueConstraintError") {
@@ -715,6 +719,7 @@ export const actualizarInforme = async (req: Request, res: Response) => {
     }
     if (informeVencido(informe)) {
       await cerrarInformeTransaccional(Number(informe.getDataValue("id")), null);
+      void notificarInformeCerrado(Number(informe.getDataValue("id")), null);
       return res.status(409).json({
         ok: false,
         code: "INFORME_VENCIDO",
@@ -782,6 +787,7 @@ export const cerrarInforme = async (req: Request, res: Response) => {
         msg: "No existe el informe solicitado.",
       });
     }
+    void notificarInformeCerrado(Number(informe.getDataValue("id")), usuarioId);
     return res.json({
       ok: true,
       msg: "Informe cerrado y responsables históricos guardados.",

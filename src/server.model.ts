@@ -1,5 +1,6 @@
 import "./crons/notifyExpiration";
 import "./crons/notifyPendingRequests";
+import "./crons/notificaciones";
 import { runReportClosureStartupCatchup } from "./crons/closeQuarterlyReports";
 
 import express, { Application } from "express";
@@ -58,6 +59,7 @@ import asuntoPendienteRoutes from "./routes/asuntoPendiente.routes";
 import mensajeInformativoRoutes from "./routes/mensajeInformativo.routes";
 import healthRoutes from "./routes/health.routes";
 import fotoPerfilRoutes from "./routes/fotoPerfil.routes";
+import notificacionRoutes from "./routes/notificacion.routes";
 
 import cors from "cors";
 import db from "./database/connection";
@@ -134,6 +136,7 @@ class Server {
     mensajesInformativos: "/api/mensajes-informativos",
     cron: "/api/cron",
     fotoPerfil: "/api/foto-perfil",
+    notificaciones: "/api/notificaciones",
     health: "/api/health",
   };
 
@@ -250,6 +253,7 @@ class Server {
     this.app.use(this.apiPaths.asuntoPendiente, asuntoPendienteRoutes);
     this.app.use(this.apiPaths.mensajesInformativos, mensajeInformativoRoutes);
     this.app.use(this.apiPaths.fotoPerfil, fotoPerfilRoutes);
+    this.app.use(this.apiPaths.notificaciones, notificacionRoutes);
 
     // Middleware para rutas no encontradas (404)
     this.app.use(notFoundHandler);
