@@ -3,6 +3,7 @@ import Informe from "../models/informe.model";
 import { ESTADO_INFORME_ENUM } from "../enum/informe.enum";
 import { obtenerFechaCierreInforme } from "../helpers/periodoInforme";
 import { cerrarInformeTransaccional } from "../services/cerrarInforme";
+import { notificarInformeCerrado } from "../services/notificaciones/eventos";
 
 const ZONA_HORARIA_UTC = "UTC";
 
@@ -38,6 +39,7 @@ const closeExpiredQuarterlyReports = async () => {
             cerrado?.getDataValue("estado") === ESTADO_INFORME_ENUM.CERRADO
           ) {
             informesCerrados += 1;
+            void notificarInformeCerrado(Number(informe.getDataValue("id")), null);
           }
         } catch (error) {
           console.error(

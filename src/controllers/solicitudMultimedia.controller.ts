@@ -26,6 +26,7 @@ import { auditoriaUsuario } from "../database/usuario.associations";
 import generarPassword from "../helpers/generarPassword";
 import { datosAprobacionMultimedia } from "../helpers/aprobacionMultimedia";
 import { errorSolicitudEnfermedad } from "../helpers/solicitudEnfermedad";
+import { notificarSolicitudNueva, notificarSolicitudResuelta } from "../services/notificaciones/eventos";
 
 const environment = config[process.env.NODE_ENV || "development"];
 const imagenEmail = environment.imagenEmail;
@@ -882,6 +883,7 @@ export const actualizarSolicitudMultimedia = async (
     //                          Actualizar la Solicitud de Accesos
     // =======================================================================
 
+    const estadoAnterior = solicitudDeAcceso.getDataValue("estado");
     const solicitudDeAccesoActualizado = await solicitudDeAcceso.update(body, {
       new: true,
       transaction,
@@ -1005,6 +1007,15 @@ export const actualizarSolicitudMultimedia = async (
     }
 
     await transaction.commit();
+
+    // Notificación en la plataforma (best-effort, después de confirmar la transacción).
+    if (
+      usuario_id &&
+      body.estado !== estadoAnterior &&
+      (body.estado === SOLICITUD_MULTIMEDIA_ENUM.APROBADA || body.estado === SOLICITUD_MULTIMEDIA_ENUM.DENEGADA)
+    ) {
+      void notificarSolicitudResuelta(Number(id), Number(usuario_id), body.estado);
+    }
 
     res.json({
       ok: true,
@@ -1190,6 +1201,7 @@ export const validarEmail = async (req: CustomRequest, res: Response) => {
           emailVerificado: true,
           estado: SOLICITUD_MULTIMEDIA_ENUM.PENDIENTE,
         });
+        void notificarSolicitudNueva(Number(id));
         res.json({
           ok: true,
           msg: `El correo electrónico de ${nombre} esta verificado`,
