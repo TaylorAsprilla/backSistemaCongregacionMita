@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response, Router } from "express";
 import validarJWT from "../middlewares/validar-jwt";
 import {
   eliminarFotoPerfil,
+  marcarTourFotoVisto,
   obtenerFotoPerfil,
   obtenerUrlsFotos,
   subirFotoPerfil,
@@ -34,6 +35,9 @@ router.get("/", validarJWT, obtenerFotoPerfil);
 
 /** @route POST /api/foto-perfil/urls  @access Autenticado (avatares en lote) */
 router.post("/urls", validarJWT, obtenerUrlsFotos);
+
+/** @route POST /api/foto-perfil/tour-visto  @access Autenticado (marca el tour como visto) */
+router.post("/tour-visto", validarJWT, marcarTourFotoVisto);
 
 /** @route POST /api/foto-perfil  @access Autenticado (foto propia; id tomado del JWT) */
 router.post("/", validarJWT, cuerpoBinario, manejarErrorCuerpo, subirFotoPerfil);
